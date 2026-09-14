@@ -11,13 +11,19 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
     "test:e2e": "pnpm --filter @atlas/web build && pnpm --filter @atlas/web test:e2e",
-    "pytest": "pytest tools/ingest"
+    "pytest": "pytest tools/ingest",
+    "export:golden": "tsx scripts/export-golden.ts"
   },
   "devDependencies": {
+    "tsx": "^4.23.13",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp", "@img/sharp"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "@img/sharp"
+    ]
   }
 }

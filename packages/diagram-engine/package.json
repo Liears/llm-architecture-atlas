@@ -8,6 +8,9 @@
     "typecheck": "tsc --noEmit"
   },
   "description": "Architecture IR -> Diagram IR -> constraint layout (issues #4, #5)",
+  "dependencies": {
+    "@atlas/architecture-ir": "workspace:*"
+  },
   "devDependencies": {
     "elkjs": "^0.9.0"
   }

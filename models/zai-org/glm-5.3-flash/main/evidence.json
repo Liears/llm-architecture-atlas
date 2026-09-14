@@ -1,0 +1,103 @@
+{
+  "model_id": "zai-org/glm-5.3-flash",
+  "claims": [
+    {
+      "path": "facts.num_hidden_layers",
+      "value": 45,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_hidden_layers" }
+    },
+    {
+      "path": "facts.hidden_size",
+      "value": 4096,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.hidden_size" }
+    },
+    {
+      "path": "facts.num_attention_heads",
+      "value": 64,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_attention_heads" }
+    },
+    {
+      "path": "facts.num_key_value_heads",
+      "value": null,
+      "status": "unknown",
+      "note": "config exposes no KV-head count; MLA compresses KV so the MHA notion does not map 1:1"
+    },
+    {
+      "path": "facts.vocab_size",
+      "value": 155136,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.vocab_size" }
+    },
+    {
+      "path": "facts.context_tokens",
+      "value": 1048576,
+      "status": "reported",
+      "source": { "kind": "model_card", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash", "locator": "context window" }
+    },
+    {
+      "path": "facts.total_params",
+      "value": 320000000000,
+      "status": "reported",
+      "source": { "kind": "model_card", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash", "locator": "parameter count" }
+    },
+    {
+      "path": "facts.active_params",
+      "value": 18000000000,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": { "kind": "derived", "locator": "sum of active experts + shared expert + attention parameters" }
+    },
+    {
+      "path": "topology.attention_groups[0]",
+      "value": "34 KDA layers",
+      "status": "reported",
+      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "architecture table" }
+    },
+    {
+      "path": "topology.attention_groups[1]",
+      "value": "11 MLA/DSA layers",
+      "status": "reported",
+      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "architecture table" }
+    },
+    {
+      "path": "topology.ffn_groups[0]",
+      "value": "first 3 blocks use dense SwiGLU instead of MoE",
+      "status": "reported",
+      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "FFN section" }
+    },
+    {
+      "path": "topology.experts.routed_total",
+      "value": 288,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.n_routed_experts" }
+    },
+    {
+      "path": "topology.experts.active_routed",
+      "value": 8,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_experts_per_tok" }
+    },
+    {
+      "path": "topology.experts.shared",
+      "value": 1,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.n_shared_experts" }
+    },
+    {
+      "path": "topology.residual.streams",
+      "value": 4,
+      "status": "reported",
+      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "mHC section" }
+    },
+    {
+      "path": "topology.position_encoding.type",
+      "value": "mixed",
+      "status": "inferred",
+      "source": { "kind": "manual", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "rope settings absent for MLA Q/K paths" },
+      "note": "awaiting confirmation from source review (issue #15)"
+    }
+  ]
+}

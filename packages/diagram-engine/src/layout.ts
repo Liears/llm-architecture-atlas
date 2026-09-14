@@ -31,16 +31,14 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
   const fontSize = opts.fontSize ?? 16;
   const skipRailGap = opts.skipRailGap ?? 20;
 
-  // -- node sizes
+  // -- node sizes (1.14 factor: headroom so browser fonts never overflow)
   const internals = new Map<string, Internal>();
-  scene.nodes.forEach((node, i) => {
-    const labelW = measureText(node.label, fontSize, true);
-    const detailW = node.detail ? measureText(node.detail, fontSize * 0.8) : 0;
+  scene.nodes.forEach((node) => {
+    const labelW = measureText(node.label, fontSize, true) * 1.14;
+    const detailW = node.detail ? measureText(node.detail, fontSize * 0.8) * 1.14 : 0;
     const w = Math.ceil(Math.max(labelW, detailW) + pad * 2);
     const h = Math.ceil((node.detail ? fontSize * 1.1 + 6 : 0) + fontSize * 1.35 + pad * 2);
     internals.set(node.id, { node, w, h, depth: 0, x: 0, y: 0, ports: {} });
-
-    void i;
   });
 
   // -- depth layering on flow edges (longest path, declared-order tie-break)
@@ -80,14 +78,37 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     byDepth.push(row);
   }
 
-  const maxDepth = byDepth.length - 1;
+  const depthOf = new Map<string, number>();
+  byDepth.forEach((row, d) => row.forEach((it) => depthOf.set(it.node.id, d)));
+
+  // align constraints (horizontal): members share the deepest row among them
+  for (const c of scene.constraints) {
+    if (c.type !== "align" || c.axis !== "horizontal") continue;
+    const d = Math.max(...c.targets.map((t) => depthOf.get(t) ?? 0));
+    for (const t of c.targets) depthOf.set(t, d);
+  }
+
+  // rebuild rows from (possibly aligned) depths, preserving declared order
+  const rowsMap = new Map<number, Internal[]>();
+  for (const node of scene.nodes) {
+    const it = internals.get(node.id)!;
+    const d = depthOf.get(node.id) ?? 0;
+    if (!rowsMap.has(d)) rowsMap.set(d, []);
+    rowsMap.get(d)!.push(it);
+  }
+  const byDepthRows = [...rowsMap.entries()].sort((a, b) => a[0] - b[0]).map(([, row]) =>
+    row.sort(
+      (a, b) =>
+        (orderRank.get(a.node.id) ?? Infinity) - (orderRank.get(b.node.id) ?? Infinity) ||
+        (declaredIndex.get(a.node.id) ?? 0) - (declaredIndex.get(b.node.id) ?? 0),
+    ),
+  );
 
   // -- vertical placement: bottom-to-top => depth 0 sits at the bottom row
-  const rowHeights = byDepth.map((row) => Math.max(...row.map((it) => it.h)));
-  const rowsFromTop = [...byDepth].reverse(); // index 0 = top row in SVG space
+  const rowHeights = byDepthRows.map((row) => Math.max(...row.map((it) => it.h)));
+  const rowsFromTop = [...byDepthRows].reverse(); // index 0 = top row in SVG space
   const heightsFromTop = [...rowHeights].reverse();
-  const totalFlowHeight = heightsFromTop.reduce((a, b) => a + b, 0) + gapY * (byDepth.length - 1);
-  const maxRowWidth = Math.max(...byDepth.map((row) => row.reduce((a, it) => a + it.w, 0) + gapX * (row.length - 1)));
+  const maxRowWidth = Math.max(...byDepthRows.map((row) => row.reduce((a, it) => a + it.w, 0) + gapX * (row.length - 1)));
   const sceneW = maxRowWidth + skipRailGap * 3 + MARGIN * 2;
 
   let y = MARGIN;
@@ -103,7 +124,6 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     }
     y += heightsFromTop[top]! + gapY;
   }
-  void totalFlowHeight;
 
   // -- ports: out = top-center, in = bottom-center; others distributed on sides
   for (const it of internals.values()) {
@@ -166,6 +186,7 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     return {
       id: group.id,
       label: group.label,
+      claimPath: group.claimPath,
       x: x1,
       y: y1,
       w: x2 - x1,

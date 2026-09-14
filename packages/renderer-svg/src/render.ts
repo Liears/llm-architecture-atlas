@@ -45,7 +45,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
 
   const lines: string[] = [];
   lines.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size.w)} ${fmt(scene.size.h)}" font-family='${esc(fontStacks.sans)}' role="img" aria-labelledby="atlas-title atlas-desc" data-atlas-model="${esc(scene.scene.modelId)}" data-atlas-view="${scene.scene.view}" data-atlas-ir="${esc(scene.scene.irVersion)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size.w)} ${fmt(scene.size.h)}" font-family="${esc(fontStacks.sans)}" role="img" aria-labelledby="atlas-title atlas-desc" data-atlas-model="${esc(scene.scene.modelId)}" data-atlas-view="${scene.scene.view}" data-atlas-ir="${esc(scene.scene.irVersion)}">`,
   );
   lines.push(`  <title id="atlas-title">${esc(title)}</title>`);
   lines.push(`  <desc id="atlas-desc">${esc(description)}</desc>`);
@@ -57,6 +57,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.n-port{fill:var(--attention);stroke:none}` +
       `.e-flow{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.flow};marker-end:url(#arrow)}` +
       `.e-skip{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.outline};stroke-dasharray:6 5;marker-end:url(#arrow)}` +
+      `.e-control{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2 4}` +
       `.g-frame{fill:none;stroke:var(--line);stroke-width:${strokeWidths.hairline}}` +
       `.g-label{fill:var(--muted);font-size:12.8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}` +
       `.g-badge{fill:var(--attention);color:#fff}` +
@@ -69,9 +70,11 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   lines.push(`  <rect width="100%" height="100%" fill="var(--paper)"/>`);
 
   for (const group of scene.groups) {
+    // when a repeat badge is present the label text would collide on narrow frames
+    const showLabel = !(group.repeatBadge && group.w < 300);
     lines.push(
-      `  <g class="grp" data-group-id="${esc(group.id)}"><rect class="g-frame" x="${fmt(group.x)}" y="${fmt(group.y)}" width="${fmt(group.w)}" height="${fmt(group.h)}" rx="${radii.container}"/>` +
-        `<text class="g-label" x="${fmt(group.x + 12)}" y="${fmt(group.y + 16)}">${esc(group.label)}</text>` +
+      `  <g class="grp" data-group-id="${esc(group.id)}"${group.claimPath ? ` data-claim-path="${esc(group.claimPath)}"` : ""}><rect class="g-frame" x="${fmt(group.x)}" y="${fmt(group.y)}" width="${fmt(group.w)}" height="${fmt(group.h)}" rx="${radii.container}"/>` +
+        (showLabel ? `<text class="g-label" x="${fmt(group.x + 12)}" y="${fmt(group.y + 16)}">${esc(group.label)}</text>` : "") +
         (group.repeatBadge
           ? `<g transform="translate(${fmt(group.x + group.w - 58)},${fmt(group.y + 6)})"><rect width="52" height="20" rx="${radii.chip}" class="g-badge"/><text x="26" y="14" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">${esc(group.repeatBadge)}</text></g>`
           : "") +
@@ -80,7 +83,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   }
 
   for (const edge of scene.edges) {
-    const cls = edge.kind === "skip" ? "e-skip" : "e-flow";
+    const cls = edge.kind === "skip" ? "e-skip" : edge.kind === "control" ? "e-control" : "e-flow";
     lines.push(
       `  <polyline class="${cls}" data-edge-id="${esc(edge.id)}" points="${edge.points.map(pt).join(" ")}"/>`,
     );

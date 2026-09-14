@@ -71,9 +71,9 @@ export const strokeWidths = {
 } as const;
 
 export const fontStacks = {
-  sans: "'Source Sans 3', 'Noto Sans SC', system-ui, sans-serif",
-  condensed: "'IBM Plex Sans Condensed', 'Source Sans 3', system-ui, sans-serif",
-  mono: "'IBM Plex Mono', ui-monospace, monospace",
+  sans: '"Source Sans 3", "Noto Sans SC", system-ui, sans-serif',
+  condensed: '"IBM Plex Sans Condensed", "Source Sans 3", system-ui, sans-serif',
+  mono: '"IBM Plex Mono", ui-monospace, monospace',
 } as const;
 
 /** WCAG 2.x relative luminance of a #RRGGBB color. */

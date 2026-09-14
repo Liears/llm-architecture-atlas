@@ -105,3 +105,9 @@ export interface ModelDocument {
   topology: ModelTopology;
   claims?: Claim[];
 }
+
+/** evidence.json: the Evidence Ledger dump for one model/revision. */
+export interface EvidenceFile {
+  model_id: string;
+  claims: Claim[];
+}

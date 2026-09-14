@@ -32,6 +32,7 @@ export interface PositionedEdge {
 export interface PositionedGroup {
   id: string;
   label: string;
+  claimPath?: string;
   x: number;
   y: number;
   w: number;

@@ -41,12 +41,16 @@ export interface SemanticGroup {
   members: string[]; // node ids
   /** Repeated container (e.g. the 45-deep decoder block). */
   repeat?: { count: number; label: string };
+  /** IR claim path backing the repeat count / group label. */
+  claimPath?: string;
 }
 
 /** Points at the IR claim that backs a figure element. */
 export interface EvidenceAnnotation {
   claimPath: string;
   target: string; // node or edge id
+  /** Copied from the claim by the compiler so renderers can flag uncertainty. */
+  status?: "verified" | "reported" | "derived" | "inferred" | "conflict" | "unknown";
 }
 
 export type LayoutConstraint =
