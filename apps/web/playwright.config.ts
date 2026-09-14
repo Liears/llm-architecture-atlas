@@ -12,10 +12,14 @@ export default defineConfig({
   webServer: process.env.ATLAS_BASE_URL
     ? undefined
     : {
-        command: "pnpm preview --port 4321 --strictPort",
+        // Bind explicitly: on some runners localhost resolves to ::1 first,
+        // which breaks the 127.0.0.1 readiness probe below.
+        command: "pnpm exec astro preview --host 127.0.0.1 --port 4321 --strictPort",
         url: "http://127.0.0.1:4321/llm-architecture-atlas/",
         reuseExistingServer: !process.env.CI,
-        timeout: 60_000,
+        timeout: 120_000,
+        stdout: "pipe",
+        stderr: "pipe",
       },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
