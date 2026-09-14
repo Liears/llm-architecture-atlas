@@ -31,6 +31,11 @@ tools/ingest/.venv/bin/pip install -e "tools/ingest[dev]"
 CI (`.github/workflows/ci.yml`) runs the same gates on every push:
 build → typecheck → vitest → Playwright smoke, plus pytest on Python 3.10/3.12.
 
+Deployment: `.github/workflows/deploy.yml` publishes the site to GitHub Pages
+on every push to `main`. One-time setup (repository admin):
+**Settings → Pages → Build and deployment → Source: GitHub Actions**, then
+re-run the deploy workflow.
+
 ## Figures
 
 | Model | Figure | Source |
