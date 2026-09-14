@@ -62,6 +62,19 @@
           ],
           "default": null,
           "title": "Note"
+        },
+        "alternatives": {
+          "anyOf": [
+            {
+              "items": {},
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alternatives"
         }
       },
       "required": [

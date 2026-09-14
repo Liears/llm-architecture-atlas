@@ -42,6 +42,8 @@ export interface Claim {
   extractor?: string | null;
   checked_at?: string | null;
   note?: string | null;
+  /** Disagreement history; only set on conflict claims. */
+  alternatives?: unknown[] | null;
 }
 
 export interface ModelIdentity {

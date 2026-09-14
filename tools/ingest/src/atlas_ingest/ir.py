@@ -66,6 +66,7 @@ class Claim(BaseModel):
     extractor: str | None = None  # e.g. "config.glm5@1"
     checked_at: Date | None = None
     note: str | None = None
+    alternatives: list[Any] | None = None  # disagreement history; set on conflict claims
 
     @model_validator(mode="after")
     def _source_rule(self) -> Claim:
@@ -73,6 +74,8 @@ class Claim(BaseModel):
             raise ValueError("unknown claims must not carry a source")
         if self.status is not ClaimStatus.unknown and self.source is None:
             raise ValueError(f"claim {self.path!r} with status {self.status.value} requires a source")
+        if self.status is not ClaimStatus.conflict and self.alternatives:
+            raise ValueError("alternatives are only allowed on conflict claims")
         return self
 
 
