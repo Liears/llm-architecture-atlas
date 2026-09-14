@@ -29,7 +29,10 @@ export function compileOverviewScene(arch: ModelDocument, evidence: EvidenceFile
 
   const kda = topology.attention_groups[0];
   const mla = topology.attention_groups[1];
-  if (!kda || !mla) throw new Error("overview template requires exactly two attention groups (hybrid layout)");
+  if (!kda) throw new Error("overview template requires at least one attention group");
+  const attentionDetail = mla
+    ? `${kda.layers.length} ${kda.label} ⇄ ${mla.layers.length} ${mla.label}`
+    : `${kda.layers.length} ${kda.label}`;
   const moeCount = topology.ffn_groups.find((g) => g.kind === "moe")?.layers.length ?? 0;
   const denseCount = topology.ffn_groups.find((g) => g.kind === "dense_ffn")?.layers.length ?? 0;
 
@@ -65,7 +68,7 @@ export function compileOverviewScene(arch: ModelDocument, evidence: EvidenceFile
       id: "inset-attn",
       kind: "inset-attention",
       label: "Attention mix",
-      detail: `${kda.layers.length} ${kda.label} ⇄ ${mla.layers.length} ${mla.label}`,
+      detail: attentionDetail,
       claimPath: "topology.attention_groups[0]",
     },
     {

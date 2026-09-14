@@ -11,7 +11,9 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "astro": "^5.13.0"
+    "astro": "^5.13.0",
+    "@atlas/catalog": "workspace:*",
+    "@atlas/architecture-ir": "workspace:*"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",

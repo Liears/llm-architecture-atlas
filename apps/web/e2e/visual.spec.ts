@@ -17,8 +17,8 @@ const VIEWPORTS: Array<[number, number]> = [
 for (const [width, height] of VIEWPORTS) {
   test(`golden figure visual regression @${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    await page.goto("/llm-architecture-atlas/models/glm-5-3-flash/");
-    const figure = page.locator('img[src*="glm-5.3-flash-generated.svg"]');
+    await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/");
+    const figure = page.locator('img[src*="-generated.svg"]');
     await expect(figure).toBeVisible();
     await expect(figure).toHaveScreenshot(`golden-figure-${width}x${height}.png`, {
       maxDiffPixelRatio: 0.05,

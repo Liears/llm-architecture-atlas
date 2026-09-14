@@ -1,0 +1,170 @@
+{
+  "modelId": "meta-llama/llama-3-8b",
+  "view": "overview",
+  "irVersion": "0.1.0",
+  "size": {
+    "w": 1224,
+    "h": 546
+  },
+  "nodes": [
+    {
+      "id": "tok",
+      "label": "Tokenized text",
+      "detail": null,
+      "claimPath": null
+    },
+    {
+      "id": "embed",
+      "label": "Token embedding layer",
+      "detail": "hidden 4,096 · vocab 128,256",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "block",
+      "label": "Decoder stack · 32 layers",
+      "detail": "32 dense SwiGLU + 0 MoE blocks",
+      "claimPath": "facts.num_hidden_layers"
+    },
+    {
+      "id": "norm",
+      "label": "Final RMSNorm",
+      "detail": null,
+      "claimPath": null
+    },
+    {
+      "id": "head",
+      "label": "Linear output layer",
+      "detail": "vocab 128,256",
+      "claimPath": "facts.vocab_size"
+    },
+    {
+      "id": "inset-attn",
+      "label": "Attention mix",
+      "detail": "32 GQA",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "inset-moe",
+      "label": "MoE routing",
+      "detail": "0 routed · 0 active + 0 shared",
+      "claimPath": "topology.experts.routed_total"
+    },
+    {
+      "id": "inset-mhc",
+      "label": "mHC residual",
+      "detail": "0 parallel streams",
+      "claimPath": "topology.residual.streams"
+    },
+    {
+      "id": "inset-ctx",
+      "label": "Context & scale",
+      "detail": "8,192 tokens · 8B total / 8B active",
+      "claimPath": "facts.context_tokens"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-tok-embed",
+      "kind": "flow",
+      "from": "tok",
+      "to": "embed"
+    },
+    {
+      "id": "e-embed-block",
+      "kind": "flow",
+      "from": "embed",
+      "to": "block"
+    },
+    {
+      "id": "e-block-norm",
+      "kind": "flow",
+      "from": "block",
+      "to": "norm"
+    },
+    {
+      "id": "e-norm-head",
+      "kind": "flow",
+      "from": "norm",
+      "to": "head"
+    },
+    {
+      "id": "c-attn",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-attn"
+    },
+    {
+      "id": "c-moe",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-moe"
+    },
+    {
+      "id": "c-mhc",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-mhc"
+    },
+    {
+      "id": "c-ctx",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-ctx"
+    }
+  ],
+  "groups": [
+    {
+      "id": "repeat-block",
+      "label": "Decoder block",
+      "kind": "stack",
+      "members": [
+        "block"
+      ],
+      "repeat": {
+        "count": 32,
+        "label": "32 ×"
+      },
+      "claimPath": "facts.num_hidden_layers"
+    }
+  ],
+  "annotations": [
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "embed",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_hidden_layers",
+      "target": "block",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.vocab_size",
+      "target": "head",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "inset-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.routed_total",
+      "target": "inset-moe"
+    },
+    {
+      "claimPath": "topology.residual.streams",
+      "target": "inset-mhc"
+    },
+    {
+      "claimPath": "facts.context_tokens",
+      "target": "inset-ctx",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_attention_heads",
+      "target": "block",
+      "status": "reported"
+    }
+  ]
+}

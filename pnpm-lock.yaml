@@ -20,6 +20,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@atlas/architecture-ir':
+        specifier: workspace:*
+        version: link:../../packages/architecture-ir
+      '@atlas/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
       astro:
         specifier: ^5.13.0
         version: 5.18.2(@types/node@22.20.2)(rollup@4.63.2)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)

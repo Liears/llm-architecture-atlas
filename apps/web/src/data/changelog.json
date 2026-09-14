@@ -1,0 +1,7 @@
+[
+  {
+    "date": "2026-09-14",
+    "title": "Atlas v0.1: six models, generated figures, compare and evidence",
+    "body": "First public catalog: Llama 3 8B, Mixtral 8x7B, DeepSeek V3, Qwen3-Next 80B-A3B, Kimi Linear 48B-A3B and GLM-5.3-Flash. Every figure is generated from an Architecture IR and every number traces to an evidence claim. Includes two-model comparison with layer-genome alignment, SVG/PNG export and dark-theme support."
+  }
+]

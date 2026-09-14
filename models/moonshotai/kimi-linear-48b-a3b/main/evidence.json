@@ -1,0 +1,136 @@
+{
+  "model_id": "moonshotai/kimi-linear-48b-a3b",
+  "claims": [
+    {
+      "path": "facts.num_hidden_layers",
+      "value": 48,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.num_hidden_layers"
+      }
+    },
+    {
+      "path": "facts.hidden_size",
+      "value": 2048,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.hidden_size"
+      }
+    },
+    {
+      "path": "facts.num_attention_heads",
+      "value": 32,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.num_attention_heads"
+      }
+    },
+    {
+      "path": "facts.vocab_size",
+      "value": 151936,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.vocab_size"
+      }
+    },
+    {
+      "path": "facts.context_tokens",
+      "value": 1048576,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.max_position_embeddings"
+      }
+    },
+    {
+      "path": "facts.total_params",
+      "value": 48000000000,
+      "status": "reported",
+      "source": {
+        "kind": "model_card",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B",
+        "locator": "parameter count"
+      }
+    },
+    {
+      "path": "facts.num_key_value_heads",
+      "value": null,
+      "status": "unknown",
+      "source": {
+        "kind": "hf_config",
+        "url": null,
+        "locator": null
+      },
+      "note": "MLA compresses the KV cache; head counts do not map 1:1"
+    },
+    {
+      "path": "topology.attention_groups[0]",
+      "value": "12 KDA layers",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "layers config / architecture table"
+      }
+    },
+    {
+      "path": "topology.attention_groups[1]",
+      "value": "12 GQA layers",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "layers config / architecture table"
+      }
+    },
+    {
+      "path": "topology.experts.routed_total",
+      "value": 512,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.n_routed_experts"
+      }
+    },
+    {
+      "path": "topology.experts.active_routed",
+      "value": 6,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.num_experts_per_tok"
+      }
+    },
+    {
+      "path": "topology.experts.shared",
+      "value": 1,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "$.n_shared_experts"
+      }
+    },
+    {
+      "path": "topology.position_encoding.type",
+      "value": "rope",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B/raw/main/config.json",
+        "locator": "rope settings"
+      }
+    }
+  ]
+}

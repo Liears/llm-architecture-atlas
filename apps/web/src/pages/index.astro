@@ -1,25 +1,133 @@
 ---
 import Base from "../layouts/Base.astro";
+import { loadModels, catalogEntries } from "../lib/atlas.js";
+import { families } from "@atlas/catalog";
+
+const models = loadModels();
+const entries = catalogEntries(models);
+const fams = families(entries);
 ---
 
-<Base>
+<Base title="LLM Architecture Atlas — catalog">
   <p class="eyebrow">Evidence-traceable LLM architecture atlas</p>
-  <h1>LLM Architecture Atlas</h1>
+  <h1>Catalog</h1>
   <p>
-    Compare architecture diagrams, implementation links, release dates, attention
-    mechanisms, decoder types and compact fact sheets — every fact traceable to a
-    source, every figure generated from an architecture IR.
+    {entries.length} models. Every figure is generated from an Architecture IR;
+    every number traces to an evidence claim.
   </p>
-  <p data-testid="catalog-count">Catalog: 1 model (golden vertical slice)</p>
-  <ul>
-    <li>
-      <a href="/llm-architecture-atlas/models/glm-5-3-flash/">GLM-5.3-Flash (320B-A18B)</a>
-      — first generated figure sample
-    </li>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Search label, family, attention…" aria-label="Search models" />
+    <select id="family" aria-label="Filter by family">
+      <option value="">All families</option>
+      {fams.map((f) => <option value={f}>{f}</option>)}
+    </select>
+    <select id="sort" aria-label="Sort">
+      <option value="label">Sort: label</option>
+      <option value="params-desc">Sort: total params ↓</option>
+      <option value="layers-desc">Sort: layers ↓</option>
+    </select>
+  </div>
+
+  <ul id="catalog" data-testid="catalog-list">
+    {
+      entries.map((e) => (
+        <li
+          class="card"
+          data-label={e.label}
+          data-family={e.family}
+          data-params={e.totalParams ?? 0}
+          data-layers={e.numLayers}
+          data-search={`${e.label} ${e.family} ${e.decoderType} ${e.attentionTypes.join(" ")}`.toLowerCase()}
+        >
+          <a href={`/llm-architecture-atlas/models/${e.slug}/`}>
+            <strong>{e.label}</strong>
+          </a>
+          <span class="muted">{e.family} · {e.decoderType}</span>
+          <span class="muted">
+            {e.totalParams ? `${Math.round((e.totalParams / 1e12) * 10) / 10}B total` : "—"}
+            {e.activeParams && e.activeParams !== e.totalParams ? ` / ${Math.round((e.activeParams / 1e9) * 10) / 10}B active` : ""}
+            {" · "}{e.numLayers} layers
+            {e.contextTokens ? ` · ${e.contextTokens >= 1e6 ? `${Math.round((e.contextTokens / 1e5)) / 10}M` : Math.round(e.contextTokens / 1024) + "K"} ctx` : ""}
+          </span>
+        </li>
+      ))
+    }
   </ul>
+  <p id="empty" hidden>No models match. <button type="button" id="reset">Reset filters</button></p>
+
   <p>
-    Under construction: issues
-    <a href="https://github.com/Liears/llm-architecture-atlas/issues">#1–#18</a>
-    track the roadmap.
+    <a href="/llm-architecture-atlas/concepts/">Concepts</a> ·
+    <a href="/llm-architecture-atlas/compare/zai-org-glm-5-3-flash--vs--meta-llama-llama-3-8b/">Example comparison</a> ·
+    <a href="/llm-architecture-atlas/changes.xml">Changes (RSS)</a> ·
+    <a href="https://github.com/Liears/llm-architecture-atlas">Source & issues</a>
   </p>
+
+  <script>
+    const q = document.getElementById("q") as HTMLInputElement;
+    const family = document.getElementById("family") as HTMLSelectElement;
+    const sort = document.getElementById("sort") as HTMLSelectElement;
+    const list = document.getElementById("catalog")!;
+    const empty = document.getElementById("empty")!;
+    const cards = [...list.querySelectorAll<HTMLElement>("li")];
+
+    function applyFromURL() {
+      const params = new URLSearchParams(location.search);
+      q.value = params.get("q") ?? "";
+      family.value = params.get("family") ?? "";
+      sort.value = params.get("sort") ?? "label";
+      apply();
+    }
+
+    function apply() {
+      const query = q.value.trim().toLowerCase();
+      const fam = family.value;
+      let visible = 0;
+      for (const card of cards) {
+        const okFamily = !fam || card.dataset.family === fam;
+        const okQuery = !query || (card.dataset.search ?? "").includes(query);
+        card.hidden = !(okFamily && okQuery);
+        if (!card.hidden) visible++;
+      }
+      empty.hidden = visible > 0;
+      const [key, dir] = sort.value.split("-");
+      const desc = dir === "desc";
+      const sorted = [...cards].sort((a, b) => {
+        const av = key === "label" ? a.dataset.label! : Number(a.dataset[key === "params" ? "params" : "layers"] ?? 0);
+        const bv = key === "label" ? b.dataset.label! : Number(b.dataset[key === "params" ? "params" : "layers"] ?? 0);
+        const r = typeof av === "string" ? av.localeCompare(bv as string) : (av as number) - (bv as number);
+        return desc ? -r : r;
+      });
+      for (const card of sorted) list.appendChild(card);
+      const params = new URLSearchParams();
+      if (q.value) params.set("q", q.value);
+      if (family.value) params.set("family", family.value);
+      if (sort.value !== "label") params.set("sort", sort.value);
+      history.replaceState(null, "", params.toString() ? `?${params}` : location.pathname);
+    }
+
+    q?.addEventListener("input", apply);
+    family?.addEventListener("change", apply);
+    sort?.addEventListener("change", apply);
+    document.getElementById("reset")?.addEventListener("click", () => {
+      q.value = ""; family.value = ""; apply();
+    });
+    applyFromURL();
+    document.body.dataset.atlasReady = "1";
+  </script>
+
+  <style>
+    .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0 1.4rem; }
+    .controls input, .controls select {
+      padding: 0.45rem 0.7rem; border: 1px solid var(--line); border-radius: 8px;
+      background: var(--panel); color: inherit; font: inherit;
+    }
+    #catalog { list-style: none; padding: 0; display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr)); }
+    .card { border: 1px solid var(--line); border-radius: 10px; padding: 0.8rem 1rem; display: grid; gap: 0.15rem; background: var(--panel); }
+    .card[hidden] { display: none; }
+    .card a { text-decoration: none; }
+    .card a:hover { text-decoration: underline; }
+    .muted { color: var(--muted); font-size: 0.88rem; }
+    #empty button { font: inherit; cursor: pointer; }
+  </style>
 </Base>

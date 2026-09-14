@@ -1,0 +1,119 @@
+{
+  "ir_version": "0.1.0",
+  "model": {
+    "id": "mistralai/mixtral-8x7b",
+    "label": "Mixtral 8x7B",
+    "family": "Mixtral",
+    "revision": "main",
+    "license": null
+  },
+  "facts": {
+    "num_hidden_layers": 32,
+    "hidden_size": 4096,
+    "num_attention_heads": 32,
+    "num_key_value_heads": 8,
+    "head_dim": null,
+    "vocab_size": 32000,
+    "context_tokens": 32768,
+    "total_params": 46700000000,
+    "active_params": 12900000000
+  },
+  "topology": {
+    "attention_groups": [
+      {
+        "label": "GQA",
+        "kind": "gqa",
+        "module": "GroupedQueryAttention",
+        "layers": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ]
+      }
+    ],
+    "ffn_groups": [
+      {
+        "label": "MoE",
+        "kind": "moe",
+        "module": "MoE",
+        "layers": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ]
+      }
+    ],
+    "experts": {
+      "routed_total": 8,
+      "active_routed": 2,
+      "shared": 0
+    },
+    "residual": {
+      "scheme": "plain",
+      "streams": null,
+      "note": null
+    },
+    "position_encoding": {
+      "type": "rope",
+      "note": null
+    }
+  }
+}

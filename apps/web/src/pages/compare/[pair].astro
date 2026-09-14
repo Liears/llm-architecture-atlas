@@ -1,0 +1,88 @@
+---
+import Base from "../../layouts/Base.astro";
+import { loadModels } from "../../lib/atlas.js";
+import { buildCatalog } from "@atlas/catalog";
+import { buildGenome, genomeCellRole } from "@atlas/catalog";
+import { compareModels } from "@atlas/catalog";
+
+export function getStaticPaths() {
+  const models = loadModels();
+  const pairs = [];
+  for (let i = 0; i < models.length; i++) {
+    for (let j = i + 1; j < models.length; j++) {
+      pairs.push({
+        params: { pair: `${models[i]!.slug}--vs--${models[j]!.slug}` },
+        props: { a: models[i]!, b: models[j]! },
+      });
+    }
+  }
+  return pairs;
+}
+
+const { a, b } = Astro.props;
+const entries = buildCatalog([a.arch, b.arch]);
+const [ea, eb] = entries;
+const genomeA = buildGenome(a.arch);
+const genomeB = buildGenome(b.arch);
+const result = compareModels({ entry: ea!, genome: genomeA }, { entry: eb!, genome: genomeB });
+
+const roleColor: Record<string, string> = {
+  attention: "var(--attention)",
+  state: "var(--state)",
+  compute: "var(--compute)",
+  muted: "var(--line)",
+};
+const cell = (c: { label: string; role: string } | null) =>
+  c
+    ? `<span class="gcell" style="background:${roleColor[genomeCellRole({ ...c, ffn: c.label, ffnKind: c.role } as never)] ?? "var(--line)"}" title="${c.label}"></span>`
+    : `<span class="gcell pad">—</span>`;
+---
+
+<Base title={`${ea!.label} vs ${eb!.label} — LLM Architecture Atlas`}>
+  <p class="eyebrow">Two-model comparison</p>
+  <h1>{ea!.label} <span class="vs">vs</span> {eb!.label}</h1>
+  <p><a href="/llm-architecture-atlas/">← catalog</a></p>
+
+  <h2>Fields</h2>
+  <table class="diff">
+    <thead><tr><th>Field</th><th>{ea!.label}</th><th>{eb!.label}</th></tr></thead>
+    <tbody>
+      {result.fieldRows.map((r) => (
+        <tr class={r.shared ? "shared" : ""}>
+          <td>{r.field}</td><td>{r.a}</td><td>{r.b}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <p class="muted">Gray rows: same value in both models.</p>
+
+  <h2>Layer Genome alignment</h2>
+  <p class="muted">
+    Columns align by layer index; the shorter model pads with —.
+    {result.genome.attentionDiffer} aligned column(s) differ in attention type.
+  </p>
+  <div class="tracks">
+    <div class="track">
+      <span class="track-label">{ea!.label}</span>
+      <div class="cells" set:html={result.genome.aLayers.map(cell).join("")} />
+    </div>
+    <div class="track">
+      <span class="track-label">{eb!.label}</span>
+      <div class="cells" set:html={result.genome.bLayers.map(cell).join("")} />
+    </div>
+  </div>
+
+  <style>
+    .vs { color: var(--muted); font-weight: 400; }
+    .diff { border-collapse: collapse; width: 100%; max-width: 46rem; }
+    .diff th, .diff td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); }
+    .diff th:first-child, .diff td:first-child { width: 10rem; }
+    tr.shared td { color: var(--muted); }
+    .tracks { display: grid; gap: 0.5rem; overflow-x: auto; }
+    .track { display: grid; grid-template-columns: 14rem 1fr; align-items: center; gap: 0.8rem; }
+    .track-label { font-size: 0.85rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cells { display: flex; gap: 2px; }
+    .gcell { width: 10px; height: 18px; border-radius: 2px; display: inline-block; }
+    .gcell.pad { background: none; color: var(--muted); width: 10px; text-align: center; }
+  </style>
+</Base>

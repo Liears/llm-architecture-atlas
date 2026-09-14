@@ -1,12 +1,10 @@
 /**
- * Structural regression gate (issue #7): the committed snapshot
- * tests/structural/glm-5.3-flash.overview.json must equal what the current
- * pipeline produces from the committed IR. Update flow:
- *
- *     pnpm export:golden   # regenerates snapshot + figure; review, commit
+ * Structural regression gate (issue #7, generalized in #11): every committed
+ * snapshot must equal what the pipeline produces from the committed IR.
+ * Update flow: pnpm export:golden — review, commit.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -14,21 +12,24 @@ import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { compileOverviewScene } from "./compile.js";
 import { layoutScene } from "./layout.js";
 
-
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const modelDir = `${root}/models/zai-org/glm-5.3-flash/main`;
+const modelsRoot = `${root}/models`;
+const snapDir = `${root}/tests/structural`;
 
-const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
-const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
-const committed = JSON.parse(
-  readFileSync(`${root}/tests/structural/glm-5.3-flash.overview.json`, "utf8"),
-);
+const snapshots = readdirSync(snapDir).filter((f) => f.endsWith(".overview.json"));
 
-describe("structural regression gate (GLM-5.3-Flash overview)", () => {
+function pipelineFor(modelId: string) {
+  const [org, ...rest] = modelId.split("/");
+  const name = rest.join("/").replace(/\./g, "-");
+  const modelDir = `${modelsRoot}/${org}/${name}/main`;
+  if (!existsSync(`${modelDir}/architecture.json`)) {
+    throw new Error(`missing IR for ${modelId} at ${modelDir}`);
+  }
+  const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
+  const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
   const scene = compileOverviewScene(arch, evidence);
   const positioned = layoutScene(scene, { fontSize: 16 });
-
-  const fresh = {
+  return {
     modelId: scene.modelId,
     view: scene.view,
     irVersion: scene.irVersion,
@@ -38,14 +39,16 @@ describe("structural regression gate (GLM-5.3-Flash overview)", () => {
     groups: scene.groups,
     annotations: scene.annotations,
   };
+}
 
-  it("matches the committed structural snapshot exactly", () => {
-    expect(fresh).toEqual(committed);
+describe.each(snapshots)("structural gate: %s", (file) => {
+  const committed = JSON.parse(readFileSync(`${snapDir}/${file}`, "utf8"));
+  it("matches the pipeline output exactly", () => {
+    expect(pipelineFor(committed.modelId)).toEqual(committed);
   });
-
   it("keeps evidence coverage: numbers always resolve to claims", () => {
-    const targeted = new Set(fresh.annotations.map((a) => a.target));
-    for (const node of fresh.nodes) {
+    const targeted = new Set<string>(committed.annotations.map((a: { target: string }) => a.target));
+    for (const node of committed.nodes) {
       if (/\d/.test(node.label) || /\d/.test(node.detail ?? "")) {
         expect(Boolean(node.claimPath) || targeted.has(node.id), node.id).toBe(true);
       }

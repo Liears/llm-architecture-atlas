@@ -1,0 +1,34 @@
+---
+import Base from "../layouts/Base.astro";
+
+const concepts = [
+  { slug: "gqa", name: "GQA — Grouped-Query Attention", text: "Several query heads share one key/value head. Shrinks the KV cache by the grouping factor while staying close to MHA quality." },
+  { slug: "mla", name: "MLA — Multi-head Latent Attention", text: "Projects keys and values into a shared low-rank latent that is cached instead of the full KV. Cache per token drops far below GQA at the same context." },
+  { slug: "dsa", name: "DSA — DeepSeek Sparse Attention", text: "A sparse attention stage on top of MLA: a lightning indexer selects a small token subset per query, so long-context cost grows sub-linearly." },
+  { slug: "kda", name: "KDA — Kimi Delta Attention", text: "A gated delta-rule linear attention: recurrent per-channel state updated with a gated delta rule. Constant-memory per-token cost, no KV cache." },
+  { slug: "moe", name: "MoE — Mixture of Experts", text: "The FFN is replaced by many expert FFNs; a router activates a small top-k subset per token. Total parameters grow, per-token compute does not." },
+  { slug: "mhc", name: "mHC — Manifold-constrained Hyper-Connections", text: "Replaces the plain residual add with several parallel residual streams mixed through a constrained combiner, improving gradient flow." },
+  { slug: "nope", name: "NoPE", text: "No positional encoding on some attention paths (e.g. MLA Q/K in GLM-5.3-Flash): position information is not injected there." },
+  { slug: "mtp", name: "MTP — Multi-Token Prediction", text: "An extra prediction layer trains the model to emit several future tokens per step; used for training signal and speculative decoding." },
+];
+
+const termBySlug = { gqa: "gqa", mla: "mla", dsa: "dsa", kda: "kda", moe: "moe", mhc: "mhc", nope: "nope", mtp: "mtp" };
+---
+
+<Base title="Concepts — LLM Architecture Atlas">
+  <p class="eyebrow">Glossary</p>
+  <h1>Concepts</h1>
+  <dl>
+    {concepts.map((c) => (
+      <div id={termBySlug[c.slug as keyof typeof termBySlug]}>
+        <dt>{c.name}</dt>
+        <dd>{c.text}</dd>
+      </div>
+    ))}
+  </dl>
+  <style>
+    dl > div { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 0.7rem 1rem; margin-bottom: 0.7rem; max-width: 46rem; }
+    dt { font-weight: 700; }
+    dd { margin: 0.2rem 0 0; color: var(--ink); }
+  </style>
+</Base>

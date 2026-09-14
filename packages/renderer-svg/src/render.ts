@@ -42,6 +42,9 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   const cssVars = Object.entries(t)
     .map(([k, v]) => `--${k.replace(/[A-Z]/g, (c) => c.toLowerCase())}:${v.toLowerCase()}`)
     .join(";");
+  const darkVars = Object.entries(themes.dark)
+    .map(([k, v]) => `--${k.replace(/[A-Z]/g, (c) => c.toLowerCase())}:${v.toLowerCase()}`)
+    .join(";");
 
   const lines: string[] = [];
   lines.push(
@@ -51,6 +54,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   lines.push(`  <desc id="atlas-desc">${esc(description)}</desc>`);
   lines.push(
     `  <style>:root{${cssVars};--font-sans:${esc(fontStacks.sans)};--font-mono:${esc(fontStacks.mono)}}` +
+      `@media (prefers-color-scheme: dark){:root{${darkVars}}}` +
       `.n-box{fill:var(--panel);stroke:var(--ink);stroke-width:${strokeWidths.outline}}` +
       `.n-label{fill:var(--ink);font-size:16px;font-weight:700;text-anchor:middle}` +
       `.n-detail{fill:var(--muted);font-size:12.8px;text-anchor:middle}` +

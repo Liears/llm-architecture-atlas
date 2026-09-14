@@ -1,0 +1,140 @@
+---
+import Base from "../../layouts/Base.astro";
+import { loadModels } from "../../lib/atlas.js";
+import { buildGenome, genomeCellRole } from "@atlas/catalog";
+
+export function getStaticPaths() {
+  return loadModels().map((m) => ({ params: { slug: m.slug }, props: { model: m } }));
+}
+
+const { model } = Astro.props;
+const { arch, evidence } = model;
+const facts = arch.facts;
+const genome = buildGenome(arch);
+
+const roleColor: Record<string, string> = {
+  attention: "var(--attention)",
+  state: "var(--state)",
+  compute: "var(--compute)",
+  muted: "var(--line)",
+};
+
+const statusChip = (s: string) =>
+  s === "verified" ? "✓ verified" : s === "reported" ? "• reported" : s === "derived" ? "= derived" : s === "inferred" ? "? inferred" : s === "conflict" ? "! conflict" : "? unknown";
+---
+
+<Base title={`${arch.model.label} — LLM Architecture Atlas`}>
+  <p class="eyebrow">Model overview · {arch.model.family}</p>
+  <h1>{arch.model.label}</h1>
+  <p class="muted">
+    Generated from Architecture IR {arch.ir_version} · revision <code>{arch.model.revision}</code>
+    · <a href="https://github.com/Liears/llm-architecture-atlas/issues">report a correction</a>
+  </p>
+
+  <h2>Overview</h2>
+  <img
+    src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
+    alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
+    style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper)"
+  />
+  <p>
+    <a href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download>Download SVG</a>
+    <button type="button" class="png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={`${model.slug}`}>Download PNG</button>
+  </p>
+
+  <h2>Fact sheet</h2>
+  <dl class="facts">
+    <div><dt>Layers</dt><dd>{facts.num_hidden_layers}</dd></div>
+    <div><dt>Hidden size</dt><dd>{facts.hidden_size}</dd></div>
+    <div><dt>Attention heads</dt><dd>{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}</dd></div>
+    <div><dt>Vocab</dt><dd>{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></div>
+    <div><dt>Context</dt><dd>{facts.context_tokens?.toLocaleString("en-US") ?? "—"}</dd></div>
+    <div><dt>Params</dt><dd>{facts.total_params ? `${Math.round((facts.total_params / 1e12) * 10) / 10}B total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${Math.round((facts.active_params / 1e9) * 10) / 10}B active` : ""}</dd></div>
+  </dl>
+
+  <h2>Architecture Genome</h2>
+  <p class="muted">One column per layer — top: attention, bottom: FFN/MoE.</p>
+  <div class="genome" role="img" aria-label={`Per-layer genome: ${genome.numLayers} layers`}>
+    {genome.layers.map((l) => (
+      <div class="col" title={`layer ${l.index}: attention ${l.attention} · ffn ${l.ffn}`}>
+        <span class="cell" style={`background:${roleColor[genomeCellRole(l)]}`} />
+        <span class="cell ffn" style={`background:${l.ffnKind === "moe" ? "var(--compute)" : l.ffnKind === "dense_ffn" ? "var(--line)" : "var(--line)"}`} />
+      </div>
+    ))}
+  </div>
+  <p class="legend muted">
+    <span class="key"><span class="cell" style="background:var(--attention)" /> attention (GQA/MLA)</span>
+    <span class="key"><span class="cell" style="background:var(--state)" /> linear / recurrent attention</span>
+    <span class="key"><span class="cell" style="background:var(--compute)" /> MoE</span>
+    <span class="key"><span class="cell" style="background:var(--line)" /> dense FFN</span>
+  </p>
+
+  <h2>Evidence</h2>
+  <p class="muted">Every visible number resolves to one of these claims. Inferred or unknown values are never shown as fact.</p>
+  <table class="evidence">
+    <thead><tr><th>Claim</th><th>Value</th><th>Status</th><th>Source</th></tr></thead>
+    <tbody>
+      {evidence.claims.map((c) => (
+        <tr>
+          <td><code>{c.path}</code></td>
+          <td>{c.status === "unknown" ? "—" : JSON.stringify(c.value)}</td>
+          <td><span class={`chip chip-${c.status}`}>{statusChip(c.status)}</span></td>
+          <td>{c.source?.url ? <a href={c.source.url} rel="noopener noreferrer">{c.source.kind}</a> : c.source?.kind} {c.source?.locator && <span class="muted">· {c.source.locator}</span>}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h2>Compare</h2>
+  <p>Compare {arch.model.label} with any other catalog model on its detail page (see catalog).</p>
+
+  <script>
+    document.querySelectorAll<HTMLButtonElement>(".png-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const url = btn.dataset.fig!;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = (img.naturalWidth || 1200) * 2;
+          canvas.height = (img.naturalHeight || 900) * 2;
+          const ctx = canvas.getContext("2d")!;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob!);
+            a.download = `${btn.dataset.name}.png`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }, "image/png");
+        };
+        img.src = url;
+      });
+    });
+  </script>
+
+  <style>
+    .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.6rem; padding: 0; }
+    .facts > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.8rem; background: var(--panel); }
+    .facts dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .facts dd { margin: 0; font-weight: 700; }
+    .genome { display: flex; gap: 2px; overflow-x: auto; padding: 0.4rem 0; }
+    .col { display: grid; gap: 2px; min-width: 9px; }
+    .cell { display: block; width: 9px; height: 16px; border-radius: 2px; }
+    .legend { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .key { display: inline-flex; align-items: center; gap: 0.3rem; }
+    .key .cell { width: 10px; height: 10px; }
+    .evidence { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .evidence th, .evidence td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.4rem 0.5rem; vertical-align: top; }
+    .chip { border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+    .chip-verified { background: var(--state); color: #fff; }
+    .chip-reported { background: var(--attention); color: #fff; }
+    .chip-derived { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
+    .chip-inferred { background: var(--compute); color: #fff; }
+    .chip-conflict { background: var(--conflict); color: #fff; }
+    .chip-unknown { background: var(--line); color: var(--ink); }
+    .png-btn { font: inherit; cursor: pointer; margin-left: 0.6rem; }
+    code { font-family: ui-monospace, monospace; font-size: 0.85em; }
+  </style>
+</Base>

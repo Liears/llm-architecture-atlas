@@ -8,8 +8,8 @@ import { validateScene } from "./validate.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
-const arch = JSON.parse(readFileSync(`${root}/models/zai-org/glm-5.3-flash/main/architecture.json`, "utf8")) as ModelDocument;
-const evidence = JSON.parse(readFileSync(`${root}/models/zai-org/glm-5.3-flash/main/evidence.json`, "utf8")) as EvidenceFile;
+const arch = JSON.parse(readFileSync(`${root}/models/zai-org/glm-5-3-flash/main/architecture.json`, "utf8")) as ModelDocument;
+const evidence = JSON.parse(readFileSync(`${root}/models/zai-org/glm-5-3-flash/main/evidence.json`, "utf8")) as EvidenceFile;
 
 const scene = compileOverviewScene(arch, evidence);
 
