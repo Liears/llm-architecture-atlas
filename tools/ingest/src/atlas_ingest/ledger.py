@@ -96,6 +96,14 @@ class EvidenceLedger:
                 existing_status=existing.status, incoming_status=incoming.status,
             )
 
+        if existing.status is ClaimStatus.unknown:
+            # an unknown slot is empty: any valued claim fills it
+            self._store(incoming)
+            return Resolution(
+                path=incoming.path, action=Action.added,
+                existing_status=existing.status, incoming_status=incoming.status,
+            )
+
         if not _values_disagree(existing.value, incoming.value):
             # agreement is harmless: only a strictly stronger status upgrades
             if _STATUS_STRENGTH[incoming.status] > _STATUS_STRENGTH[existing.status]:
