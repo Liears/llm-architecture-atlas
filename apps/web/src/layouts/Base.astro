@@ -1,0 +1,61 @@
+---
+const { title = "LLM Architecture Atlas" } = Astro.props;
+interface Props {
+  title?: string;
+}
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <style is:global>
+      :root {
+        --paper: #f5f7fa;
+        --ink: #172033;
+        --muted: #5d6778;
+        --line: rgb(145 157 177 / 26%);
+        --attention: #1769e0;
+        --state: #008c8c;
+        --compute: #d9822b;
+        --conflict: #c94f5c;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Source Sans 3", "Noto Sans SC", system-ui, sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 4rem;
+      }
+      a {
+        color: var(--attention);
+      }
+      .eyebrow {
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #0b1220;
+          color: #e6ebf4;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

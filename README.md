@@ -11,6 +11,26 @@ Apache-2.0) and cross-checked against each model's published config / tech repor
 > original vector redraws. The gallery's own images are copyrighted and are **not** included
 > here; original figure watermarks/seals are intentionally omitted.
 
+## Development
+
+Monorepo: pnpm workspace (Node ≥ 22.12) + Python (pydantic v2).
+
+```bash
+pnpm install                 # .npmrc pins the npmmirror registry
+pnpm build                   # astro static build
+pnpm typecheck               # tsc + astro check, all packages
+pnpm test                    # vitest (packages)
+pnpm test:e2e                # builds web, runs Playwright smoke (chromium)
+pnpm pytest                  # python tests (tools/ingest)
+
+# python side (venv keeps the shared box clean)
+python3 -m venv tools/ingest/.venv
+tools/ingest/.venv/bin/pip install -e "tools/ingest[dev]"
+```
+
+CI (`.github/workflows/ci.yml`) runs the same gates on every push:
+build → typecheck → vitest → Playwright smoke, plus pytest on Python 3.10/3.12.
+
 ## Figures
 
 | Model | Figure | Source |

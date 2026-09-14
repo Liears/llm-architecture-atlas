@@ -1,0 +1,15 @@
+{
+  "name": "@atlas/architecture-ir",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "description": "Architecture IR schema, generated types and migrations (issue #2)",
+  "devDependencies": {
+    "ajv": "^8.17.0",
+    "@types/node": "^22"
+  }
+}

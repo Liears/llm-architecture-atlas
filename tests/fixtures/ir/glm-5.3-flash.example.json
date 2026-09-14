@@ -1,0 +1,103 @@
+{
+  "ir_version": "0.1.0",
+  "model": {
+    "id": "zai-org/glm-5.3-flash",
+    "label": "GLM-5.3-Flash (320B-A18B)",
+    "family": "GLM",
+    "revision": "main",
+    "license": "glm-community-license"
+  },
+  "facts": {
+    "num_hidden_layers": 45,
+    "hidden_size": 4096,
+    "num_attention_heads": 64,
+    "num_key_value_heads": null,
+    "head_dim": null,
+    "vocab_size": 155136,
+    "context_tokens": 1048576,
+    "total_params": 320000000000,
+    "active_params": 18000000000
+  },
+  "topology": {
+    "attention_groups": [
+      {
+        "label": "KDA",
+        "kind": "linear_attention",
+        "module": "KimiDeltaAttention",
+        "layers": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+      },
+      {
+        "label": "MLA/DSA",
+        "kind": "mla_sparse",
+        "module": "MultiHeadLatentAttention + DeepSeekSparseAttention",
+        "layers": [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+      }
+    ],
+    "ffn_groups": [
+      {
+        "label": "Dense SwiGLU",
+        "kind": "dense_ffn",
+        "module": "SwiGLU",
+        "layers": [0, 1, 2]
+      },
+      {
+        "label": "MoE",
+        "kind": "moe",
+        "module": "MoE",
+        "layers": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+      }
+    ],
+    "experts": {
+      "routed_total": 288,
+      "active_routed": 8,
+      "shared": 1
+    },
+    "residual": {
+      "scheme": "mhc",
+      "streams": 4,
+      "note": "manifold-constrained hyper-connections replace plain residual add"
+    },
+    "position_encoding": {
+      "type": "mixed",
+      "note": "RoPE absent in MLA Q/K (NoPE); KDA layers carry their own state handling"
+    }
+  },
+  "claims": [
+    {
+      "path": "facts.num_hidden_layers",
+      "value": 45,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.num_hidden_layers" }
+    },
+    {
+      "path": "facts.num_attention_heads",
+      "value": 64,
+      "status": "reported",
+      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_attention_heads" }
+    },
+    {
+      "path": "facts.num_key_value_heads",
+      "value": null,
+      "status": "unknown"
+    },
+    {
+      "path": "topology.attention_groups[0].layers",
+      "value": [0, 34],
+      "status": "reported",
+      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "architecture table" }
+    },
+    {
+      "path": "topology.experts.routed_total",
+      "value": 288,
+      "status": "reported",
+      "source": { "kind": "model_card", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash", "locator": "MoE section" }
+    },
+    {
+      "path": "facts.active_params",
+      "value": 18000000000,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": { "kind": "derived", "locator": "routed_active*(expert_ffn) + shared + attention params" }
+    }
+  ]
+}

@@ -1,0 +1,554 @@
+{
+  "$defs": {
+    "Claim": {
+      "additionalProperties": false,
+      "description": "A single statement about the model with its evidence.",
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "title": "Value"
+        },
+        "status": {
+          "$ref": "#/$defs/ClaimStatus"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "extractor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Extractor"
+        },
+        "checked_at": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checked At"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "path",
+        "status"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "ClaimStatus": {
+      "description": "Evidence status of a claim (docs/development-plan.md §5.2).",
+      "enum": [
+        "verified",
+        "reported",
+        "derived",
+        "inferred",
+        "conflict",
+        "unknown"
+      ],
+      "title": "ClaimStatus",
+      "type": "string"
+    },
+    "ExpertConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "routed_total": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Routed Total"
+        },
+        "active_routed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Routed"
+        },
+        "shared": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shared"
+        }
+      },
+      "title": "ExpertConfig",
+      "type": "object"
+    },
+    "LayerGroup": {
+      "additionalProperties": false,
+      "description": "A run of layers sharing the same module kind (Layer Genome column run).",
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "module": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Module"
+        },
+        "layers": {
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Layers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "label",
+        "kind",
+        "layers"
+      ],
+      "title": "LayerGroup",
+      "type": "object"
+    },
+    "ModelFacts": {
+      "additionalProperties": false,
+      "description": "Scalar facts; every UI-visible number must resolve to a Claim.",
+      "properties": {
+        "num_hidden_layers": {
+          "exclusiveMinimum": 0,
+          "title": "Num Hidden Layers",
+          "type": "integer"
+        },
+        "hidden_size": {
+          "exclusiveMinimum": 0,
+          "title": "Hidden Size",
+          "type": "integer"
+        },
+        "num_attention_heads": {
+          "exclusiveMinimum": 0,
+          "title": "Num Attention Heads",
+          "type": "integer"
+        },
+        "num_key_value_heads": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Num Key Value Heads"
+        },
+        "head_dim": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Head Dim"
+        },
+        "vocab_size": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vocab Size"
+        },
+        "context_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Tokens"
+        },
+        "total_params": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Params"
+        },
+        "active_params": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Active Params"
+        }
+      },
+      "required": [
+        "num_hidden_layers",
+        "hidden_size",
+        "num_attention_heads"
+      ],
+      "title": "ModelFacts",
+      "type": "object"
+    },
+    "ModelIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "org/name, e.g. zai-org/glm-5.3-flash",
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family"
+        },
+        "revision": {
+          "default": "main",
+          "title": "Revision",
+          "type": "string"
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "ModelIdentity",
+      "type": "object"
+    },
+    "ModelTopology": {
+      "additionalProperties": false,
+      "properties": {
+        "attention_groups": {
+          "items": {
+            "$ref": "#/$defs/LayerGroup"
+          },
+          "minItems": 1,
+          "title": "Attention Groups",
+          "type": "array"
+        },
+        "ffn_groups": {
+          "items": {
+            "$ref": "#/$defs/LayerGroup"
+          },
+          "minItems": 1,
+          "title": "Ffn Groups",
+          "type": "array"
+        },
+        "experts": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExpertConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "residual": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResidualScheme"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "position_encoding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PositionEncoding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "attention_groups",
+        "ffn_groups"
+      ],
+      "title": "ModelTopology",
+      "type": "object"
+    },
+    "PositionEncoding": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "PositionEncoding",
+      "type": "object"
+    },
+    "ResidualScheme": {
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {
+          "title": "Scheme",
+          "type": "string"
+        },
+        "streams": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Streams"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "scheme"
+      ],
+      "title": "ResidualScheme",
+      "type": "object"
+    },
+    "SourceKind": {
+      "enum": [
+        "hf_config",
+        "source_code",
+        "tech_report",
+        "model_card",
+        "manual",
+        "derived"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Where a claim comes from, down to a stable locator.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locator"
+        },
+        "hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hash"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Root of an Architecture IR document (one per model/revision).",
+  "properties": {
+    "ir_version": {
+      "const": "0.1.0",
+      "default": "0.1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelIdentity"
+    },
+    "facts": {
+      "$ref": "#/$defs/ModelFacts"
+    },
+    "topology": {
+      "$ref": "#/$defs/ModelTopology"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Claims",
+      "type": "array"
+    }
+  },
+  "required": [
+    "model",
+    "facts",
+    "topology"
+  ],
+  "title": "LLM Architecture IR",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Liears/llm-architecture-atlas/architecture-ir.schema.json"
+}

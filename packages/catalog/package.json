@@ -1,0 +1,11 @@
+{
+  "name": "@atlas/catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "description": "Model catalog: index, revision selection, search data (issue #8)"
+}

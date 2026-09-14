@@ -4,3 +4,19 @@
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+.venv/
+
+# Node
+node_modules/
+dist/
+.astro/
+playwright-report/
+test-results/
+pnpm-lock.yaml.bak
+
+# OS
+.DS_Store
+
+# CI config: pending PAT "workflow" scope on the fine-grained token (issue #1)
+.github/workflows/ci.yml
