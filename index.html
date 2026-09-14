@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>LLM Architecture Gallery — 复刻对比</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: #f5f6f8; color: #1a1a1a; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+  .compare { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; margin-bottom: 32px; }
+  .pane { flex: 1 1 460px; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 14px; min-width: 380px; }
+  .pane h2 { font-size: 15px; margin: 0 0 10px; color: #333; }
+  .pane img, .pane object { width: 100%; height: auto; display: block; background: #fff; }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+  .tag.orig { background: #ffe8e4; color: #c0392b; }
+  .tag.mine { background: #e3f0ff; color: #2471b8; }
+  .note { background: #fff8e6; border: 1px solid #eadfb8; border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.7; margin-bottom: 28px; }
+  h3 { font-size: 16px; margin: 0 0 12px; }
+  .refgrid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .refgrid .pane { flex: 1 1 320px; }
+</style>
+</head>
+<body>
+
+<h1>GLM-5.3-Flash 架构图 — SVG 复刻 vs 原图</h1>
+<div class="sub">左:我按 models.yml 元数据 + 原图风格手绘的 SVG &nbsp;|&nbsp; 右:sebastianraschka.com 原图(仅本地对比用)</div>
+
+<div class="note">
+  说明:① 复刻版没有原作水印和印章(故意不抄);② 所有数字取自 repo 的 models.yml 而非照图抄;
+  ③ SVG 用浏览器字体渲染,比 PNG 预览更接近原图字形;PNG 是本机无浏览器的 cairosvg 自检产物。
+</div>
+
+<div class="compare">
+  <div class="pane">
+    <h2>复刻版<span class="tag mine">SVG 手绘</span></h2>
+    <object type="image/svg+xml" data="figures/glm-5.3-flash.svg">你的浏览器不支持内嵌 SVG</object>
+  </div>
+  <div class="pane">
+    <h2>原版<span class="tag orig">© Sebastian Raschka</span></h2>
+    <img src="glm-5.3-flash.webp" alt="原图 GLM-5.3-Flash">
+  </div>
+</div>
+
+<h3>其他原图样本(风格参考)</h3>
+<div class="refgrid">
+  <div class="pane"><h2>DeepSeek V3/R1 (671B)</h2><img src="deepseek-v3-r1-671-billion.webp" alt=""></div>
+  <div class="pane"><h2>GPT-2 XL (1.5B)</h2><img src="gpt-2-xl.webp" alt=""></div>
+  <div class="pane"><h2>GPT-OSS 120B</h2><img src="gpt-oss-120b.webp" alt=""></div>
+  <div class="pane"><h2>GLM-4.5-Air</h2><img src="glm-4-5-air.webp" alt=""></div>
+  <div class="pane"><h2>Gemma 3 270m</h2><img src="gemma-3-270m.webp" alt=""></div>
+</div>
+
+</body>
+</html>

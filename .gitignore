@@ -1,0 +1,6 @@
+# Original gallery images belong to Sebastian Raschka — never redistribute
+*.webp
+
+# Python
+__pycache__/
+*.pyc
