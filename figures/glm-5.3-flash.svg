@@ -1,20 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 1780" font-family="Helvetica, Arial, 'DejaVu Sans', sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 1780" font-family="'Liberation Sans', Arial, Helvetica, sans-serif">
   <defs>
     <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#3d8ed9"/>
       <stop offset="1" stop-color="#7ab6e9"/>
     </linearGradient>
-    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#111"/>
     </marker>
   </defs>
 
   <style>
-    .box  { fill:#ffffff; stroke:#111; stroke-width:2.5; }
-    .gbox { fill:#d9d9d9; stroke:#111; stroke-width:2.5; }
+    .box  { fill:#ffffff; stroke:#111; stroke-width:2.2; }
+    .gbox { fill:#d9d9d9; stroke:#111; stroke-width:2.2; }
     .lbl  { font-size:25px; fill:#111; text-anchor:middle; }
-    .flow { stroke:#111; stroke-width:2.5; fill:none; marker-end:url(#arr); }
-    .lead { stroke:#111; stroke-width:3.5; stroke-linecap:round; stroke-dasharray:0.1 10; fill:none; }
+    .flow { stroke:#111; stroke-width:2.2; fill:none; marker-end:url(#arr); }
+    .lead { stroke:#111; stroke-width:3; stroke-linecap:round; stroke-dasharray:0.1 8; fill:none; }
     .note { font-size:28px; font-weight:bold; fill:#111; }
     .blue { fill:#2e7cd6; }
     .red  { fill:#ff7b6e; }
@@ -23,12 +23,12 @@
   <rect x="0" y="0" width="1900" height="1780" fill="#ffffff"/>
 
   <!-- ======================= Title ======================= -->
-  <text x="60" y="88" font-size="62" font-weight="bold"><tspan class="blue">GLM-5.3-Flash (320B-A18B)</tspan><tspan fill="#3a3a3a"> (“Ox Alpha”)</tspan></text>
-  <text x="140" y="138" font-size="27" fill="#111">(Text decoder shown; 24-layer vision encoder and one MTP prediction layer omitted)</text>
+  <text x="60" y="90" font-size="66" font-weight="bold"><tspan class="blue">GLM-5.3-Flash (320B-A18B)</tspan><tspan fill="#3a3a3a"> (“Ox Alpha”)</tspan></text>
+  <text x="145" y="140" font-size="27" fill="#111">(Text decoder shown; 24-layer vision encoder and one MTP prediction layer omitted)</text>
 
   <!-- ======================= Main model container ======================= -->
-  <rect x="345" y="230" width="590" height="1198" rx="45" fill="#ececec" stroke="#111" stroke-width="3"/>
-  <rect x="435" y="455" width="410" height="835" rx="45" fill="url(#blueGrad)" stroke="#111" stroke-width="3"/>
+  <rect x="345" y="230" width="590" height="1198" rx="45" fill="#ececec" stroke="#111" stroke-width="2.8"/>
+  <rect x="435" y="455" width="410" height="835" rx="45" fill="url(#blueGrad)" stroke="#111" stroke-width="2.8"/>
 
   <!-- main flow arrows (bottom-up) -->
   <path class="flow" d="M640,1460 L640,1434"/>
@@ -47,53 +47,67 @@
   <path class="flow" d="M640,278 L640,180"/>
 
   <!-- main flow boxes -->
-  <rect class="box" x="540" y="1462" width="200" height="48"/>
+  <rect class="box" x="540" y="1462" width="200" height="48" rx="10"/>
   <text class="lbl" x="640" y="1494" font-size="24">Tokenized text</text>
 
-  <rect class="box" x="505" y="1330" width="280" height="48"/>
+  <rect class="box" x="505" y="1330" width="280" height="48" rx="10"/>
   <text class="lbl" x="645" y="1362">Token embedding layer</text>
 
-  <rect class="box" x="525" y="1226" width="230" height="48"/>
+  <rect class="box" x="525" y="1226" width="230" height="48" rx="10"/>
   <text class="lbl" x="640" y="1258">RMSNorm 1</text>
 
-  <rect class="box" x="525" y="1156" width="230" height="46"/>
-  <text font-size="25" fill="#111"><tspan x="569" y="1187" class="blue" font-weight="bold">mhC</tspan><tspan x="632" y="1187">&#160;mixer</tspan></text>
+  <rect class="box" x="525" y="1156" width="230" height="46" rx="10"/>
+  <text font-size="25" fill="#111" xml:space="preserve">    <tspan x="578" y="1187" class="blue">mhC</tspan>
+    <tspan x="641" y="1187">mixer</tspan></text>
 
-  <rect x="485" y="958" width="310" height="176" rx="16" fill="#4d4d4d" stroke="#111" stroke-width="2.5"/>
-  <text font-size="21" fill="#ffffff">
-    <tspan x="547" y="986">Multi-head Latent</tspan>
-    <tspan x="540" y="1013">Attention (</tspan><tspan x="652" y="1013" class="red">MLA</tspan><tspan x="703" y="1013">) w.</tspan>
-    <tspan x="547" y="1040">DeepSeek Sparse</tspan>
-    <tspan x="556" y="1067">Attention (</tspan><tspan x="667" y="1067" class="red">DSA</tspan><tspan x="716" y="1067">)</tspan>
-    <tspan x="629" y="1094">or</tspan>
-    <tspan x="497" y="1121">Kimi Delta Attention (</tspan><tspan x="724" y="1121" class="red">KDA</tspan><tspan x="774" y="1121">)</tspan>
+  <rect x="485" y="958" width="310" height="176" rx="16" fill="#4d4d4d" stroke="#111" stroke-width="2.2"/>
+  <text font-size="21" fill="#ffffff" xml:space="preserve">
+    <tspan x="559" y="984">Multi-head Latent</tspan>
+    <tspan x="554" y="1011">Attention</tspan>
+    <tspan x="644" y="1011">(</tspan>
+    <tspan x="653" y="1011" class="red">MLA</tspan>
+    <tspan x="696" y="1011">)</tspan>
+    <tspan x="709" y="1011">w.</tspan>
+    <tspan x="555" y="1038">DeepSeek Sparse</tspan>
+    <tspan x="567" y="1065">Attention</tspan>
+    <tspan x="658" y="1065">(</tspan>
+    <tspan x="666" y="1065" class="red">DSA</tspan>
+    <tspan x="709" y="1065">)</tspan>
+    <tspan x="631" y="1092">or</tspan>
+    <tspan x="517" y="1119">Kimi Delta Attention</tspan>
+    <tspan x="713" y="1119">(</tspan>
+    <tspan x="721" y="1119" class="red">KDA</tspan>
+    <tspan x="764" y="1119">)</tspan>
   </text>
 
-  <rect class="box" x="525" y="890" width="230" height="46"/>
-  <text font-size="25" fill="#111"><tspan x="569" y="921" class="blue" font-weight="bold">mhC</tspan><tspan x="632" y="921">&#160;mixer</tspan></text>
+  <rect class="box" x="525" y="890" width="230" height="46" rx="10"/>
+  <text font-size="25" fill="#111" xml:space="preserve">    <tspan x="578" y="921" class="blue">mhC</tspan>
+    <tspan x="641" y="921">mixer</tspan></text>
 
-  <circle cx="640" cy="848" r="16" fill="#ffffff" stroke="#111" stroke-width="2.5"/>
-  <path d="M640,840 L640,856 M632,848 L648,848" stroke="#111" stroke-width="2.5"/>
+  <circle cx="640" cy="848" r="16" fill="#ffffff" stroke="#111" stroke-width="2.2"/>
+  <path d="M640,840 L640,856 M632,848 L648,848" stroke="#111" stroke-width="2.2"/>
 
-  <rect class="box" x="525" y="760" width="230" height="48"/>
+  <rect class="box" x="525" y="760" width="230" height="48" rx="10"/>
   <text class="lbl" x="640" y="792">RMSNorm 2</text>
 
-  <rect class="box" x="525" y="686" width="230" height="46"/>
-  <text font-size="25" fill="#111"><tspan x="569" y="717" class="blue" font-weight="bold">mhC</tspan><tspan x="632" y="717">&#160;mixer</tspan></text>
+  <rect class="box" x="525" y="686" width="230" height="46" rx="10"/>
+  <text font-size="25" fill="#111" xml:space="preserve">    <tspan x="578" y="717" class="blue">mhC</tspan>
+    <tspan x="641" y="717">mixer</tspan></text>
 
-  <rect class="gbox" x="525" y="608" width="230" height="50"/>
+  <rect class="gbox" x="525" y="608" width="230" height="50" rx="10"/>
   <text class="lbl" x="640" y="641">MoE</text>
 
-  <rect class="box" x="525" y="534" width="230" height="46"/>
-  <text font-size="25" fill="#111"><tspan x="569" y="565" class="blue" font-weight="bold">mhC</tspan><tspan x="632" y="565">&#160;mixer</tspan></text>
+  <rect class="box" x="525" y="534" width="230" height="46" rx="10"/>
+  <text font-size="25" fill="#111" xml:space="preserve">    <tspan x="578" y="565" class="blue">mhC</tspan>
+    <tspan x="641" y="565">mixer</tspan></text>
 
-  <circle cx="640" cy="492" r="16" fill="#ffffff" stroke="#111" stroke-width="2.5"/>
-  <path d="M640,484 L640,500 M632,492 L648,492" stroke="#111" stroke-width="2.5"/>
+  <circle cx="640" cy="492" r="16" fill="#ffffff" stroke="#111" stroke-width="2.2"/>
+  <path d="M640,484 L640,500 M632,492 L648,492" stroke="#111" stroke-width="2.2"/>
 
-  <rect class="box" x="525" y="362" width="230" height="48"/>
+  <rect class="box" x="525" y="362" width="230" height="48" rx="10"/>
   <text class="lbl" x="640" y="394">Final RMSNorm</text>
 
-  <rect class="box" x="505" y="280" width="280" height="48"/>
+  <rect class="box" x="505" y="280" width="280" height="48" rx="10"/>
   <text class="lbl" x="645" y="312">Linear output layer</text>
 
   <!-- residual skip rails -->
@@ -102,14 +116,15 @@
 
   <!-- 45x brace -->
   <path d="M438,1192 C412,1206 420,1236 402,1246 C420,1256 412,1286 438,1300" fill="none" stroke="#111" stroke-width="4"/>
-  <text font-size="36" font-weight="bold" fill="#111"><tspan x="306" y="1258" class="blue">45</tspan><tspan x="356" y="1258">&#160;×</tspan></text>
+  <text font-size="36" font-weight="bold" fill="#111" xml:space="preserve">    <tspan x="316" y="1258" class="blue">45</tspan>
+    <tspan x="366" y="1258">×</tspan></text>
 
-  <text x="640" y="1565" text-anchor="middle" font-size="27" font-family="'DejaVu Sans Mono', monospace" fill="#111">Sample input text</text>
+  <text x="640" y="1565" text-anchor="middle" font-size="27" font-family="Menlo, Consolas, 'Liberation Mono', monospace" fill="#111">Sample input text</text>
 
   <!-- ======================= Left callouts ======================= -->
   <text class="note" x="55" y="345">Vocabulary size of</text>
   <text class="note blue" x="95" y="385">155k</text>
-  <path class="lead" d="M365,348 L503,305"/>
+  <path class="lead" d="M350,338 L503,305"/>
 
   <text class="note" x="125" y="705"><tspan class="blue">34</tspan> KDA layers</text>
   <text class="note" x="125" y="743"><tspan class="blue">11</tspan> MLA+DSA layers</text>
@@ -124,7 +139,7 @@
 
   <text class="note" x="20" y="1150">Supported context length</text>
   <text class="note" x="20" y="1188">of <tspan class="blue">1M</tspan> tokens</text>
-  <path class="lead" d="M280,1162 L432,1175"/>
+  <path class="lead" d="M290,1160 L432,1178"/>
 
   <text class="note" x="85" y="1408">First <tspan class="blue">3</tspan> blocks use</text>
   <text class="note" x="85" y="1446">dense SwiGLU FFNs</text>
@@ -137,14 +152,14 @@
 
   <!-- ======================= SwiGLU inset ======================= -->
   <text x="1330" y="215" text-anchor="middle" font-size="32" font-weight="bold" fill="#111">FeedForward (SwiGLU) module</text>
-  <rect x="1085" y="235" width="490" height="373" rx="28" fill="#fcfcfc" stroke="#111" stroke-width="3.5" stroke-dasharray="0.1 11" stroke-linecap="round"/>
+  <rect x="1085" y="235" width="490" height="373" rx="28" fill="#fcfcfc" stroke="#111" stroke-width="3" stroke-dasharray="0.1 9" stroke-linecap="round"/>
 
   <rect class="box" x="1242" y="258" width="170" height="44" rx="10"/>
   <text class="lbl" x="1327" y="288" font-size="23">Linear layer</text>
   <path class="flow" d="M1327,316 L1327,306"/>
 
-  <circle cx="1327" cy="332" r="14" fill="#ffffff" stroke="#111" stroke-width="2.5"/>
-  <path d="M1321,326 L1333,338 M1333,326 L1321,338" stroke="#111" stroke-width="2.5"/>
+  <circle cx="1327" cy="332" r="14" fill="#ffffff" stroke="#111" stroke-width="2.2"/>
+  <path d="M1321,326 L1333,338 M1333,326 L1321,338" stroke="#111" stroke-width="2.2"/>
 
   <rect class="box" x="1135" y="357" width="170" height="44" rx="10"/>
   <text class="lbl" x="1220" y="387" font-size="22">SiLU activation</text>
@@ -161,14 +176,15 @@
 
   <text class="note" x="1360" y="660" text-anchor="middle">Intermediate hidden</text>
   <text class="note" x="1360" y="698" text-anchor="middle">layer dimension of</text>
-  <text font-size="29" font-weight="bold" fill="#111"><tspan x="1234" y="736" class="blue">2,048</tspan><tspan x="1326" y="736">&#160;per&#160;expert</tspan></text>
+  <text font-size="28" font-weight="bold" fill="#111" xml:space="preserve">    <tspan x="1258" y="736" class="blue">2,048</tspan>
+    <tspan x="1336" y="736">per expert</tspan></text>
 
   <!-- ======================= MoE inset ======================= -->
-  <rect x="1030" y="760" width="550" height="510" rx="28" fill="#fcfcfc" stroke="#111" stroke-width="3.5" stroke-dasharray="0.1 11" stroke-linecap="round"/>
+  <rect x="1030" y="760" width="550" height="510" rx="28" fill="#fcfcfc" stroke="#111" stroke-width="3" stroke-dasharray="0.1 9" stroke-linecap="round"/>
   <text x="1470" y="808" text-anchor="middle" font-size="34" font-weight="bold" fill="#111">MoE layer</text>
 
-  <circle cx="1305" cy="868" r="17" fill="#ffffff" stroke="#111" stroke-width="2.5"/>
-  <path d="M1305,859 L1305,877 M1296,868 L1314,868" stroke="#111" stroke-width="2.5"/>
+  <circle cx="1305" cy="868" r="17" fill="#ffffff" stroke="#111" stroke-width="2.2"/>
+  <path d="M1305,859 L1305,877 M1296,868 L1314,868" stroke="#111" stroke-width="2.2"/>
   <path class="flow" d="M1305,849 L1305,818"/>
 
   <rect class="gbox" x="1065" y="934" width="160" height="44" rx="10"/>
@@ -183,7 +199,7 @@
 
   <text x="1305" y="966" text-anchor="middle" font-size="30" font-weight="bold" fill="#111">• • •</text>
 
-  <rect x="1232" y="1108" width="146" height="47" rx="12" fill="#ffffff" stroke="#2e7cd6" stroke-width="3.5"/>
+  <rect x="1232" y="1108" width="146" height="47" rx="12" fill="#ffffff" stroke="#2e7cd6" stroke-width="3"/>
   <text class="lbl" x="1305" y="1140" font-size="26">Router</text>
 
   <path class="flow" d="M1285,1106 L1165,984"/>
@@ -193,11 +209,12 @@
   <path class="flow" d="M1465,932 L1465,868 L1328,868"/>
 
   <path class="lead" d="M1085,470 L1155,928"/>
-  <path class="lead" d="M1063,955 L762,640"/>
+  <path class="lead" d="M1065,980 L762,640"/>
 
   <!-- ======================= mhC inset ======================= -->
-  <rect x="1010" y="1305" width="880" height="405" rx="28" fill="#fcfcfc" stroke="#111" stroke-width="3.5" stroke-dasharray="0.1 11" stroke-linecap="round"/>
-  <text font-size="30" font-weight="bold" fill="#111"><tspan x="1094" y="1352" class="blue">mhC</tspan><tspan x="1168" y="1352">&#160;(manifold-constrained&#160;hyper-connections)</tspan></text>
+  <rect x="1010" y="1305" width="880" height="405" rx="28" fill="#fcfcfc" stroke="#111" stroke-width="3" stroke-dasharray="0.1 9" stroke-linecap="round"/>
+  <text font-size="28" font-weight="bold" fill="#111" xml:space="preserve">    <tspan x="1157" y="1352" class="blue">mhC</tspan>
+    <tspan x="1227" y="1352">(manifold-constrained hyper-connections)</tspan></text>
 
   <circle cx="1045" cy="1428" r="5.5" fill="#111"/>
   <circle cx="1045" cy="1455" r="5.5" fill="#111"/>
@@ -205,7 +222,8 @@
   <circle cx="1045" cy="1509" r="5.5" fill="#111"/>
 
   <rect class="box" x="1080" y="1405" width="215" height="125" rx="10"/>
-  <text font-size="25" fill="#111"><tspan x="1116" y="1458" class="blue" font-weight="bold">mhC</tspan><tspan x="1179" y="1458">&#160;mixer</tspan></text>
+  <text font-size="25" fill="#111" xml:space="preserve">    <tspan x="1125" y="1458" class="blue">mhC</tspan>
+    <tspan x="1188" y="1458">mixer</tspan></text>
   <text class="lbl" x="1187" y="1495" font-size="19">(constrained mixing)</text>
   <path class="flow" d="M1297,1467 L1316,1467"/>
 
@@ -215,14 +233,17 @@
   <path class="flow" d="M1537,1467 L1556,1467"/>
 
   <rect class="box" x="1560" y="1405" width="215" height="125" rx="10"/>
-  <text font-size="25" fill="#111"><tspan x="1596" y="1458" class="blue" font-weight="bold">mhC</tspan><tspan x="1659" y="1458">&#160;mixer</tspan></text>
+  <text font-size="25" fill="#111" xml:space="preserve">    <tspan x="1605" y="1458" class="blue">mhC</tspan>
+    <tspan x="1668" y="1458">mixer</tspan></text>
 
   <circle cx="1810" cy="1428" r="5.5" fill="#111"/>
   <circle cx="1810" cy="1455" r="5.5" fill="#111"/>
   <circle cx="1810" cy="1482" r="5.5" fill="#111"/>
   <circle cx="1810" cy="1509" r="5.5" fill="#111"/>
 
-  <text font-size="29" font-weight="bold" fill="#111"><tspan x="1221" y="1592">with&#160;</tspan><tspan x="1292" y="1592" class="blue">4</tspan><tspan x="1312" y="1592">&#160;parallel&#160;residual&#160;streams</tspan></text>
+  <text font-size="28" font-weight="bold" fill="#111" xml:space="preserve">    <tspan x="1258" y="1592">with</tspan>
+    <tspan x="1317" y="1592" class="blue">4</tspan>
+    <tspan x="1339" y="1592">parallel residual streams</tspan></text>
   <text x="1450" y="1636" text-anchor="middle" font-size="25" fill="#111">(replaces plain residual x + F(x) with constrained multi-</text>
   <text x="1450" y="1670" text-anchor="middle" font-size="25" fill="#111">stream mixing)</text>
 
