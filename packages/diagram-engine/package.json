@@ -7,5 +7,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "description": "Architecture IR -> Diagram IR -> constraint layout (issues #4, #5)"
+  "description": "Architecture IR -> Diagram IR -> constraint layout (issues #4, #5)",
+  "devDependencies": {
+    "elkjs": "^0.9.0"
+  }
 }

@@ -7,5 +7,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "description": "Semantic SVG renderer: DOM, themes, a11y, export (issues #5, #12)"
+  "description": "Semantic SVG renderer: DOM, themes, a11y, export (issues #5, #12)",
+  "dependencies": {
+    "@atlas/diagram-engine": "workspace:*",
+    "@atlas/ui": "workspace:*"
+  }
 }
