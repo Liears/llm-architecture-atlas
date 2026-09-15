@@ -126,6 +126,19 @@ GLM 详情页将 320B 显示为 0.3B total / 18B active。原因是 total_params
 
 跟踪：[Issue #24](https://github.com/Liears/llm-architecture-atlas/issues/24)
 
+#### 论文与官方配置复核结论
+
+当前问题比“画面死板”更严重：图中的文字摘要基本覆盖了几个关键词，但没有表达论文和源码定义的计算拓扑。
+
+- [GLM-5.3-Flash 官方 config（固定 revision）](https://huggingface.co/zai-org/GLM-5.3-Flash/blob/eb9eb208eb0d988989d07a6a12d0fdeb5f52574a/config.json) 明确给出 45 层、34 个 `linear_attention` 层、11 个 `deepseek_sparse_attention` 层，调度为每四层 `K,K,K,D` 后再接一个 KDA 层；同时给出前三层 Dense、后 42 层 Sparse MoE、`hc_mult=4`、288 routed / Top-8 / 1 shared expert，以及 154,880 vocab。当前 IR 错写成前 34 层连续 KDA + 后 11 层连续 DSA，生成图又把它压成四个旁注框，并且 vocab 仍写成 155,136。
+- [GLM-5 技术报告 v2](https://arxiv.org/abs/2602.15763v2) 是相关但并非 GLM-5.3-Flash 的精确规格：报告 §2.1 描述的是 744B/40B active、80 层的 GLM-5，并在 §2.1.1 说明 DSA。它不能证明 Flash 的 320B/18B、45 层、attention/FFN 调度或 mHC。当前 evidence 中用来证明这些 Flash 事实的 `architecture table`、`FFN section`、`mHC section` locator 必须改由固定官方 config/code 支撑。
+- [Kimi Linear 报告](https://arxiv.org/abs/2510.26692) Figure 3（PDF p.6）和 §4 解释 KDA 内部以及 3:1 KDA/MLA 的混合块；它是 `mechanism-only` 来源。
+- [DeepSeek-V3.2 报告](https://arxiv.org/abs/2512.02556) §2.1 与 Figure 2（PDF pp.3–4）解释 DSA 如何在 MLA 上通过 Lightning Indexer 和 Top-k selector 选择 KV；它是 `mechanism-only` 来源。
+- [mHC 论文](https://arxiv.org/abs/2512.24880) Figure 1(c)（PDF p.1）与 §4 解释多 residual streams 的 pre/res/post mixing；GLM 的四路数量仍必须由官方 config 的 `hc_mult=4` 证明。
+- [LLM Architecture Gallery 的 GLM 图](https://www.sebastianraschka.com/llm-architecture-gallery/images/architectures/thumbnails/glm-5.3-flash.webp) 只能作为二级视觉参考。它至少把 decoder 主干、残差 rail、MoE router、FFN、四路 mHC 和局部 attention 画成不同层级；Atlas 当前只有横向摘要卡片。Atlas 应在精确值、证据联动、可下钻和可访问性上超过它，而不是复刻版式。
+
+跟踪：[Issue #30](https://github.com/Liears/llm-architecture-atlas/issues/30)
+
 ### 4.6 P1：Compare Genome 在浏览器中不可见
 
 真实 DOM 中存在 90 个 gcell，但计算样式为 width: 0px、height: 0px。flex shrink 把单元格压缩为零。
@@ -214,6 +227,13 @@ GLM 详情页将 320B 显示为 0.3B total / 18B active。原因是 total_params
 
 ### Phase A：恢复可信度与可复现性
 
+#### Task A0：建立论文/源码驱动的 Architecture Brief
+
+- Issue：[30](https://github.com/Liears/llm-architecture-atlas/issues/30)
+- 验收：每个模型实现 Issue/PR 附固定 revision、论文适用范围、精确 Figure/Table/Section/Page 和 paper-to-diagram map；没有模型专属论文时显式记录。
+- 验证：故意引用错误模型或不存在章节的 fixture 必须被审查门禁拒绝。
+- 范围：S/M。
+
 #### Task A1：修正 Qwen/Kimi 真值
 
 - Issue：[20](https://github.com/Liears/llm-architecture-atlas/issues/20)
@@ -245,6 +265,7 @@ GLM 详情页将 320B 显示为 0.3B total / 18B active。原因是 total_params
 
 ### Checkpoint A
 
+- 六模型均有可审查的 Architecture Brief，且没有把机制论文冒充模型精确规格；
 - 六模型事实经官方来源复核；
 - 模型结构和 evidence coverage 均为零错误；
 - 所有测试命令能从干净 clone 执行；
@@ -372,6 +393,7 @@ Overview 必须保持简洁，但不能用文字摘要替代关键拓扑。复�
 
 新的 hardening 路线只有在以下条件同时成立时才能关闭：
 
+- 每个模型 Issue/PR 都附相关论文与精确定位；无模型专属论文时有明确声明和官方 config/code 替代证据；
 - 六模型事实与官方来源一致；
 - 所有可见数字、结构节点和关键边均有精确 claim；
 - Qwen/Kimi 不存在 missing/duplicated layer；

@@ -263,6 +263,19 @@ type DiagramScene = {
 
 任何新模型都必须有来源快照、IR fixture、结构快照与至少三个 viewport 的视觉快照。
 
+### 6.5 先写 Architecture Brief，再允许画图
+
+每个模型在进入 Diagram IR 之前必须有一份可审查的 Architecture Brief，并在模型接入 Issue 和实现 PR 中附上链接。Brief 至少包含：
+
+- 官方模型仓库、`config.json` 或源码的不可变 revision 与内容哈希；
+- 模型专属论文/技术报告；如果没有，必须明确写 `none published`；
+- KDA、DSA、MLA、MoE、mHC 等机制论文，并标注为 `mechanism-only`，不得用来证明后续模型的精确层数和维度；
+- 每条结论对应的 `Figure / Table / Section / PDF page` 或 JSONPath/源码行定位；
+- paper-to-diagram map：逐项列出图中的节点、端口、边、重复层模式与来源；
+- 来源冲突、推断和为了可读性做出的有损简化。
+
+绘图评审必须同时检查“事实正确”和“拓扑表达正确”。把 `34 KDA + 11 MLA/DSA`、`4 streams` 或 `288 experts` 放进说明框，只证明文字出现过，不证明层调度、残差混合和路由结构已经画对。Gallery 等第三方图只用于比较信息层级与视觉表达，不能替代官方配置、源码和论文。
+
 ## 7. 视觉方向
 
 ### 7.1 主题、受众与页面唯一任务
@@ -487,6 +500,7 @@ quality      documentation
 - 依赖 Issue；
 - 预计涉及文件与 S/M 范围；
 - 明确非目标。
+- 相关论文/报告链接、适用范围（模型专属或仅机制）及精确 Figure/Table/Section/Page；没有模型专属论文时必须明确说明。
 
 Issue 完成不等于“代码写完”，还必须满足测试、文档、视觉快照和证据要求。
 
