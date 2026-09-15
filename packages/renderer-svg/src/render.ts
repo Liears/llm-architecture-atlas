@@ -61,7 +61,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.n-port{fill:var(--attention);stroke:none}` +
       `.e-flow{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.flow};marker-end:url(#arrow)}` +
       `.e-skip{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.outline};stroke-dasharray:6 5;marker-end:url(#arrow)}` +
-      `.e-control{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2 4}` +
+      `.e-control{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2 4} .e-label{fill:var(--muted);font-size:11.5px;font-family:var(--font-mono)}` +
       `.g-frame{fill:none;stroke:var(--line);stroke-width:${strokeWidths.hairline}}` +
       `.g-label{fill:var(--muted);font-size:12.8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}` +
       `.g-badge{fill:var(--attention);color:#fff}` +
@@ -88,8 +88,13 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
 
   for (const edge of scene.edges) {
     const cls = edge.kind === "skip" ? "e-skip" : edge.kind === "control" ? "e-control" : "e-flow";
+    const edgeClaim = edge.claimPath ? ` data-claim-path="${esc(edge.claimPath)}"` : "";
+    const mid = edge.points[Math.floor(edge.points.length / 2)]!;
+    const edgeLabel = edge.label
+      ? `<text class="e-label" x="${fmt(mid.x + 6)}" y="${fmt(mid.y - 6)}">${esc(edge.label)}</text>`
+      : "";
     lines.push(
-      `  <polyline class="${cls}" data-edge-id="${esc(edge.id)}" points="${edge.points.map(pt).join(" ")}"/>`,
+      `  <polyline class="${cls}" data-edge-id="${esc(edge.id)}"${edgeClaim} points="${edge.points.map(pt).join(" ")}"/>${edgeLabel}`,
     );
   }
 

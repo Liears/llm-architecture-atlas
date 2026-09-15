@@ -34,7 +34,12 @@ const roleColor: Record<string, string> = {
 };
 const cell = (c: { label: string; role: string } | null) =>
   c
-    ? `<span class="gcell" style="background:${roleColor[genomeCellRole({ ...c, ffn: c.label, ffnKind: c.role } as never)] ?? "var(--line)"}" title="${c.label}"></span>`
+    ? `<span class="gcell" style="background:${roleColor[c.role] ?? "var(--line)"}" title="${c.label}"></span>`
+    : `<span class="gcell pad">—</span>`;
+
+const ffnCell = (c: { label: string; role: string } | null) =>
+  c
+    ? `<span class="gcell ffn" style="background:${c.role === "moe" ? "var(--compute)" : "var(--line)"}" title="${c.label} FFN"></span>`
     : `<span class="gcell pad">—</span>`;
 ---
 
@@ -65,14 +70,16 @@ const cell = (c: { label: string; role: string } | null) =>
     Columns align by layer index; the shorter model pads with —.
     {result.genome.attentionDiffer} aligned column(s) differ in attention type.
   </p>
-  <div class="tracks">
+  <div class="tracks" data-testid="genome-tracks">
     <div class="track">
       <span class="track-label">{ea!.label}</span>
       <div class="cells" set:html={result.genome.aLayers.map(cell).join("")} />
+      <div class="cells ffn" set:html={result.genome.aLayers.map(ffnCell).join("")} />
     </div>
     <div class="track">
       <span class="track-label">{eb!.label}</span>
       <div class="cells" set:html={result.genome.bLayers.map(cell).join("")} />
+      <div class="cells ffn" set:html={result.genome.bLayers.map(ffnCell).join("")} />
     </div>
   </div>
 
@@ -85,8 +92,11 @@ const cell = (c: { label: string; role: string } | null) =>
     .tracks { display: grid; gap: 0.5rem; overflow-x: auto; }
     .track { display: grid; grid-template-columns: 14rem 1fr; align-items: center; gap: 0.8rem; }
     .track-label { font-size: 0.85rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .cells { display: flex; gap: 2px; }
-    .gcell { width: 10px; height: 18px; border-radius: 2px; display: inline-block; }
-    .gcell.pad { background: none; color: var(--muted); width: 10px; text-align: center; }
+    /* set:html content is not scoped — these must be global */
+    :global(.cells) { display: flex; gap: 2px; flex-shrink: 0; }
+    :global(.cells.ffn) { margin-top: 2px; }
+    :global(.gcell) { width: 10px; height: 18px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+    :global(.gcell.pad) { background: none; color: var(--muted); text-align: center; }
+    :global(.gcell.ffn) { height: 6px; }
   </style>
 </Base>

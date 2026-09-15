@@ -125,6 +125,13 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     y += heightsFromTop[top]! + gapY;
   }
 
+  // -- left-rail reserve: shift the scene so left skip rails have room
+  const leftSkipsAll = scene.edges.filter((e) => e.kind === "skip" && e.rail === "left");
+  const leftRailOffset = leftSkipsAll.length ? 30 + leftSkipsAll.length * 18 : 0;
+  if (leftRailOffset) {
+    for (const it of internals.values()) { it.x += leftRailOffset; }
+  }
+
   // -- ports: out = top-center, in = bottom-center; others distributed on sides
   for (const it of internals.values()) {
     const ports: Record<string, Point> = {
@@ -146,6 +153,8 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
   // -- edges
   const positionedEdges: PositionedEdge[] = [];
   const skipEdges = scene.edges.filter((e) => e.kind === "skip");
+  const leftSkips = skipEdges.filter((e) => e.rail === "left");
+  let leftRailIndex = 0;
   for (const edge of scene.edges) {
     const fromId = edge.from.split(".")[0]!;
     const toId = edge.to.split(".")[0]!;
@@ -158,9 +167,18 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     const b = to.ports[toPort] ?? to.ports.in!;
 
     let points: Point[];
-    if (edge.kind === "skip") {
+    if (edge.kind === "skip" && edge.rail === "left") {
+      const railX = 24 + leftRailIndex * 18;
+      leftRailIndex += 1;
+      points = [
+        { x: from.x, y: a.y },
+        { x: railX, y: a.y },
+        { x: railX, y: b.y },
+        { x: to.x, y: b.y },
+      ];
+    } else if (edge.kind === "skip") {
       const railIndex = skipEdges.findIndex((s) => s.id === edge.id);
-      const railX = MARGIN + maxRowWidth + skipRailGap * (railIndex + 1) + 8;
+      const railX = MARGIN + leftRailOffset + maxRowWidth + skipRailGap * (railIndex + 1) + 8;
       points = [
         a,
         { x: railX, y: a.y },
@@ -173,7 +191,7 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
       const midY = (a.y + b.y) / 2;
       points = [a, { x: a.x, y: midY }, { x: b.x, y: midY }, b];
     }
-    positionedEdges.push({ id: edge.id, kind: edge.kind, label: edge.label, points });
+    positionedEdges.push({ id: edge.id, kind: edge.kind, label: edge.label, claimPath: edge.claimPath, points });
   }
 
   // -- groups frame their members

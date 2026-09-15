@@ -3,8 +3,8 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1379,
-    "h": 546
+    "w": 2345,
+    "h": 700
   },
   "nodes": [
     {
@@ -15,15 +15,69 @@
     },
     {
       "id": "embed",
-      "label": "Token embedding layer",
+      "label": "Token embedding",
       "detail": "hidden 4,096 · vocab 154,880",
       "claimPath": "facts.hidden_size"
     },
     {
-      "id": "block",
-      "label": "Decoder stack · 45 layers",
-      "detail": "45 layers · 34 KDA · 11 MLA/DSA · 3 dense · 42 MoE blocks",
-      "claimPath": "facts.num_hidden_layers"
+      "id": "unit",
+      "label": "K,K,K,D × 11 units",
+      "detail": "34 KDA · 11 MLA/DSA",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "tail-kda",
+      "label": "KDA",
+      "detail": "tail layer",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "dsa",
+      "label": "MLA core",
+      "detail": "selected KV → latent attention",
+      "claimPath": "topology.attention_groups[1]"
+    },
+    {
+      "id": "indexer",
+      "label": "Lightning indexer",
+      "detail": "scores all positions",
+      "claimPath": "topology.attention.dsa_indexer_heads"
+    },
+    {
+      "id": "topk",
+      "label": "Top-k selector",
+      "detail": "keeps k tokens",
+      "claimPath": "topology.attention.dsa_topk"
+    },
+    {
+      "id": "router",
+      "label": "Router",
+      "detail": "softmax over experts",
+      "claimPath": "topology.experts.routed_total"
+    },
+    {
+      "id": "experts",
+      "label": "Routed experts",
+      "detail": "288 routed · top-8",
+      "claimPath": "topology.experts.routed_total"
+    },
+    {
+      "id": "shared",
+      "label": "Shared expert",
+      "detail": "always on",
+      "claimPath": "topology.experts.shared"
+    },
+    {
+      "id": "dense3",
+      "label": "Dense SwiGLU ×3",
+      "detail": "layers 0–2",
+      "claimPath": "topology.ffn_groups[0]"
+    },
+    {
+      "id": "moe42",
+      "label": "Sparse MoE ×42",
+      "detail": "layers 3–44",
+      "claimPath": "topology.ffn_groups[1]"
     },
     {
       "id": "norm",
@@ -33,33 +87,21 @@
     },
     {
       "id": "head",
-      "label": "Linear output layer",
+      "label": "Linear output",
       "detail": "vocab 154,880",
       "claimPath": "facts.vocab_size"
     },
     {
-      "id": "inset-attn",
-      "label": "Attention mix",
-      "detail": "34 KDA · 11 MLA/DSA",
-      "claimPath": "topology.attention_groups[0]"
-    },
-    {
-      "id": "inset-moe",
-      "label": "MoE routing",
-      "detail": "288 routed · 8 active · 1 shared",
-      "claimPath": "topology.experts.routed_total"
-    },
-    {
-      "id": "inset-mhc",
-      "label": "mHC residual",
-      "detail": "4 parallel streams",
+      "id": "mhc",
+      "label": "mHC mixers",
+      "detail": "pre/read · res/mix · post/write",
       "claimPath": "topology.residual.streams"
     },
     {
-      "id": "inset-ctx",
-      "label": "Context & scale",
-      "detail": "1M tokens · 320B total · 18B active",
-      "claimPath": "facts.context_tokens"
+      "id": "mtp",
+      "label": "MTP head (omitted)",
+      "detail": "not drawn in overview",
+      "claimPath": "topology.mtp.predict_layers"
     }
   ],
   "edges": [
@@ -73,12 +115,18 @@
       "id": "e-embed-block",
       "kind": "flow",
       "from": "embed",
-      "to": "block"
+      "to": "unit"
     },
     {
-      "id": "e-block-norm",
+      "id": "e-unit-tail",
       "kind": "flow",
-      "from": "block",
+      "from": "unit",
+      "to": "tail-kda"
+    },
+    {
+      "id": "e-tail-norm",
+      "kind": "flow",
+      "from": "tail-kda",
       "to": "norm"
     },
     {
@@ -88,43 +136,137 @@
       "to": "head"
     },
     {
-      "id": "c-attn",
+      "id": "e-dsa-q",
       "kind": "control",
-      "from": "block",
-      "to": "inset-attn"
+      "from": "unit.out",
+      "to": "indexer"
     },
     {
-      "id": "c-moe",
+      "id": "e-index-topk",
       "kind": "control",
-      "from": "block",
-      "to": "inset-moe"
+      "from": "indexer",
+      "to": "topk"
     },
     {
-      "id": "c-mhc",
+      "id": "e-topk-sel",
       "kind": "control",
-      "from": "block",
-      "to": "inset-mhc"
+      "from": "topk",
+      "to": "dsa.sel"
     },
     {
-      "id": "c-ctx",
+      "id": "e-moe-router",
       "kind": "control",
-      "from": "block",
-      "to": "inset-ctx"
+      "from": "moe42",
+      "to": "router"
+    },
+    {
+      "id": "e-router-experts",
+      "kind": "control",
+      "from": "router",
+      "to": "experts"
+    },
+    {
+      "id": "e-shared",
+      "kind": "control",
+      "from": "moe42",
+      "to": "shared"
+    },
+    {
+      "id": "e-dense-moe",
+      "kind": "flow",
+      "from": "dense3",
+      "to": "moe42"
+    },
+    {
+      "id": "e-mhc-s1",
+      "kind": "skip",
+      "from": "mhc",
+      "to": "mhc"
+    },
+    {
+      "id": "e-mhc-s2",
+      "kind": "skip",
+      "from": "mhc",
+      "to": "mhc"
+    },
+    {
+      "id": "e-mhc-s3",
+      "kind": "skip",
+      "from": "mhc",
+      "to": "mhc"
+    },
+    {
+      "id": "e-mhc-s4",
+      "kind": "skip",
+      "from": "mhc",
+      "to": "mhc"
+    },
+    {
+      "id": "e-embed-mhc",
+      "kind": "control",
+      "from": "embed",
+      "to": "mhc"
+    },
+    {
+      "id": "e-mhc-head",
+      "kind": "control",
+      "from": "mhc",
+      "to": "head"
+    },
+    {
+      "id": "c-mtp",
+      "kind": "control",
+      "from": "head",
+      "to": "mtp"
     }
   ],
   "groups": [
     {
-      "id": "repeat-block",
-      "label": "Decoder block",
+      "id": "g-decoder",
+      "label": "Decoder · 45 layers",
       "kind": "stack",
       "members": [
-        "block"
+        "unit",
+        "tail-kda",
+        "dense3",
+        "moe42"
       ],
       "repeat": {
         "count": 45,
         "label": "45 ×"
       },
       "claimPath": "facts.num_hidden_layers"
+    },
+    {
+      "id": "g-dsa",
+      "label": "DSA (1 of 4 layers)",
+      "kind": "inset",
+      "members": [
+        "indexer",
+        "topk",
+        "dsa"
+      ],
+      "claimPath": "topology.attention_groups[1]"
+    },
+    {
+      "id": "g-moe",
+      "label": "Sparse MoE block",
+      "kind": "inset",
+      "members": [
+        "router",
+        "experts",
+        "shared"
+      ],
+      "claimPath": "topology.experts.routed_total"
+    },
+    {
+      "id": "g-mhc",
+      "label": "mHC · 4 streams",
+      "kind": "inset",
+      "members": [
+        "mhc"
+      ],
+      "claimPath": "topology.residual.streams"
     }
   ],
   "annotations": [
@@ -139,18 +281,68 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_hidden_layers",
-      "target": "block",
-      "status": "reported"
-    },
-    {
       "claimPath": "topology.attention_groups[0]",
-      "target": "block",
+      "target": "unit",
       "status": "reported"
     },
     {
       "claimPath": "topology.attention_groups[1]",
-      "target": "block",
+      "target": "unit",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "tail-kda",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention.dsa_indexer_heads",
+      "target": "dsa",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention.dsa_topk",
+      "target": "dsa",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention.dsa_indexer_heads",
+      "target": "indexer",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention.dsa_topk",
+      "target": "topk",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.routed_total",
+      "target": "router",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.routed_total",
+      "target": "experts",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.active_routed",
+      "target": "experts",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.shared",
+      "target": "shared",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.ffn_groups[0]",
+      "target": "dense3",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.ffn_groups[1]",
+      "target": "moe42",
       "status": "reported"
     },
     {
@@ -159,49 +351,64 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[0]",
-      "target": "inset-attn",
+      "claimPath": "topology.residual.streams",
+      "target": "mhc",
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[1]",
-      "target": "inset-attn",
+      "claimPath": "topology.mtp.predict_layers",
+      "target": "mtp",
       "status": "reported"
     },
     {
-      "claimPath": "topology.experts.routed_total",
-      "target": "inset-moe",
+      "claimPath": "topology.attention.dsa_indexer_heads",
+      "target": "e-index-topk",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention.dsa_topk",
+      "target": "e-topk-sel",
       "status": "reported"
     },
     {
       "claimPath": "topology.experts.active_routed",
-      "target": "inset-moe",
+      "target": "e-router-experts",
       "status": "reported"
     },
     {
       "claimPath": "topology.experts.shared",
-      "target": "inset-moe",
+      "target": "e-shared",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.ffn_groups[0]",
+      "target": "e-dense-moe",
       "status": "reported"
     },
     {
       "claimPath": "topology.residual.streams",
-      "target": "inset-mhc",
+      "target": "e-mhc-s1",
       "status": "reported"
     },
     {
-      "claimPath": "facts.context_tokens",
-      "target": "inset-ctx",
+      "claimPath": "topology.residual.streams",
+      "target": "e-mhc-s2",
       "status": "reported"
     },
     {
-      "claimPath": "facts.total_params",
-      "target": "inset-ctx",
+      "claimPath": "topology.residual.streams",
+      "target": "e-mhc-s3",
       "status": "reported"
     },
     {
-      "claimPath": "facts.active_params",
-      "target": "inset-ctx",
-      "status": "derived"
+      "claimPath": "topology.residual.streams",
+      "target": "e-mhc-s4",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.mtp.predict_layers",
+      "target": "c-mtp",
+      "status": "reported"
     }
   ]
 }

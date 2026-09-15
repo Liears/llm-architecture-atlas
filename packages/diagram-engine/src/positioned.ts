@@ -26,6 +26,7 @@ export interface PositionedEdge {
   id: string;
   kind: string; // flow | skip | control
   label?: string;
+  claimPath?: string;
   /** polyline waypoints, first = source anchor, last = target anchor */
   points: Point[];
 }

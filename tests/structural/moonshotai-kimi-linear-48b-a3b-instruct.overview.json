@@ -3,7 +3,7 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1011,
+    "w": 1225,
     "h": 546
   },
   "nodes": [
@@ -54,6 +54,12 @@
       "label": "Context & scale",
       "detail": "1M tokens · 48B total · 3B active",
       "claimPath": "facts.context_tokens"
+    },
+    {
+      "id": "inset-mla",
+      "label": "MLA latent KV",
+      "detail": "MLA: latent + RoPE keys",
+      "claimPath": "topology.attention_groups[1]"
     }
   ],
   "edges": [
@@ -98,6 +104,12 @@
       "kind": "control",
       "from": "block",
       "to": "inset-ctx"
+    },
+    {
+      "id": "c-mla",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-mla"
     }
   ],
   "groups": [
@@ -180,6 +192,11 @@
       "claimPath": "facts.active_params",
       "target": "inset-ctx",
       "status": "derived"
+    },
+    {
+      "claimPath": "topology.attention_groups[1]",
+      "target": "inset-mla",
+      "status": "reported"
     }
   ]
 }

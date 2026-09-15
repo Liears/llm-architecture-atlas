@@ -56,6 +56,9 @@ export function compareModels(
     const cells: Array<{ label: string; role: string } | null> = [];
     for (let i = 0; i < numLayers; i++) {
       const l = g.layers[i];
+      // dual-track encoding: attention cell carries attention kind, FFN cell
+      // is derived by re-encoding: roles keep attention; ffn role = attentionKind
+      // replaced later by renderer via ffnCell (moe vs dense from ffnKind)
       cells.push(l ? { label: l.attention, role: l.attentionKind } : null);
     }
     return cells;

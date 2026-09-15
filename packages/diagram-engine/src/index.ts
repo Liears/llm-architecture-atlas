@@ -6,3 +6,4 @@ export * from "./text.js";
 export * from "./layout.js";
 export * from "./elk.js";
 export * from "./compile.js";
+export * from "./glm-topology.js";

@@ -6,7 +6,9 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { EvidenceFile, ModelDocument } from "../packages/architecture-ir/src/types.ts";
-import { auditCoverage, compileOverviewScene, layoutScene, validateScene } from "../packages/diagram-engine/src/index.ts";
+import {
+  auditCoverage, compileOverviewScene, compileGlmTopologyScene, layoutScene, validateScene,
+} from "../packages/diagram-engine/src/index.ts";
 import { renderSvg } from "../packages/renderer-svg/src/render.ts";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -25,7 +27,9 @@ for (const org of readdirSync(modelsRoot)) {
     const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
     const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
 
-    const scene = compileOverviewScene(arch, evidence);
+    const scene = arch.model.id === "zai-org/glm-5.3-flash"
+      ? compileGlmTopologyScene(arch, evidence)
+      : compileOverviewScene(arch, evidence);
     const errors = validateScene(scene);
     if (errors.length > 0) {
       console.error(`[${arch.model.id}] scene invalid:`, errors);

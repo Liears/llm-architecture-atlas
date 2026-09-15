@@ -150,6 +150,39 @@ export function compileOverviewScene(arch: ModelDocument, evidence: EvidenceFile
       ],
     });
   }
+  // mechanism-specific attention structure inset (#28): each family shows
+  // its signature attention mechanism as structure, not just a label
+  const attnKinds = new Set(attentionGroups.map((g) => g.kind));
+  if (attnKinds.has("mla") || attnKinds.has("mla_sparse")) {
+    insetSpecs.push({
+      id: "inset-mla",
+      kind: "inset-attention",
+      label: "MLA latent KV",
+      segments: attentionGroups
+        .filter((g) => g.kind === "mla" || g.kind === "mla_sparse")
+        .map((g) => ({ claimPath: `topology.attention_groups[${attentionGroups.indexOf(g)}]`, label: `${g.label}: latent + RoPE keys` })),
+    });
+  } else if (attnKinds.has("linear_attention")) {
+    insetSpecs.push({
+      id: "inset-linear",
+      kind: "inset-attention",
+      label: "Linear state path",
+      segments: attentionGroups
+        .filter((g) => g.kind === "linear_attention")
+        .map((g) => ({ claimPath: `topology.attention_groups[${attentionGroups.indexOf(g)}]`, label: `${g.label}: recurrent state, no KV cache` })),
+    });
+  } else {
+    insetSpecs.push({
+      id: "inset-gqa",
+      kind: "inset-attention",
+      label: "GQA grouped KV",
+      segments: attentionGroups.map((g, i) => ({
+        claimPath: `topology.attention_groups[${i}]`,
+        label: `${g.label}: shared KV heads`,
+      })),
+    });
+  }
+
   for (const spec of insetSpecs) {
     scene.nodes.push(node(spec.id, spec.kind, spec.label, spec.segments));
     scene.edges.push({ id: `c-${spec.id.replace("inset-", "")}`, from: "block", to: spec.id, kind: "control" });

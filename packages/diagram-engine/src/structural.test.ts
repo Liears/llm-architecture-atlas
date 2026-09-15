@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { compileOverviewScene } from "./compile.js";
+import { compileGlmTopologyScene } from "./glm-topology.js";
 import { auditCoverage } from "./audit.js";
 import { layoutScene } from "./layout.js";
 
@@ -30,7 +31,9 @@ function pipelineFor(modelId: string) {
   }
   const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
   const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
-  const scene = compileOverviewScene(arch, evidence);
+  const scene = modelId === "zai-org/glm-5.3-flash"
+    ? compileGlmTopologyScene(arch, evidence)
+    : compileOverviewScene(arch, evidence);
   const positioned = layoutScene(scene, { fontSize: 16 });
   return {
     modelId: scene.modelId,
@@ -62,13 +65,17 @@ describe.each(snapshots)("structural gate: %s", (file) => {
   });
   it("keeps evidence coverage: every claim-backed segment resolves (#21)", () => {
     const { arch, evidence } = modelInputs(committed.modelId);
-    const scene = compileOverviewScene(arch, evidence);
+    const scene = committed.modelId === "zai-org/glm-5.3-flash"
+      ? compileGlmTopologyScene(arch, evidence)
+      : compileOverviewScene(arch, evidence);
     expect(auditCoverage(scene, evidence.claims, scene.groups)).toEqual([]);
   });
 
   it("negative: removing a shown claim from evidence fails the audit (#21)", () => {
     const { arch, evidence } = modelInputs(committed.modelId);
-    const scene = compileOverviewScene(arch, evidence);
+    const scene = committed.modelId === "zai-org/glm-5.3-flash"
+      ? compileGlmTopologyScene(arch, evidence)
+      : compileOverviewScene(arch, evidence);
     const firstRef = scene.nodes.flatMap((n) => n.claims ?? [])[0];
     if (!firstRef) return; // model has no claim-backed segments
     const reduced = evidence.claims.filter((c) => c.path !== firstRef.claimPath);

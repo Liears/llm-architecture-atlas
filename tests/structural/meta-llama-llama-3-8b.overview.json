@@ -3,7 +3,7 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 783,
+    "w": 986,
     "h": 546
   },
   "nodes": [
@@ -48,6 +48,12 @@
       "label": "Context & scale",
       "detail": "8K tokens · 8B total · 8B active",
       "claimPath": "facts.context_tokens"
+    },
+    {
+      "id": "inset-gqa",
+      "label": "GQA grouped KV",
+      "detail": "GQA: shared KV heads",
+      "claimPath": "topology.attention_groups[0]"
     }
   ],
   "edges": [
@@ -86,6 +92,12 @@
       "kind": "control",
       "from": "block",
       "to": "inset-ctx"
+    },
+    {
+      "id": "c-gqa",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-gqa"
     }
   ],
   "groups": [
@@ -148,6 +160,11 @@
       "claimPath": "facts.active_params",
       "target": "inset-ctx",
       "status": "derived"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "inset-gqa",
+      "status": "reported"
     }
   ]
 }

@@ -19,6 +19,9 @@ const roleColor: Record<string, string> = {
   muted: "var(--line)",
 };
 
+const attnLabels = arch.topology.attention_groups.map((g) => g.label);
+const ffnLabels = arch.topology.ffn_groups.map((g) => g.label);
+
 const statusSymbol = (s: string) =>
   s === "verified" ? "✓" : s === "reported" ? "•" : s === "derived" ? "=" : s === "inferred" ? "?" : s === "conflict" ? "!" : "?";
 ---
@@ -54,14 +57,35 @@ const statusSymbol = (s: string) =>
 
   <h2 data-i18n="detail.genome">Architecture Genome</h2>
   <p class="muted" data-i18n="detail.genomeNote">One column per layer — top: attention, bottom: FFN/MoE.</p>
-  <div class="genome" role="img" aria-label={`Per-layer genome: ${genome.numLayers} layers`}>
+  <div class="genome" role="listbox" aria-label={`Per-layer genome: ${genome.numLayers} layers. Arrow keys move, Enter selects.`} tabindex="0">
     {genome.layers.map((l) => (
-      <div class="col" title={`layer ${l.index}: attention ${l.attention} · ffn ${l.ffn}`}>
+      <button
+        type="button"
+        class="col"
+        role="option"
+        aria-selected="false"
+        data-layer={String(l.index)}
+        data-attention={l.attention}
+        data-attn-kind={l.attentionKind}
+        data-ffn={l.ffn}
+        data-ffn-kind={l.ffnKind}
+        title={`layer ${l.index}: attention ${l.attention} · ffn ${l.ffn}`}
+      >
         <span class="cell" style={`background:${roleColor[genomeCellRole(l)]}`} />
-        <span class="cell ffn" style={`background:${l.ffnKind === "moe" ? "var(--compute)" : l.ffnKind === "dense_ffn" ? "var(--line)" : "var(--line)"}`} />
-      </div>
+        <span class="cell ffn" style={`background:${l.ffnKind === "moe" ? "var(--compute)" : "var(--line)"}`} />
+      </button>
     ))}
   </div>
+  <script type="application/json" id="attn-labels" set:html={JSON.stringify(attnLabels)}></script>
+  <script type="application/json" id="ffn-labels" set:html={JSON.stringify(ffnLabels)}></script>
+
+  <div id="layer-detail" class="layer-detail" hidden data-testid="layer-detail">
+    <strong>Layer <span id="ld-index"></span></strong>
+    <span id="ld-attention"></span>
+    <span id="ld-ffn"></span>
+    <span class="muted" id="ld-evidence"></span>
+  </div>
+
   <p class="legend muted">
     <span class="key"><span class="cell" style="background:var(--attention)" /> attention (GQA/MLA)</span>
     <span class="key"><span class="cell" style="background:var(--state)" /> linear / recurrent attention</span>
@@ -71,6 +95,7 @@ const statusSymbol = (s: string) =>
 
   <h2 data-i18n="detail.evidence">Evidence</h2>
   <p class="muted" data-i18n="detail.evidenceNote">Every visible number resolves to one of these claims. Inferred or unknown values are never shown as fact.</p>
+  <div class="evidence-wrap">
   <table class="evidence">
     <thead><tr>
         <th data-i18n="detail.claim">Claim</th>
@@ -89,9 +114,57 @@ const statusSymbol = (s: string) =>
       ))}
     </tbody>
   </table>
+  </div>
 
   <h2 data-i18n="detail.compare">Compare</h2>
   <p data-i18n="detail.compareNote">Compare this model with any other catalog model (see catalog).</p>
+
+  <script>
+    // layer drill-down + evidence linkage (#26)
+    const genome = document.querySelector<HTMLElement>(".genome");
+    const detail = document.getElementById("layer-detail")!;
+    const cols = [...document.querySelectorAll<HTMLElement>(".genome .col")];
+    const evidenceRows = [...document.querySelectorAll<HTMLTableRowElement>("table.evidence tbody tr")];
+
+    function selectLayer(i: number) {
+      const col = cols[i];
+      if (!col) return;
+      cols.forEach((c) => c.setAttribute("aria-selected", "false"));
+      col.setAttribute("aria-selected", "true");
+      const attn = col.dataset.attention!;
+      const attnKind = col.dataset.attnKind!;
+      const ffn = col.dataset.ffn!;
+      document.getElementById("ld-index")!.textContent = col.dataset.layer!;
+      document.getElementById("ld-attention")!.textContent = attn;
+      document.getElementById("ld-ffn")!.textContent = ffn;
+      // group index for evidence matching
+      const gi = (labels: string[], label: string) => labels.indexOf(label);
+      const attnLabels = JSON.parse(document.getElementById("attn-labels")!.textContent!) as string[];
+      const ffnLabels = JSON.parse(document.getElementById("ffn-labels")!.textContent!) as string[];
+      const paths = [
+        `topology.attention_groups[${gi(attnLabels, attn)}]`,
+        `topology.ffn_groups[${gi(ffnLabels, ffn)}]`,
+      ].filter((p) => !p.includes("-1"));
+      document.getElementById("ld-evidence")!.textContent = paths.length ? `evidence: ${paths.join(", ")}` : "";
+      detail.hidden = false;
+      evidenceRows.forEach((row) => {
+        const path = row.querySelector("code")?.textContent ?? "";
+        row.classList.toggle("dimmed", paths.length > 0 && !paths.some((p) => path.startsWith(p)));
+      });
+      detail.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    cols.forEach((col, i) => col.addEventListener("click", () => selectLayer(i)));
+    genome?.addEventListener("keydown", (ev) => {
+      const cur = cols.findIndex((c) => c.getAttribute("aria-selected") === "true");
+      if (ev.key === "ArrowRight") { selectLayer(Math.min(cur + 1, cols.length - 1)); ev.preventDefault(); }
+      if (ev.key === "ArrowLeft") { selectLayer(Math.max(cur - 1, 0)); ev.preventDefault(); }
+      if (ev.key === "Home") { selectLayer(0); ev.preventDefault(); }
+      if (ev.key === "End") { selectLayer(cols.length - 1); ev.preventDefault(); }
+    });
+    const mql = matchMedia("(prefers-reduced-motion: reduce)");
+    if (!mql.matches) { /* smooth scroll allowed */ }
+  </script>
 
   <script>
     document.querySelectorAll<HTMLButtonElement>(".png-btn").forEach((btn) => {
@@ -130,7 +203,9 @@ const statusSymbol = (s: string) =>
     .legend { display: flex; gap: 1rem; flex-wrap: wrap; }
     .key { display: inline-flex; align-items: center; gap: 0.3rem; }
     .key .cell { width: 10px; height: 10px; }
-    .evidence { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .evidence-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .evidence { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 34rem; }
+    .genome { display: flex; gap: 2px; overflow-x: auto; padding: 0.4rem 0; max-width: 100%; }
     .evidence th, .evidence td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.4rem 0.5rem; vertical-align: top; }
     .chip { border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
     .chip-verified { background: var(--state); color: #fff; }

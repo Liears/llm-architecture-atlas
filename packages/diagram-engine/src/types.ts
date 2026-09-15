@@ -32,6 +32,9 @@ export interface SemanticEdge {
   to: string;
   kind: EdgeKind;
   label?: string;
+  claimPath?: string;
+  /** skip-edge routing side; default right. */
+  rail?: "left" | "right";
 }
 
 export type GroupKind = "stack" | "inset" | "frame";

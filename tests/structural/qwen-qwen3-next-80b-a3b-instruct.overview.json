@@ -3,7 +3,7 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1274,
+    "w": 1621,
     "h": 546
   },
   "nodes": [
@@ -54,6 +54,12 @@
       "label": "Context & scale",
       "detail": "256K tokens · 80B total · 3B active",
       "claimPath": "facts.context_tokens"
+    },
+    {
+      "id": "inset-linear",
+      "label": "Linear state path",
+      "detail": "Gated DeltaNet: recurrent state, no KV cache",
+      "claimPath": "topology.attention_groups[0]"
     }
   ],
   "edges": [
@@ -98,6 +104,12 @@
       "kind": "control",
       "from": "block",
       "to": "inset-ctx"
+    },
+    {
+      "id": "c-linear",
+      "kind": "control",
+      "from": "block",
+      "to": "inset-linear"
     }
   ],
   "groups": [
@@ -180,6 +192,11 @@
       "claimPath": "facts.active_params",
       "target": "inset-ctx",
       "status": "derived"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "inset-linear",
+      "status": "reported"
     }
   ]
 }

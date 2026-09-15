@@ -23,7 +23,11 @@ test("model page serves the IR-generated golden figure with evidence links", asy
   expect(svg).toContain('data-atlas-model="zai-org/glm-5.3-flash"');
   expect(svg).toContain("data-claim-path"); // every number traces to evidence
   expect(svg).toContain("288 routed"); // MoE info survives generation
-  expect(svg).toContain("4 parallel streams"); // mHC info survives generation
+  expect(svg).toContain("s1"); // mHC stream rails are drawn
+  expect(svg).toContain("s4");
+  expect(svg).toContain("Lightning indexer"); // DSA chain (#24)
+  expect(svg).toContain("Top-k selector");
+  expect(svg).toContain("45 ×"); // decoder repeat
   // evidence table lists claims with status chips
   await expect(page.locator("table.evidence tbody tr").first()).toBeVisible();
 });
