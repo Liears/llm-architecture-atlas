@@ -3,8 +3,8 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 2345,
-    "h": 700
+    "w": 1958,
+    "h": 980
   },
   "nodes": [
     {
@@ -139,17 +139,17 @@
       "id": "e-dsa-q",
       "kind": "control",
       "from": "unit.out",
-      "to": "indexer"
+      "to": "g-dsa.q"
     },
     {
       "id": "e-index-topk",
-      "kind": "control",
+      "kind": "flow",
       "from": "indexer",
       "to": "topk"
     },
     {
       "id": "e-topk-sel",
-      "kind": "control",
+      "kind": "flow",
       "from": "topk",
       "to": "dsa.sel"
     },
@@ -157,7 +157,7 @@
       "id": "e-moe-router",
       "kind": "control",
       "from": "moe42",
-      "to": "router"
+      "to": "g-moe.r"
     },
     {
       "id": "e-router-experts",
@@ -169,7 +169,7 @@
       "id": "e-shared",
       "kind": "control",
       "from": "moe42",
-      "to": "shared"
+      "to": "g-moe.s"
     },
     {
       "id": "e-dense-moe",
@@ -246,6 +246,14 @@
         "topk",
         "dsa"
       ],
+      "direction": "left-to-right",
+      "ports": [
+        {
+          "id": "q",
+          "side": "left",
+          "inner": "indexer"
+        }
+      ],
       "claimPath": "topology.attention_groups[1]"
     },
     {
@@ -257,12 +265,25 @@
         "experts",
         "shared"
       ],
+      "direction": "left-to-right",
+      "ports": [
+        {
+          "id": "r",
+          "side": "left",
+          "inner": "router"
+        },
+        {
+          "id": "s",
+          "side": "left",
+          "inner": "shared"
+        }
+      ],
       "claimPath": "topology.experts.routed_total"
     },
     {
       "id": "g-mhc",
       "label": "mHC · 4 streams",
-      "kind": "inset",
+      "kind": "stack",
       "members": [
         "mhc"
       ],

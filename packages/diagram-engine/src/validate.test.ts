@@ -71,3 +71,118 @@ describe("validateScene", () => {
     expect(validateScene(scene).join("\n")).toMatch(/constraint emphasize: unknown target ghost/);
   });
 });
+
+describe("validateScene compound rules (#33)", () => {
+  /** inset with a boundary port; attn inside, head outside. */
+  function insetScene(): DiagramScene {
+    return {
+      irVersion: "0.1.0",
+      view: "overview",
+      modelId: "fixture/inset",
+      nodes: [
+        { id: "embed", kind: "embedding", label: "Embedding" },
+        { id: "attn", kind: "attention", label: "Attention" },
+        { id: "head", kind: "output", label: "LM head" },
+      ],
+      edges: [
+        { id: "e1", from: "embed", to: "g-attn.in", kind: "flow" },
+        { id: "e2", from: "g-attn.out", to: "head", kind: "flow" },
+      ],
+      groups: [
+        {
+          id: "g-attn",
+          label: "Attention",
+          kind: "inset",
+          members: ["attn"],
+          direction: "left-to-right",
+          ports: [
+            { id: "in", side: "left", inner: "attn" },
+            { id: "out", side: "right", inner: "attn" },
+          ],
+        },
+      ],
+      annotations: [],
+      constraints: [{ type: "direction", value: "bottom-to-top" }],
+    };
+  }
+
+  it("accepts edges that cross an inset through declared boundary ports", () => {
+    expect(validateScene(insetScene())).toEqual([]);
+  });
+
+  it("rejects a cross-group edge without a boundary port", () => {
+    const scene = insetScene();
+    scene.edges[0]!.to = "attn";
+    expect(validateScene(scene).join("\n")).toMatch(/crosses group g-attn boundary without a boundary port/);
+  });
+
+  it("rejects endpoints that name a group without a matching port", () => {
+    const scene = insetScene();
+    scene.edges[0]!.to = "g-attn.ghost";
+    expect(validateScene(scene).join("\n")).toMatch(/does not match a boundary port of group g-attn/);
+  });
+
+  it("rejects boundary ports whose inner anchor is not a member", () => {
+    const scene = insetScene();
+    scene.groups[0]!.ports![0]!.inner = "head";
+    expect(validateScene(scene).join("\n")).toMatch(/port "in" inner "head" does not reference a member node/);
+  });
+
+  it("rejects residual self-loops — pseudo streams are not streams", () => {
+    const scene = insetScene();
+    scene.edges.push({ id: "s1", from: "embed", to: "embed", kind: "residual" });
+    expect(validateScene(scene).join("\n")).toMatch(/residual edge s1: self-loop/);
+  });
+
+  it("rejects residual edges that stay inside one sublayer", () => {
+    const scene = insetScene();
+    scene.edges.push({ id: "s1", from: "g-attn.in", to: "g-attn.out", kind: "residual" });
+    // both endpoints resolve to attn (inside g-attn): no boundary crossed
+    expect(validateScene(scene).join("\n")).toMatch(/residual edge s1: does not cross a sublayer boundary/);
+  });
+
+  it("accepts a residual edge that enters through a boundary port", () => {
+    const scene = insetScene();
+    scene.edges.push({ id: "s1", from: "embed", to: "g-attn.in", kind: "residual" });
+    expect(validateScene(scene)).toEqual([]);
+  });
+
+  it("rejects split nodes with a single fan-out", () => {
+    const scene = insetScene();
+    scene.nodes.push({ id: "split", kind: "split", label: "Split" });
+    scene.edges.push({ id: "sp", from: "split", to: "head", kind: "flow" });
+    expect(validateScene(scene).join("\n")).toMatch(/split node split must fan out to at least 2 targets/);
+  });
+
+  it("rejects merge nodes with a single fan-in", () => {
+    const scene = insetScene();
+    scene.nodes.push({ id: "merge", kind: "merge", label: "Merge" });
+    scene.edges.push({ id: "mg", from: "embed", to: "merge", kind: "flow" });
+    expect(validateScene(scene).join("\n")).toMatch(/merge node merge must collect at least 2 sources/);
+  });
+
+  it("rejects a node claimed by two groups", () => {
+    const scene = insetScene();
+    scene.groups.push({ id: "g2", label: "G2", kind: "stack", members: ["attn"] });
+    expect(validateScene(scene).join("\n")).toMatch(/node attn belongs to multiple groups: g-attn and g2/);
+  });
+
+  it("rejects unknown group parents", () => {
+    const scene = insetScene();
+    scene.groups[0]!.parent = "ghost";
+    expect(validateScene(scene).join("\n")).toMatch(/group g-attn: unknown parent ghost/);
+  });
+
+  it("rejects group parent cycles", () => {
+    const scene = insetScene();
+    scene.groups.push({ id: "outer", label: "Outer", kind: "inset", members: [], parent: "g-attn" });
+    scene.groups[0]!.parent = "outer";
+    expect(validateScene(scene).join("\n")).toMatch(/parent cycle/);
+  });
+
+  it("rejects pixel coordinates on groups", () => {
+    const scene = insetScene();
+    (scene.groups[0] as unknown as Record<string, unknown>).x = 40;
+    expect(validateScene(scene).join("\n")).toMatch(/group g-attn: coordinate key "x" is forbidden/);
+  });
+});

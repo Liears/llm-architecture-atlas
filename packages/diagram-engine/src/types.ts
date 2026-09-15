@@ -24,30 +24,47 @@ export interface SemanticNode {
   claims?: Array<{ claimPath: string; label: string }>;
 }
 
-export type EdgeKind = "flow" | "skip" | "control";
+export type EdgeKind = "flow" | "skip" | "control" | "residual";
 
 export interface SemanticEdge {
   id: string;
-  from: string; // nodeId or nodeId.port
+  from: string; // nodeId, nodeId.port, or groupId.port (boundary port)
   to: string;
   kind: EdgeKind;
   label?: string;
   claimPath?: string;
-  /** skip-edge routing side; default right. */
+  /** skip/residual-edge routing side; default right for skip, left for residual. */
   rail?: "left" | "right";
 }
 
 export type GroupKind = "stack" | "inset" | "frame";
 
+/**
+ * Boundary port of a compound group (#33): edges crossing the group frame
+ * must land here instead of piercing the frame at an arbitrary member port.
+ */
+export interface SemanticGroupPort {
+  id: string; // unique within the group, e.g. "pre1"
+  side: "left" | "right" | "top" | "bottom";
+  /** member-side anchor: member node id or "memberId.port" */
+  inner: string;
+}
+
 export interface SemanticGroup {
   id: string;
   label: string;
   kind: GroupKind;
-  members: string[]; // node ids
+  members: string[]; // node ids directly contained (membership is unique)
   /** Repeated container (e.g. the 45-deep decoder block). */
   repeat?: { count: number; label: string };
   /** IR claim path backing the repeat count / group label. */
   claimPath?: string;
+  /** Containing group id, for compound subgraphs (groups form a tree). */
+  parent?: string;
+  /** Group-local layout direction; insets default to left-to-right. */
+  direction?: "bottom-to-top" | "top-to-bottom" | "left-to-right";
+  /** Boundary ports; cross-group edges must reference one of these. */
+  ports?: SemanticGroupPort[];
 }
 
 /** Points at the IR claim that backs a figure element. */
