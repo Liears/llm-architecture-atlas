@@ -1,5 +1,17 @@
 # LLM Architecture Atlas
 
+**🌐 Live site: <https://liears.github.io/llm-architecture-atlas/>**
+
+A static catalog of six open-weight models — every figure generated from an
+Architecture IR, every number traceable to an evidence claim. Browse the
+catalog, drill into per-model fact sheets and Architecture Genome strips,
+compare any two models side by side, and export figures as SVG/PNG.
+Bilingual UI: English / 中文 (toggle top-right). Deployed automatically on
+every push to `main` via GitHub Pages.
+
+> 内网访问备注(dev box):`ssh -L 8871:127.0.0.1:8871` 后打开
+> `http://127.0.0.1:8871/llm-architecture-atlas/`(8871 直接伺服 `apps/web/dist`)。
+
 Original, open-source **SVG redraws** of open-weight LLM architecture diagrams, in the visual
 style of [Sebastian Raschka's LLM Architecture Gallery](https://sebastianraschka.com/llm-architecture-gallery/).
 
