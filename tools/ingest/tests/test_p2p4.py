@@ -145,7 +145,7 @@ def test_proposals_never_touch_production_data() -> None:
                       source={"kind": "source_code", "locator": "x"})],
     )
     review_proposal(proposal, doc)
-    assert doc.facts.vocab_size == 155136  # untouched
+    assert doc.facts.vocab_size == 154880  # untouched
 
 
 # ---------------------------------------------------------------- #17 memory

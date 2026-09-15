@@ -95,13 +95,14 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
 
   for (const node of scene.nodes) {
     const claim = node.claimPath ? ` data-claim-path="${esc(node.claimPath)}"` : "";
+    const claimsAttr = node.claims?.length ? ` data-claims='${esc(JSON.stringify(node.claims))}'` : "";
     const portDots = Object.entries(node.ports)
       .filter(([name]) => name !== "in" && name !== "out")
       .map(([, p]) => `<circle class="n-port" cx="${fmt(p.x)}" cy="${fmt(p.y)}" r="3"/>`)
       .join("");
     const kindClass = node.kind === "attention" ? " attn" : node.kind === "moe" || node.kind === "ffn" ? " compute" : "";
     lines.push(
-      `  <g class="node${kindClass}" data-node-id="${esc(node.id)}"${claim}><title>${esc(node.label)}</title>` +
+      `  <g class="node${kindClass}" data-node-id="${esc(node.id)}"${claim}${claimsAttr}><title>${esc(node.label)}</title>` +
         `<rect class="n-box${kindClass}" x="${fmt(node.x)}" y="${fmt(node.y)}" width="${fmt(node.w)}" height="${fmt(node.h)}" rx="${radii.node}"/>` +
         `<text class="n-label" x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + (node.detail ? -4 : 5))}">${esc(node.label)}</text>` +
         (node.detail

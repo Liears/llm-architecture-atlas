@@ -13,6 +13,7 @@ export interface PositionedNode {
   label: string;
   detail?: string;
   claimPath?: string;
+  claims?: Array<{ claimPath: string; label: string }>;
   x: number; // left
   y: number; // top (SVG convention, 0 at top)
   w: number;

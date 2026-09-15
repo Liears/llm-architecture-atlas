@@ -5,99 +5,261 @@
       "path": "facts.num_hidden_layers",
       "value": 45,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_hidden_layers" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.num_hidden_layers"
+      }
     },
     {
       "path": "facts.hidden_size",
       "value": 4096,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.hidden_size" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.hidden_size"
+      }
     },
     {
       "path": "facts.num_attention_heads",
       "value": 64,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_attention_heads" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.num_attention_heads"
+      }
     },
     {
       "path": "facts.num_key_value_heads",
       "value": null,
       "status": "unknown",
-      "note": "config exposes no KV-head count; MLA compresses KV so the MHA notion does not map 1:1"
+      "note": "MLA compresses KV; head count does not map 1:1"
     },
     {
       "path": "facts.vocab_size",
-      "value": 155136,
+      "value": 154880,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.vocab_size" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.vocab_size"
+      }
     },
     {
       "path": "facts.context_tokens",
       "value": 1048576,
       "status": "reported",
-      "source": { "kind": "model_card", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash", "locator": "context window" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.max_position_embeddings"
+      }
     },
     {
       "path": "facts.total_params",
       "value": 320000000000,
       "status": "reported",
-      "source": { "kind": "model_card", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash", "locator": "parameter count" }
+      "source": {
+        "kind": "model_card",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash",
+        "revision": "f93128cf7f",
+        "locator": "parameter count"
+      }
     },
     {
       "path": "facts.active_params",
       "value": 18000000000,
       "status": "derived",
-      "extractor": "facts.active-params@1",
-      "source": { "kind": "derived", "locator": "sum of active experts + shared expert + attention parameters" }
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash",
+        "revision": "f93128cf7f",
+        "locator": "routed-active experts + shared + attention params"
+      },
+      "extractor": "facts.active-params@1"
     },
     {
       "path": "topology.attention_groups[0]",
-      "value": "34 KDA layers",
+      "value": "34 KDA layers (K,K,K,D schedule)",
       "status": "reported",
-      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "architecture table" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.linear_attn_config.kda_layers"
+      }
     },
     {
       "path": "topology.attention_groups[1]",
       "value": "11 MLA/DSA layers",
       "status": "reported",
-      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "architecture table" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.linear_attn_config.full_attn_layers"
+      }
+    },
+    {
+      "path": "topology.attention.kda_heads",
+      "value": 64,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.linear_attn_config.num_heads"
+      }
+    },
+    {
+      "path": "topology.attention.kda_head_dim",
+      "value": 128,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.linear_attn_config.head_dim"
+      }
+    },
+    {
+      "path": "topology.attention.kda_short_conv_kernel",
+      "value": 4,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.linear_attn_config.short_conv_kernel_size"
+      }
+    },
+    {
+      "path": "topology.attention.dsa_indexer_heads",
+      "value": 32,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.index_n_heads"
+      }
+    },
+    {
+      "path": "topology.attention.dsa_indexer_head_dim",
+      "value": 128,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.index_head_dim"
+      }
+    },
+    {
+      "path": "topology.attention.dsa_topk",
+      "value": 2048,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.index_topk"
+      }
     },
     {
       "path": "topology.ffn_groups[0]",
-      "value": "first 3 blocks use dense SwiGLU instead of MoE",
+      "value": "first 3 blocks dense SwiGLU",
       "status": "reported",
-      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "FFN section" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.first_k_dense_replace"
+      }
+    },
+    {
+      "path": "topology.ffn_groups[1]",
+      "value": "42 sparse MoE blocks",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.mlp_layer_types"
+      }
     },
     {
       "path": "topology.experts.routed_total",
       "value": 288,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.n_routed_experts" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.n_routed_experts"
+      }
     },
     {
       "path": "topology.experts.active_routed",
       "value": 8,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.num_experts_per_tok" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.num_experts_per_tok"
+      }
     },
     {
       "path": "topology.experts.shared",
       "value": 1,
       "status": "reported",
-      "source": { "kind": "hf_config", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "$.text_config.n_shared_experts" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.n_shared_experts"
+      }
     },
     {
       "path": "topology.residual.streams",
       "value": 4,
       "status": "reported",
-      "source": { "kind": "tech_report", "url": "https://arxiv.org/pdf/2602.15763", "locator": "mHC section" }
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.hc_mult"
+      }
     },
     {
-      "path": "topology.position_encoding.type",
-      "value": "mixed",
-      "status": "inferred",
-      "source": { "kind": "manual", "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/config.json", "locator": "rope settings absent for MLA Q/K paths" },
-      "note": "awaiting confirmation from source review (issue #15)"
+      "path": "topology.residual.scheme",
+      "value": "mhc",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.mhc"
+      }
+    },
+    {
+      "path": "topology.mtp.predict_layers",
+      "value": 1,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+        "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+        "locator": "$.text_config.num_nextn_predict_layers"
+      }
     }
   ]
 }

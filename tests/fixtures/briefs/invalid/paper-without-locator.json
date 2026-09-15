@@ -1,0 +1,18 @@
+{
+  "model_id": "zai-org/glm-5.3-flash",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+      "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7"
+    }
+  ],
+  "papers": [
+    {
+      "url": "https://arxiv.org/abs/2512.24880",
+      "title": "mHC paper",
+      "role": "mechanism-only",
+      "locators": []
+    }
+  ]
+}

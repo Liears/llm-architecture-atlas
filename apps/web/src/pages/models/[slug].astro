@@ -1,7 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { loadModels } from "../../lib/atlas.js";
-import { buildGenome, genomeCellRole } from "@atlas/catalog";
+import { buildGenome, genomeCellRole, formatParams, formatContext } from "@atlas/catalog";
 
 export function getStaticPaths() {
   return loadModels().map((m) => ({ params: { slug: m.slug }, props: { model: m } }));
@@ -48,8 +48,8 @@ const statusSymbol = (s: string) =>
     <div><dt data-i18n="fact.hiddenSize">Hidden size</dt><dd>{facts.hidden_size}</dd></div>
     <div><dt data-i18n="fact.heads">Attention heads</dt><dd>{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}</dd></div>
     <div><dt data-i18n="fact.vocab">Vocab</dt><dd>{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></div>
-    <div><dt data-i18n="fact.context">Context</dt><dd>{facts.context_tokens?.toLocaleString("en-US") ?? "—"}</dd></div>
-    <div><dt data-i18n="fact.params">Params</dt><dd>{facts.total_params ? `${Math.round((facts.total_params / 1e12) * 10) / 10}B total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${Math.round((facts.active_params / 1e9) * 10) / 10}B active` : ""}</dd></div>
+    <div><dt data-i18n="fact.context">Context</dt><dd>{formatContext(facts.context_tokens)}</dd></div>
+    <div><dt data-i18n="fact.params">Params</dt><dd>{facts.total_params ? `${formatParams(facts.total_params)} total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${formatParams(facts.active_params)} active` : ""}</dd></div>
   </dl>
 
   <h2 data-i18n="detail.genome">Architecture Genome</h2>

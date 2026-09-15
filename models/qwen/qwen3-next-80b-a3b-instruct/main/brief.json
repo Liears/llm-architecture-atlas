@@ -1,0 +1,26 @@
+{
+  "model_id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct/raw/b664bd1e89aa8649fdb1016281122da970b5e848/config.json",
+      "revision": "b664bd1e89aa8649fdb1016281122da970b5e848",
+      "sha256": "2d483c7cabad7c8704478ed4038fa7e7b2eff840bc00a118eccbe38e2b488303"
+    }
+  ],
+  "papers": [],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "48 layers, linear:full = 3:1 (full_attention_interval=4)",
+      "locator": "config $.full_attention_interval (rev b664bd1e)",
+      "status": "verified"
+    },
+    {
+      "element": "MoE 512 experts, top-10",
+      "locator": "config $.num_experts + $.num_experts_per_tok",
+      "status": "verified"
+    }
+  ],
+  "notes": "No model-specific paper has been audited for Qwen3-Next yet; the pinned official config is the sole source of truth. Adding a paper requires the issue-template source pack."
+}

@@ -1,48 +1,72 @@
 {
   "ir_version": "0.1.0",
   "model": {
-    "id": "moonshotai/kimi-linear-48b-a3b",
-    "label": "Kimi Linear 48B-A3B",
-    "family": "Kimi",
-    "revision": "main",
-    "license": null
+    "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+    "label": "Qwen3-Next 80B-A3B",
+    "family": "Qwen3-Next",
+    "revision": "b664bd1e89",
+    "license": "apache-2.0"
   },
   "facts": {
     "num_hidden_layers": 48,
     "hidden_size": 2048,
-    "num_attention_heads": 32,
-    "num_key_value_heads": null,
-    "head_dim": null,
+    "num_attention_heads": 16,
+    "num_key_value_heads": 2,
+    "head_dim": 256,
     "vocab_size": 151936,
-    "context_tokens": 1048576,
-    "total_params": 48000000000,
+    "context_tokens": 262144,
+    "total_params": 80000000000,
     "active_params": 3000000000
   },
   "topology": {
     "attention_groups": [
       {
-        "label": "KDA",
+        "label": "Gated DeltaNet",
         "kind": "linear_attention",
-        "module": "KimiDeltaAttention",
+        "module": "GatedDeltaNet",
         "layers": [
           0,
+          1,
+          2,
           4,
+          5,
+          6,
           8,
+          9,
+          10,
           12,
+          13,
+          14,
           16,
+          17,
+          18,
           20,
+          21,
+          22,
           24,
+          25,
+          26,
           28,
+          29,
+          30,
           32,
+          33,
+          34,
           36,
+          37,
+          38,
           40,
-          44
+          41,
+          42,
+          44,
+          45,
+          46
         ]
       },
       {
-        "label": "GQA",
+        "label": "Gated Attention",
         "kind": "gqa",
-        "module": "GroupedQueryAttention",
+        "module": "GatedAttention",
         "layers": [
           3,
           7,
@@ -118,8 +142,8 @@
     ],
     "experts": {
       "routed_total": 512,
-      "active_routed": 6,
-      "shared": 1
+      "active_routed": 10,
+      "shared": null
     },
     "residual": {
       "scheme": "plain",
@@ -128,7 +152,7 @@
     },
     "position_encoding": {
       "type": "rope",
-      "note": null
+      "note": "partial RoPE on the gated attention path"
     }
   }
 }

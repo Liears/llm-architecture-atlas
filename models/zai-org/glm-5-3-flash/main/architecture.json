@@ -4,7 +4,7 @@
     "id": "zai-org/glm-5.3-flash",
     "label": "GLM-5.3-Flash (320B-A18B)",
     "family": "GLM",
-    "revision": "main",
+    "revision": "f93128cf7f",
     "license": "glm-community-license"
   },
   "facts": {
@@ -13,7 +13,7 @@
     "num_attention_heads": 64,
     "num_key_value_heads": null,
     "head_dim": null,
-    "vocab_size": 155136,
+    "vocab_size": 154880,
     "context_tokens": 1048576,
     "total_params": 320000000000,
     "active_params": 18000000000
@@ -24,13 +24,60 @@
         "label": "KDA",
         "kind": "linear_attention",
         "module": "KimiDeltaAttention",
-        "layers": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+        "layers": [
+          0,
+          1,
+          2,
+          4,
+          5,
+          6,
+          8,
+          9,
+          10,
+          12,
+          13,
+          14,
+          16,
+          17,
+          18,
+          20,
+          21,
+          22,
+          24,
+          25,
+          26,
+          28,
+          29,
+          30,
+          32,
+          33,
+          34,
+          36,
+          37,
+          38,
+          40,
+          41,
+          42,
+          44
+        ]
       },
       {
         "label": "MLA/DSA",
         "kind": "mla_sparse",
-        "module": "MultiHeadLatentAttention + DeepSeekSparseAttention",
-        "layers": [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+        "module": "MLA + DeepSeek Sparse Attention",
+        "layers": [
+          3,
+          7,
+          11,
+          15,
+          19,
+          23,
+          27,
+          31,
+          35,
+          39,
+          43
+        ]
       }
     ],
     "ffn_groups": [
@@ -38,13 +85,60 @@
         "label": "Dense SwiGLU",
         "kind": "dense_ffn",
         "module": "SwiGLU",
-        "layers": [0, 1, 2]
+        "layers": [
+          0,
+          1,
+          2
+        ]
       },
       {
         "label": "MoE",
         "kind": "moe",
         "module": "MoE",
-        "layers": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+        "layers": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44
+        ]
       }
     ],
     "experts": {
@@ -55,11 +149,11 @@
     "residual": {
       "scheme": "mhc",
       "streams": 4,
-      "note": "manifold-constrained hyper-connections replace the plain residual add with constrained four-stream mixing"
+      "note": "manifold-constrained hyper-connections, hc_mult=4"
     },
     "position_encoding": {
       "type": "mixed",
-      "note": "NoPE inside MLA Q/K; KDA layers carry per-channel recurrent state"
+      "note": "NoPE inside MLA Q/K; KDA uses per-channel decay state"
     }
   }
 }

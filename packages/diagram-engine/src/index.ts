@@ -1,5 +1,6 @@
 export * from "./types.js";
 export * from "./validate.js";
+export * from "./audit.js";
 export * from "./positioned.js";
 export * from "./text.js";
 export * from "./layout.js";

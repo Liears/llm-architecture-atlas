@@ -1,7 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import { loadModels, catalogEntries } from "../lib/atlas.js";
-import { families } from "@atlas/catalog";
+import { families, formatParams } from "@atlas/catalog";
 
 const models = loadModels();
 const entries = catalogEntries(models);
@@ -51,7 +51,7 @@ const fmtB = (n: number | null): string => {
           </a>
           <span class="muted">{e.family} · {e.decoderType}</span>
           <span class="muted">
-            {e.totalParams ? `${fmtB(e.totalParams)} total` : "—"}
+            {e.totalParams ? `${formatParams(e.totalParams)} total` : "—"}
             {e.activeParams && e.activeParams !== e.totalParams ? ` / ${fmtB(e.activeParams)} active` : ""}
             {" · "}{e.numLayers} layers
             {e.contextTokens ? ` · ${e.contextTokens >= 1e6 ? `${Math.round((e.contextTokens / 1e5)) / 10}M` : Math.round(e.contextTokens / 1024) + "K"} ctx` : ""}

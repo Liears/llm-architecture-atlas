@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { compileOverviewScene } from "./compile.js";
+import { auditCoverage } from "./audit.js";
 import { layoutScene } from "./layout.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -19,8 +20,10 @@ const snapDir = `${root}/tests/structural`;
 const snapshots = readdirSync(snapDir).filter((f) => f.endsWith(".overview.json"));
 
 function pipelineFor(modelId: string) {
-  const [org, ...rest] = modelId.split("/");
-  const name = rest.join("/").replace(/\./g, "-");
+  const [orgRaw, ...rest] = modelId.split("/");
+  if (!orgRaw) throw new Error(`bad modelId: ${modelId}`);
+  const org = orgRaw.toLowerCase();
+  const name = rest.join("/").toLowerCase().replace(/\./g, "-");
   const modelDir = `${modelsRoot}/${org}/${name}/main`;
   if (!existsSync(`${modelDir}/architecture.json`)) {
     throw new Error(`missing IR for ${modelId} at ${modelDir}`);
@@ -41,17 +44,35 @@ function pipelineFor(modelId: string) {
   };
 }
 
+function modelInputs(modelId: string): { arch: ModelDocument; evidence: EvidenceFile } {
+  const [orgRaw, ...rest] = modelId.split("/");
+  if (!orgRaw) throw new Error(`bad modelId: ${modelId}`);
+  const org = orgRaw.toLowerCase();
+  const modelDir = `${modelsRoot}/${org}/${rest.join("/").toLowerCase().replace(/\./g, "-")}/main`;
+  return {
+    arch: JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument,
+    evidence: JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile,
+  };
+}
+
 describe.each(snapshots)("structural gate: %s", (file) => {
   const committed = JSON.parse(readFileSync(`${snapDir}/${file}`, "utf8"));
   it("matches the pipeline output exactly", () => {
     expect(pipelineFor(committed.modelId)).toEqual(committed);
   });
-  it("keeps evidence coverage: numbers always resolve to claims", () => {
-    const targeted = new Set<string>(committed.annotations.map((a: { target: string }) => a.target));
-    for (const node of committed.nodes) {
-      if (/\d/.test(node.label) || /\d/.test(node.detail ?? "")) {
-        expect(Boolean(node.claimPath) || targeted.has(node.id), node.id).toBe(true);
-      }
-    }
+  it("keeps evidence coverage: every claim-backed segment resolves (#21)", () => {
+    const { arch, evidence } = modelInputs(committed.modelId);
+    const scene = compileOverviewScene(arch, evidence);
+    expect(auditCoverage(scene, evidence.claims, scene.groups)).toEqual([]);
+  });
+
+  it("negative: removing a shown claim from evidence fails the audit (#21)", () => {
+    const { arch, evidence } = modelInputs(committed.modelId);
+    const scene = compileOverviewScene(arch, evidence);
+    const firstRef = scene.nodes.flatMap((n) => n.claims ?? [])[0];
+    if (!firstRef) return; // model has no claim-backed segments
+    const reduced = evidence.claims.filter((c) => c.path !== firstRef.claimPath);
+    const audit: string[] = auditCoverage(scene, reduced, scene.groups);
+    expect(audit.some((e) => e.includes(`"${firstRef.claimPath}" missing from evidence`))).toBe(true);
   });
 });

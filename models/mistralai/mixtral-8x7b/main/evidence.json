@@ -7,8 +7,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.num_hidden_layers"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.num_hidden_layers",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -17,8 +18,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.hidden_size"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.hidden_size",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -27,8 +29,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.num_attention_heads"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.num_attention_heads",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -37,8 +40,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.vocab_size"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.vocab_size",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -47,8 +51,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.max_position_embeddings"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.max_position_embeddings",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -58,7 +63,8 @@
       "source": {
         "kind": "model_card",
         "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1",
-        "locator": "parameter count"
+        "locator": "parameter count",
+        "revision": "de132a80b2"
       }
     },
     {
@@ -67,8 +73,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.num_key_value_heads"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.num_key_value_heads",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -77,8 +84,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "layers config / architecture table"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "layers config / architecture table",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -87,8 +95,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.n_routed_experts"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.n_routed_experts",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -97,8 +106,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.num_experts_per_tok"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.num_experts_per_tok",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -107,8 +117,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "$.n_shared_experts"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "$.n_shared_experts",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
       }
     },
     {
@@ -117,8 +128,21 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/main/config.json",
-        "locator": "rope settings"
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+        "locator": "rope settings",
+        "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756"
+      }
+    },
+    {
+      "path": "facts.active_params",
+      "value": 12900000000,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1",
+        "revision": "de132a80b2",
+        "locator": "dense or activated experts + attention params"
       }
     }
   ]

@@ -4,7 +4,7 @@
     "id": "meta-llama/llama-3-8b",
     "label": "Llama 3 8B",
     "family": "Llama",
-    "revision": "main",
+    "revision": "7784fbf634",
     "license": null
   },
   "facts": {

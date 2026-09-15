@@ -7,8 +7,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.num_hidden_layers"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.num_hidden_layers",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -17,8 +18,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.hidden_size"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.hidden_size",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -27,8 +29,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.num_attention_heads"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.num_attention_heads",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -37,8 +40,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.vocab_size"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.vocab_size",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -47,8 +51,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.max_position_embeddings"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.max_position_embeddings",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -58,7 +63,8 @@
       "source": {
         "kind": "model_card",
         "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3",
-        "locator": "parameter count"
+        "locator": "parameter count",
+        "revision": "aec35a75d9"
       }
     },
     {
@@ -67,8 +73,9 @@
       "status": "unknown",
       "source": {
         "kind": "hf_config",
-        "url": null,
-        "locator": null
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": null,
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       },
       "note": "MLA compresses the KV cache; head counts do not map 1:1"
     },
@@ -78,8 +85,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "layers config / architecture table"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "layers config / architecture table",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -88,8 +96,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.n_routed_experts"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.n_routed_experts",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -98,8 +107,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.num_experts_per_tok"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.num_experts_per_tok",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -108,8 +118,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "$.n_shared_experts"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "$.n_shared_experts",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       }
     },
     {
@@ -118,10 +129,23 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/main/config.json",
-        "locator": "rope settings"
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+        "locator": "rope settings",
+        "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce"
       },
       "note": "MLA decouples RoPE via decoupled RoPE keypoints"
+    },
+    {
+      "path": "facts.active_params",
+      "value": 37000000000,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3",
+        "revision": "aec35a75d9",
+        "locator": "dense or activated experts + attention params"
+      }
     }
   ]
 }

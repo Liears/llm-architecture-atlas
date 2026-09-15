@@ -3,7 +3,7 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1238,
+    "w": 994,
     "h": 546
   },
   "nodes": [
@@ -22,7 +22,7 @@
     {
       "id": "block",
       "label": "Decoder stack · 32 layers",
-      "detail": "0 dense SwiGLU + 32 MoE blocks",
+      "detail": "32 layers · 32 GQA · 32 MoE blocks",
       "claimPath": "facts.num_hidden_layers"
     },
     {
@@ -46,19 +46,13 @@
     {
       "id": "inset-moe",
       "label": "MoE routing",
-      "detail": "8 routed · 2 active + 0 shared",
+      "detail": "8 routed · 2 active",
       "claimPath": "topology.experts.routed_total"
-    },
-    {
-      "id": "inset-mhc",
-      "label": "mHC residual",
-      "detail": "0 parallel streams",
-      "claimPath": "topology.residual.streams"
     },
     {
       "id": "inset-ctx",
       "label": "Context & scale",
-      "detail": "32,768 tokens · 47B total / 13B active",
+      "detail": "32K tokens · 46.7B total · 12.9B active",
       "claimPath": "facts.context_tokens"
     }
   ],
@@ -100,12 +94,6 @@
       "to": "inset-moe"
     },
     {
-      "id": "c-mhc",
-      "kind": "control",
-      "from": "block",
-      "to": "inset-mhc"
-    },
-    {
       "id": "c-ctx",
       "kind": "control",
       "from": "block",
@@ -134,7 +122,17 @@
       "status": "reported"
     },
     {
+      "claimPath": "facts.vocab_size",
+      "target": "embed",
+      "status": "reported"
+    },
+    {
       "claimPath": "facts.num_hidden_layers",
+      "target": "block",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
       "target": "block",
       "status": "reported"
     },
@@ -154,8 +152,9 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.streams",
-      "target": "inset-mhc"
+      "claimPath": "topology.experts.active_routed",
+      "target": "inset-moe",
+      "status": "reported"
     },
     {
       "claimPath": "facts.context_tokens",
@@ -163,9 +162,14 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_attention_heads",
-      "target": "block",
+      "claimPath": "facts.total_params",
+      "target": "inset-ctx",
       "status": "reported"
+    },
+    {
+      "claimPath": "facts.active_params",
+      "target": "inset-ctx",
+      "status": "derived"
     }
   ]
 }

@@ -3,7 +3,7 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1257,
+    "w": 1113,
     "h": 546
   },
   "nodes": [
@@ -22,7 +22,7 @@
     {
       "id": "block",
       "label": "Decoder stack · 61 layers",
-      "detail": "3 dense SwiGLU + 58 MoE blocks",
+      "detail": "61 layers · 61 MLA · 3 dense · 58 MoE blocks",
       "claimPath": "facts.num_hidden_layers"
     },
     {
@@ -46,19 +46,13 @@
     {
       "id": "inset-moe",
       "label": "MoE routing",
-      "detail": "256 routed · 8 active + 1 shared",
+      "detail": "256 routed · 8 active · 1 shared",
       "claimPath": "topology.experts.routed_total"
-    },
-    {
-      "id": "inset-mhc",
-      "label": "mHC residual",
-      "detail": "0 parallel streams",
-      "claimPath": "topology.residual.streams"
     },
     {
       "id": "inset-ctx",
       "label": "Context & scale",
-      "detail": "163,840 tokens · 671B total / 37B active",
+      "detail": "160K tokens · 671B total · 37B active",
       "claimPath": "facts.context_tokens"
     }
   ],
@@ -100,12 +94,6 @@
       "to": "inset-moe"
     },
     {
-      "id": "c-mhc",
-      "kind": "control",
-      "from": "block",
-      "to": "inset-mhc"
-    },
-    {
       "id": "c-ctx",
       "kind": "control",
       "from": "block",
@@ -134,7 +122,17 @@
       "status": "reported"
     },
     {
+      "claimPath": "facts.vocab_size",
+      "target": "embed",
+      "status": "reported"
+    },
+    {
       "claimPath": "facts.num_hidden_layers",
+      "target": "block",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
       "target": "block",
       "status": "reported"
     },
@@ -154,8 +152,14 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.streams",
-      "target": "inset-mhc"
+      "claimPath": "topology.experts.active_routed",
+      "target": "inset-moe",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.shared",
+      "target": "inset-moe",
+      "status": "reported"
     },
     {
       "claimPath": "facts.context_tokens",
@@ -163,9 +167,14 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_attention_heads",
-      "target": "block",
+      "claimPath": "facts.total_params",
+      "target": "inset-ctx",
       "status": "reported"
+    },
+    {
+      "claimPath": "facts.active_params",
+      "target": "inset-ctx",
+      "status": "derived"
     }
   ]
 }

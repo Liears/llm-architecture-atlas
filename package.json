@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:e2e": "pnpm --filter @atlas/web build && pnpm --filter @atlas/web test:e2e",
     "pytest": "pytest tools/ingest",
-    "export:golden": "tsx scripts/export-golden.ts"
+    "export:golden": "tsx scripts/export-golden.ts",
+    "verify": "node scripts/verify.mjs",
+    "verify:e2e": "node scripts/verify.mjs --e2e"
   },
   "devDependencies": {
     "tsx": "^4.23.13",

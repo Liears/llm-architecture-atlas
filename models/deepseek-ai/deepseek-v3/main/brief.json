@@ -1,0 +1,32 @@
+{
+  "model_id": "deepseek-ai/deepseek-v3",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3/raw/aec35a75d9bd54d463287e655724a0aeffdb38ce/config.json",
+      "revision": "aec35a75d9bd54d463287e655724a0aeffdb38ce",
+      "sha256": "cbf0b95dc614de208a109bb5fd4e7eed11385e9c68411d2c17db5319443035d9"
+    }
+  ],
+  "papers": [
+    {
+      "url": "https://arxiv.org/abs/2512.02556",
+      "title": "DeepSeek-V3.2 report (DSA)",
+      "role": "mechanism-only",
+      "verifies": null,
+      "locators": [
+        "§2.1",
+        "Figure 2 (PDF pp.3-4)"
+      ]
+    }
+  ],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "61 layers, MLA (kv_lora_rank 512), first 3 dense + 58 MoE (256 experts top-8 + 1 shared), MTP 1",
+      "locator": "config (rev aec35a75); DSA paper Fig.2 for the V3.2 mechanism variant",
+      "status": "verified"
+    }
+  ],
+  "notes": "The audited DeepSeek-V3.2 report is mechanism-only for V3 (V3.2 changes the sparse-attention design). The pinned V3 config is the source of truth."
+}

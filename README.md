@@ -27,6 +27,15 @@ Apache-2.0) and cross-checked against each model's published config / tech repor
 
 Monorepo: pnpm workspace (Node ≥ 22.12) + Python (pydantic v2).
 
+One-command verification from a clean clone (Windows/Linux/macOS):
+
+```bash
+pnpm verify                  # venv bootstrap + install + build + typecheck + all tests + clean-diff gate
+pnpm verify:e2e              # same, plus Playwright smoke
+```
+
+Or step by step:
+
 ```bash
 pnpm install                 # .npmrc pins the npmmirror registry
 pnpm build                   # astro static build

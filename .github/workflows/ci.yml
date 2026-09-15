@@ -41,6 +41,11 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
         working-directory: apps/web
 
+      - name: Regenerate golden artifacts and require clean diff
+        run: |
+          pnpm export:golden
+          git diff --exit-code --stat tests/structural apps/web/public/figures
+
       - name: E2E smoke (Playwright)
         run: pnpm --filter @atlas/web test:e2e
         env:

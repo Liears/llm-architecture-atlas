@@ -1,0 +1,43 @@
+{
+  "model_id": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
+      "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
+      "sha256": "a6ac3c2c4b5aa72370f9727f49ffa4432715d20061889acdb37c688be853096e"
+    }
+  ],
+  "papers": [
+    {
+      "url": "https://arxiv.org/abs/2510.26692",
+      "title": "Kimi Linear: An Hybrid Fisher-Decay Linear Attention Model",
+      "role": "model-specific",
+      "verifies": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+      "locators": [
+        "§4",
+        "Figure 3 (PDF p.6)",
+        "§5.2 / Table 1 (PDF p.8)"
+      ]
+    }
+  ],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "27 layers, KDA:MLA = 3:1 (last layer MLA)",
+      "locator": "config $.linear_attn_config.kda_layers/full_attn_layers (rev 69e2a71f)",
+      "status": "verified"
+    },
+    {
+      "element": "KDA shortconv kernel 4, 32 heads, head_dim 128",
+      "locator": "config $.linear_attn_config (rev 69e2a71f); Kimi paper §4/Fig.3 for mechanism",
+      "status": "verified"
+    },
+    {
+      "element": "MoE 256 experts, top-8, 1 shared",
+      "locator": "config $.num_experts + $.num_experts_per_token + $.n_shared_experts",
+      "status": "verified"
+    }
+  ],
+  "notes": "The Kimi Linear report is model-specific for this family. Context 1M comes from the model card (config has no max_position_embeddings)."
+}

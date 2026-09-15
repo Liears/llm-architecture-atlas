@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Ingest pipeline: source snapshots, config extraction adapters, evidence-ledged claims (issues #13-#16)"
 requires-python = ">=3.10"
 dependencies = [
-  "pydantic>=2.9",
+  "pydantic==2.13.5",
 ]
 
 [project.optional-dependencies]

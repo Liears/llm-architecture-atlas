@@ -1,0 +1,93 @@
+{
+  "model_id": "zai-org/glm-5.3-flash",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/f93128cf7f31ca2b22e367cd63676c320c4164a7/config.json",
+      "revision": "f93128cf7f31ca2b22e367cd63676c320c4164a7",
+      "sha256": "bb8f01c42cb92a52ca72e65afb4d5bd8d11aef083cd210e8de25dfb904f23e9f"
+    }
+  ],
+  "papers": [
+    {
+      "url": "https://arxiv.org/abs/2602.15763v2",
+      "title": "GLM-5 technical report (v2)",
+      "role": "mechanism-only",
+      "verifies": null,
+      "locators": [
+        "§2.1 Architecture",
+        "§2.1.1 DSA",
+        "PDF pp.4-6"
+      ]
+    },
+    {
+      "url": "https://arxiv.org/abs/2510.26692",
+      "title": "Kimi Linear: An Hybrid Fisher-Decay Linear Attention Model",
+      "role": "mechanism-only",
+      "verifies": null,
+      "locators": [
+        "§4",
+        "Figure 3 (PDF p.6)",
+        "§5.2 / Table 1 (PDF p.8)"
+      ]
+    },
+    {
+      "url": "https://arxiv.org/abs/2512.02556",
+      "title": "DeepSeek-V3.2 report (DSA)",
+      "role": "mechanism-only",
+      "verifies": null,
+      "locators": [
+        "§2.1",
+        "Figure 2 (PDF pp.3-4)"
+      ]
+    },
+    {
+      "url": "https://arxiv.org/abs/2512.24880",
+      "title": "Manifold-constrained Hyper-Connections (mHC)",
+      "role": "mechanism-only",
+      "verifies": null,
+      "locators": [
+        "Figure 1(c) (PDF p.1)",
+        "§3-§4"
+      ]
+    }
+  ],
+  "visual_references": [
+    {
+      "url": "https://www.sebastianraschka.com/llm-architecture-gallery/images/architectures/thumbnails/glm-5.3-flash.webp",
+      "title": "Raschka Gallery GLM-5.3-Flash figure",
+      "role": "secondary-visual",
+      "locators": [
+        "whole figure"
+      ]
+    }
+  ],
+  "paper_to_diagram": [
+    {
+      "element": "45-layer decoder, K,K,K,D schedule",
+      "locator": "config $.text_config.layer_types (rev f93128cf)",
+      "status": "verified"
+    },
+    {
+      "element": "mHC 4 residual streams",
+      "locator": "config $.text_config.hc_mult (rev f93128cf); mHC paper Fig.1(c) for mechanism",
+      "status": "verified"
+    },
+    {
+      "element": "DSA indexer -> top-k 2048 -> selected KV",
+      "locator": "config $.text_config.index_* (rev f93128cf); DSA paper Fig.2 for mechanism",
+      "status": "verified"
+    },
+    {
+      "element": "dense x3 -> sparse MoE x42",
+      "locator": "config $.text_config.first_k_dense_replace + mlp_layer_types",
+      "status": "verified"
+    },
+    {
+      "element": "vocab 154,880 (overview may show ≈155K)",
+      "locator": "config $.text_config.vocab_size",
+      "status": "verified"
+    }
+  ],
+  "notes": "No model-specific paper exists for GLM-5.3-Flash; the GLM-5 report is mechanism-only (it documents the 744B/40B model). All Flash-specific facts rest on the pinned config revision. Parameters 320B/18B are from the model card and must stay separate from the MoE active-expert count."
+}

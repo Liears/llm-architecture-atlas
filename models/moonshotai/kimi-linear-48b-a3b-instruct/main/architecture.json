@@ -1,48 +1,56 @@
 {
   "ir_version": "0.1.0",
   "model": {
-    "id": "qwen/qwen3-next-80b-a3b",
-    "label": "Qwen3-Next 80B-A3B",
-    "family": "Qwen3-Next",
-    "revision": "main",
-    "license": null
+    "id": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
+    "label": "Kimi Linear 48B-A3B",
+    "family": "Kimi",
+    "revision": "69e2a71feb",
+    "license": "modified-mit"
   },
   "facts": {
-    "num_hidden_layers": 48,
-    "hidden_size": 2048,
+    "num_hidden_layers": 27,
+    "hidden_size": 2304,
     "num_attention_heads": 32,
-    "num_key_value_heads": 16,
-    "head_dim": null,
-    "vocab_size": 151936,
-    "context_tokens": 262144,
-    "total_params": 80000000000,
+    "num_key_value_heads": 32,
+    "head_dim": 72,
+    "vocab_size": 163840,
+    "context_tokens": 1048576,
+    "total_params": 48000000000,
     "active_params": 3000000000
   },
   "topology": {
     "attention_groups": [
       {
-        "label": "Gated DeltaNet",
+        "label": "KDA",
         "kind": "linear_attention",
-        "module": "GatedDeltaNet",
+        "module": "KimiDeltaAttention",
         "layers": [
           0,
+          1,
+          2,
           4,
+          5,
+          6,
           8,
+          9,
+          10,
           12,
+          13,
+          14,
           16,
+          17,
+          18,
           20,
+          21,
+          22,
           24,
-          28,
-          32,
-          36,
-          40,
-          44
+          25
         ]
       },
       {
-        "label": "Gated Attention",
-        "kind": "gqa",
-        "module": "GatedAttention",
+        "label": "MLA",
+        "kind": "mla",
+        "module": "MLA",
         "layers": [
           3,
           7,
@@ -50,12 +58,7 @@
           15,
           19,
           23,
-          27,
-          31,
-          35,
-          39,
-          43,
-          47
+          26
         ]
       }
     ],
@@ -91,35 +94,14 @@
           23,
           24,
           25,
-          26,
-          27,
-          28,
-          29,
-          30,
-          31,
-          32,
-          33,
-          34,
-          35,
-          36,
-          37,
-          38,
-          39,
-          40,
-          41,
-          42,
-          43,
-          44,
-          45,
-          46,
-          47
+          26
         ]
       }
     ],
     "experts": {
-      "routed_total": 512,
-      "active_routed": 10,
-      "shared": 1
+      "routed_total": 256,
+      "active_routed": 8,
+      "shared": null
     },
     "residual": {
       "scheme": "plain",
@@ -128,7 +110,7 @@
     },
     "position_encoding": {
       "type": "rope",
-      "note": "partial RoPE on the gated attention path"
+      "note": "qk_rope_head_dim=64 on MLA layers"
     }
   }
 }

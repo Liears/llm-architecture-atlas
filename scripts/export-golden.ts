@@ -4,11 +4,12 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { EvidenceFile, ModelDocument } from "../packages/architecture-ir/src/types.ts";
-import { compileOverviewScene, layoutScene, validateScene } from "../packages/diagram-engine/src/index.ts";
+import { auditCoverage, compileOverviewScene, layoutScene, validateScene } from "../packages/diagram-engine/src/index.ts";
 import { renderSvg } from "../packages/renderer-svg/src/render.ts";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const modelsRoot = `${root}models`;
 const outDir = `${root}apps/web/public/figures`;
 mkdirSync(outDir, { recursive: true });

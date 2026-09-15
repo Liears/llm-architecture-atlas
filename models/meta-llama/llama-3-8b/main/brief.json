@@ -1,0 +1,21 @@
+{
+  "model_id": "meta-llama/llama-3-8b",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/NousResearch/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+      "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8",
+      "sha256": "2430cee764b6530ff8673cf9ba8561e1d5a33152d503cd0de909ff5718261441"
+    }
+  ],
+  "papers": [],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "32 layers, GQA (8 KV of 32 heads), dense FFN",
+      "locator": "config (mirror copy of gated upstream, rev 7784fbf6)",
+      "status": "verified"
+    }
+  ],
+  "notes": "Upstream meta-llama repo is gated (HTTP 401 from this network); the pinned revision is the public NousResearch mirror copy of the same config. Llama 3 has no model-specific paper; the config is the source of truth."
+}

@@ -201,6 +201,7 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     label: it.node.label,
     detail: it.node.detail,
     claimPath: it.node.claimPath,
+    claims: it.node.claims,
     x: it.x,
     y: it.y,
     w: it.w,

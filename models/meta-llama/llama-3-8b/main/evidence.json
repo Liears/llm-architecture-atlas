@@ -7,8 +7,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "$.num_hidden_layers"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "$.num_hidden_layers",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -17,8 +18,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "$.hidden_size"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "$.hidden_size",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -27,8 +29,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "$.num_attention_heads"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "$.num_attention_heads",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -37,8 +40,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "$.vocab_size"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "$.vocab_size",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -47,8 +51,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "$.max_position_embeddings"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "$.max_position_embeddings",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -58,7 +63,8 @@
       "source": {
         "kind": "model_card",
         "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B",
-        "locator": "parameter count"
+        "locator": "parameter count",
+        "revision": "7784fbf634"
       }
     },
     {
@@ -67,8 +73,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "$.num_key_value_heads"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "$.num_key_value_heads",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -77,8 +84,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "layers config / architecture table"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "layers config / architecture table",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
       }
     },
     {
@@ -87,8 +95,21 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/main/config.json",
-        "locator": "rope settings"
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B/raw/7784fbf6342de338b736f884a49b08f270c5e9c8/config.json",
+        "locator": "rope settings",
+        "revision": "7784fbf6342de338b736f884a49b08f270c5e9c8"
+      }
+    },
+    {
+      "path": "facts.active_params",
+      "value": 8030000000,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/meta-llama/Meta-Llama-3-8B",
+        "revision": "7784fbf634",
+        "locator": "dense or activated experts + attention params"
       }
     }
   ]

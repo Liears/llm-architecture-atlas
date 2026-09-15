@@ -20,6 +20,8 @@ export interface SemanticNode {
   ports?: string[];
   /** IR claim path backing this node's label, for evidence annotations. */
   claimPath?: string;
+  /** Per-segment evidence: every number-bearing text piece references its claim. */
+  claims?: Array<{ claimPath: string; label: string }>;
 }
 
 export type EdgeKind = "flow" | "skip" | "control";

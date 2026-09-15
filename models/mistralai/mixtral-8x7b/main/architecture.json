@@ -4,7 +4,7 @@
     "id": "mistralai/mixtral-8x7b",
     "label": "Mixtral 8x7B",
     "family": "Mixtral",
-    "revision": "main",
+    "revision": "de132a80b2",
     "license": null
   },
   "facts": {

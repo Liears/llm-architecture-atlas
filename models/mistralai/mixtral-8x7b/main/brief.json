@@ -1,0 +1,21 @@
+{
+  "model_id": "mistralai/mixtral-8x7b",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/raw/de132a80b25c9d12c674dbd84cedc1d6f35fb756/config.json",
+      "revision": "de132a80b25c9d12c674dbd84cedc1d6f35fb756",
+      "sha256": "9d56d04b36d0fd12ff54ae4c5bac769cc176e254e64ff71144614b6318b40793"
+    }
+  ],
+  "papers": [],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "32 layers, GQA, MoE 8 experts top-2",
+      "locator": "config (rev de132a80)",
+      "status": "verified"
+    }
+  ],
+  "notes": "The Mixtral 8x7B paper exists but has not been audited into this brief yet; the pinned config is the source of truth."
+}

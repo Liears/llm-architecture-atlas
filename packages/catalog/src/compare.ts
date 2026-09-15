@@ -20,10 +20,9 @@ export interface CompareResult {
   };
 }
 
-function fmtParams(n: number | null): string {
-  if (n === null) return "—";
-  return n >= 1e12 ? `${Math.round((n / 1e12) * 10) / 10}B` : `${Math.round((n / 1e9) * 10) / 10}B`;
-}
+import { formatParams } from "./format.js";
+
+const fmtParams = formatParams;
 
 export function compareModels(
   a: { entry: CatalogEntry; genome: Genome },
