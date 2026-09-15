@@ -43,21 +43,25 @@ const cell = (c: { label: string; role: string } | null) =>
   <h1>{ea!.label} <span class="vs">vs</span> {eb!.label}</h1>
   <p><a href="/llm-architecture-atlas/">← catalog</a></p>
 
-  <h2>Fields</h2>
+  <h2 data-i18n="compare.fields">Fields</h2>
   <table class="diff">
-    <thead><tr><th>Field</th><th>{ea!.label}</th><th>{eb!.label}</th></tr></thead>
+    <thead><tr>
+        <th data-i18n="compare.fields">Field</th>
+        <th>{ea!.label}</th>
+        <th>{eb!.label}</th>
+      </tr></thead>
     <tbody>
       {result.fieldRows.map((r) => (
         <tr class={r.shared ? "shared" : ""}>
-          <td>{r.field}</td><td>{r.a}</td><td>{r.b}</td>
+          <td data-i18n={r.field}>{r.field.replace("compare.", "")}</td><td>{r.a}</td><td>{r.b}</td>
         </tr>
       ))}
     </tbody>
   </table>
-  <p class="muted">Gray rows: same value in both models.</p>
+  <p class="muted" data-i18n="compare.sharedNote">Gray rows: same value in both models.</p>
 
-  <h2>Layer Genome alignment</h2>
-  <p class="muted">
+  <h2 data-i18n="compare.genome">Layer Genome alignment</h2>
+  <p class="muted" data-i18n="compare.genomeNote" data-n={String(result.genome.attentionDiffer)}>
     Columns align by layer index; the shorter model pads with —.
     {result.genome.attentionDiffer} aligned column(s) differ in attention type.
   </p>

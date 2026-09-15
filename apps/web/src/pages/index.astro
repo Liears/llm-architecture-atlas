@@ -6,26 +6,32 @@ import { families } from "@atlas/catalog";
 const models = loadModels();
 const entries = catalogEntries(models);
 const fams = families(entries);
+
+const fmtB = (n: number | null): string => {
+  if (n === null) return "—";
+  const b = Math.round((n / 1e9) * 10) / 10;
+  return `${Number.isInteger(b) ? b.toFixed(0) : b.toFixed(1)}B`;
+};
 ---
 
 <Base title="LLM Architecture Atlas — catalog">
   <p class="eyebrow">Evidence-traceable LLM architecture atlas</p>
-  <h1>Catalog</h1>
-  <p>
+  <h1 data-i18n="catalog.title">Catalog</h1>
+  <p data-i18n="catalog.subtitle" data-n={String(entries.length)}>
     {entries.length} models. Every figure is generated from an Architecture IR;
     every number traces to an evidence claim.
   </p>
 
   <div class="controls">
-    <input id="q" type="search" placeholder="Search label, family, attention…" aria-label="Search models" />
-    <select id="family" aria-label="Filter by family">
-      <option value="">All families</option>
+    <input id="q" type="search" placeholder="Search label, family, attention…" data-i18n-placeholder="catalog.search" aria-label="Search models" />
+    <select id="family" aria-label="Filter by family" data-i18n-aria="catalog.allFamilies">
+      <option value="" data-i18n="catalog.allFamilies">All families</option>
       {fams.map((f) => <option value={f}>{f}</option>)}
     </select>
-    <select id="sort" aria-label="Sort">
-      <option value="label">Sort: label</option>
-      <option value="params-desc">Sort: total params ↓</option>
-      <option value="layers-desc">Sort: layers ↓</option>
+    <select id="sort" aria-label="Sort" data-i18n-aria="catalog.sortLabel">
+      <option value="label" data-i18n="catalog.sortLabel">Sort: label</option>
+      <option value="params-desc" data-i18n="catalog.sortParams">Sort: total params ↓</option>
+      <option value="layers-desc" data-i18n="catalog.sortLayers">Sort: layers ↓</option>
     </select>
   </div>
 
@@ -45,8 +51,8 @@ const fams = families(entries);
           </a>
           <span class="muted">{e.family} · {e.decoderType}</span>
           <span class="muted">
-            {e.totalParams ? `${Math.round((e.totalParams / 1e12) * 10) / 10}B total` : "—"}
-            {e.activeParams && e.activeParams !== e.totalParams ? ` / ${Math.round((e.activeParams / 1e9) * 10) / 10}B active` : ""}
+            {e.totalParams ? `${fmtB(e.totalParams)} total` : "—"}
+            {e.activeParams && e.activeParams !== e.totalParams ? ` / ${fmtB(e.activeParams)} active` : ""}
             {" · "}{e.numLayers} layers
             {e.contextTokens ? ` · ${e.contextTokens >= 1e6 ? `${Math.round((e.contextTokens / 1e5)) / 10}M` : Math.round(e.contextTokens / 1024) + "K"} ctx` : ""}
           </span>
@@ -54,13 +60,13 @@ const fams = families(entries);
       ))
     }
   </ul>
-  <p id="empty" hidden>No models match. <button type="button" id="reset">Reset filters</button></p>
+  <p id="empty" hidden><span data-i18n="catalog.noMatch">No models match.</span> <button type="button" id="reset" data-i18n="catalog.reset">Reset filters</button></p>
 
   <p>
-    <a href="/llm-architecture-atlas/concepts/">Concepts</a> ·
-    <a href="/llm-architecture-atlas/compare/zai-org-glm-5-3-flash--vs--meta-llama-llama-3-8b/">Example comparison</a> ·
-    <a href="/llm-architecture-atlas/changes.xml">Changes (RSS)</a> ·
-    <a href="https://github.com/Liears/llm-architecture-atlas">Source & issues</a>
+    <a href="/llm-architecture-atlas/concepts/" data-i18n="nav.concepts">Concepts</a> ·
+    <a href="/llm-architecture-atlas/compare/zai-org-glm-5-3-flash--vs--meta-llama-llama-3-8b/" data-i18n="nav.compare">Example comparison</a> ·
+    <a href="/llm-architecture-atlas/changes.xml" data-i18n="nav.changes">Changes (RSS)</a> ·
+    <a href="https://github.com/Liears/llm-architecture-atlas" data-i18n="nav.source">Source & issues</a>
   </p>
 
   <script>

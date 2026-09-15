@@ -28,6 +28,17 @@ test("model page serves the IR-generated golden figure with evidence links", asy
   await expect(page.locator("table.evidence tbody tr").first()).toBeVisible();
 });
 
+test("language toggle switches to Chinese and persists", async ({ page }) => {
+  await page.goto("/llm-architecture-atlas/");
+  await page.click("#lang-toggle");
+  await expect(page.locator("h1")).toHaveText("目录");
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await page.reload();
+  await expect(page.locator("h1")).toHaveText("目录"); // persisted
+  await page.click("#lang-toggle");
+  await expect(page.locator("h1")).toHaveText("Catalog");
+});
+
 test("compare page aligns genomes", async ({ page }) => {
   await page.goto("/llm-architecture-atlas/compare/zai-org-glm-5-3-flash--vs--meta-llama-llama-3-8b/");
   await expect(page.locator("h1")).toContainText("vs");

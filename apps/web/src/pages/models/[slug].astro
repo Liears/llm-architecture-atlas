@@ -19,41 +19,41 @@ const roleColor: Record<string, string> = {
   muted: "var(--line)",
 };
 
-const statusChip = (s: string) =>
-  s === "verified" ? "✓ verified" : s === "reported" ? "• reported" : s === "derived" ? "= derived" : s === "inferred" ? "? inferred" : s === "conflict" ? "! conflict" : "? unknown";
+const statusSymbol = (s: string) =>
+  s === "verified" ? "✓" : s === "reported" ? "•" : s === "derived" ? "=" : s === "inferred" ? "?" : s === "conflict" ? "!" : "?";
 ---
 
 <Base title={`${arch.model.label} — LLM Architecture Atlas`}>
   <p class="eyebrow">Model overview · {arch.model.family}</p>
   <h1>{arch.model.label}</h1>
   <p class="muted">
-    Generated from Architecture IR {arch.ir_version} · revision <code>{arch.model.revision}</code>
-    · <a href="https://github.com/Liears/llm-architecture-atlas/issues">report a correction</a>
+    <span data-i18n="detail.generatedFrom">Generated from Architecture IR</span> {arch.ir_version} · <span data-i18n="detail.revision">revision</span> <code>{arch.model.revision}</code>
+    · <a href="https://github.com/Liears/llm-architecture-atlas/issues" data-i18n="detail.reportCorrection">report a correction</a>
   </p>
 
-  <h2>Overview</h2>
+  <h2 data-i18n="detail.overview">Overview</h2>
   <img
     src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
     alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
     style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper)"
   />
   <p>
-    <a href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download>Download SVG</a>
-    <button type="button" class="png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={`${model.slug}`}>Download PNG</button>
+    <a href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download data-i18n="detail.downloadSvg">Download SVG</a>
+    <button type="button" class="png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={`${model.slug}`} data-i18n="detail.downloadPng">Download PNG</button>
   </p>
 
-  <h2>Fact sheet</h2>
+  <h2 data-i18n="detail.factSheet">Fact sheet</h2>
   <dl class="facts">
-    <div><dt>Layers</dt><dd>{facts.num_hidden_layers}</dd></div>
-    <div><dt>Hidden size</dt><dd>{facts.hidden_size}</dd></div>
-    <div><dt>Attention heads</dt><dd>{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}</dd></div>
-    <div><dt>Vocab</dt><dd>{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></div>
-    <div><dt>Context</dt><dd>{facts.context_tokens?.toLocaleString("en-US") ?? "—"}</dd></div>
-    <div><dt>Params</dt><dd>{facts.total_params ? `${Math.round((facts.total_params / 1e12) * 10) / 10}B total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${Math.round((facts.active_params / 1e9) * 10) / 10}B active` : ""}</dd></div>
+    <div><dt data-i18n="fact.layers">Layers</dt><dd>{facts.num_hidden_layers}</dd></div>
+    <div><dt data-i18n="fact.hiddenSize">Hidden size</dt><dd>{facts.hidden_size}</dd></div>
+    <div><dt data-i18n="fact.heads">Attention heads</dt><dd>{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}</dd></div>
+    <div><dt data-i18n="fact.vocab">Vocab</dt><dd>{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></div>
+    <div><dt data-i18n="fact.context">Context</dt><dd>{facts.context_tokens?.toLocaleString("en-US") ?? "—"}</dd></div>
+    <div><dt data-i18n="fact.params">Params</dt><dd>{facts.total_params ? `${Math.round((facts.total_params / 1e12) * 10) / 10}B total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${Math.round((facts.active_params / 1e9) * 10) / 10}B active` : ""}</dd></div>
   </dl>
 
-  <h2>Architecture Genome</h2>
-  <p class="muted">One column per layer — top: attention, bottom: FFN/MoE.</p>
+  <h2 data-i18n="detail.genome">Architecture Genome</h2>
+  <p class="muted" data-i18n="detail.genomeNote">One column per layer — top: attention, bottom: FFN/MoE.</p>
   <div class="genome" role="img" aria-label={`Per-layer genome: ${genome.numLayers} layers`}>
     {genome.layers.map((l) => (
       <div class="col" title={`layer ${l.index}: attention ${l.attention} · ffn ${l.ffn}`}>
@@ -69,24 +69,29 @@ const statusChip = (s: string) =>
     <span class="key"><span class="cell" style="background:var(--line)" /> dense FFN</span>
   </p>
 
-  <h2>Evidence</h2>
-  <p class="muted">Every visible number resolves to one of these claims. Inferred or unknown values are never shown as fact.</p>
+  <h2 data-i18n="detail.evidence">Evidence</h2>
+  <p class="muted" data-i18n="detail.evidenceNote">Every visible number resolves to one of these claims. Inferred or unknown values are never shown as fact.</p>
   <table class="evidence">
-    <thead><tr><th>Claim</th><th>Value</th><th>Status</th><th>Source</th></tr></thead>
+    <thead><tr>
+        <th data-i18n="detail.claim">Claim</th>
+        <th data-i18n="detail.value">Value</th>
+        <th data-i18n="detail.status">Status</th>
+        <th data-i18n="detail.source">Source</th>
+      </tr></thead>
     <tbody>
       {evidence.claims.map((c) => (
         <tr>
           <td><code>{c.path}</code></td>
           <td>{c.status === "unknown" ? "—" : JSON.stringify(c.value)}</td>
-          <td><span class={`chip chip-${c.status}`}>{statusChip(c.status)}</span></td>
+          <td><span class={`chip chip-${c.status}`} data-i18n={`status.${c.status}`}>{statusSymbol(c.status)} {c.status}</span></td>
           <td>{c.source?.url ? <a href={c.source.url} rel="noopener noreferrer">{c.source.kind}</a> : c.source?.kind} {c.source?.locator && <span class="muted">· {c.source.locator}</span>}</td>
         </tr>
       ))}
     </tbody>
   </table>
 
-  <h2>Compare</h2>
-  <p>Compare {arch.model.label} with any other catalog model on its detail page (see catalog).</p>
+  <h2 data-i18n="detail.compare">Compare</h2>
+  <p data-i18n="detail.compareNote">Compare this model with any other catalog model (see catalog).</p>
 
   <script>
     document.querySelectorAll<HTMLButtonElement>(".png-btn").forEach((btn) => {

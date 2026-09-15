@@ -17,12 +17,12 @@ const termBySlug = { gqa: "gqa", mla: "mla", dsa: "dsa", kda: "kda", moe: "moe",
 
 <Base title="Concepts — LLM Architecture Atlas">
   <p class="eyebrow">Glossary</p>
-  <h1>Concepts</h1>
+  <h1 data-i18n="concepts.title">Concepts</h1>
   <dl>
     {concepts.map((c) => (
       <div id={termBySlug[c.slug as keyof typeof termBySlug]}>
-        <dt>{c.name}</dt>
-        <dd>{c.text}</dd>
+        <dt data-i18n={`concept.${c.slug}.name`}>{c.name}</dt>
+        <dd data-i18n={`concept.${c.slug}.text`}>{c.text}</dd>
       </div>
     ))}
   </dl>

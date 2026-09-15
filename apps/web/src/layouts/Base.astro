@@ -55,8 +55,23 @@ interface Props {
     </style>
   </head>
   <body>
+    <div class="langbar">
+      <button id="lang-toggle" type="button" aria-label="切换语言 / switch language">中文</button>
+    </div>
     <main>
       <slot />
     </main>
+    <script>
+      import "../scripts/i18n";
+    </script>
+    <style>
+      .langbar { max-width: 72rem; margin: 0 auto; padding: 0.8rem 1.25rem 0; display: flex; justify-content: flex-end; }
+      #lang-toggle {
+        font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+        border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: inherit;
+        padding: 0.3rem 0.8rem;
+      }
+      #lang-toggle:hover { border-color: var(--attention); }
+    </style>
   </body>
 </html>
