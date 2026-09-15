@@ -12,6 +12,10 @@ updated: 2026-09-15
 
 # LLM Architecture Atlas 发布后评审与质量加固计划
 
+> 本文保留首次发布后的评审基线。#20–#30 实施后的下一轮执行计划见
+> [`next-round-visual-quality-plan.md`](./next-round-visual-quality-plan.md)，不得以旧 issue
+> 的关闭状态替代新一轮独立验收。
+
 ## 1. 结论
 
 当前版本已经从单张手写 SVG 演进成可部署的静态 Atlas，工程骨架和主要页面都已建立，但还不能按原开发计划认定为“开发完毕”。

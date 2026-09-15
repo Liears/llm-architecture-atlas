@@ -4,6 +4,10 @@ These rules apply to every agent working in this repository. `CONTRIBUTING.md`
 defines the content and evidence requirements; this file defines how agent work
 is proposed, reviewed, merged, and accepted.
 
+Before architecture-diagram, layout, responsive-canvas, drill-down, or evidence
+UI work, read `docs/next-round-visual-quality-plan.md` and follow its dependency
+order and review checkpoints.
+
 ## Mandatory pull-request workflow
 
 Every change—code, model data, diagrams, documentation, tests, and generated
