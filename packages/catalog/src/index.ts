@@ -83,5 +83,6 @@ export function families(entries: CatalogEntry[]): string[] {
   return [...new Set(entries.map((e) => e.family))].sort();
 }
 
+export * from "./format.js";
 export * from "./genome.js";
 export * from "./compare.js";
