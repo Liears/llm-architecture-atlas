@@ -8,11 +8,20 @@ Before architecture-diagram, layout, responsive-canvas, drill-down, or evidence
 UI work, read `docs/next-round-visual-quality-plan.md` and follow its dependency
 order and review checkpoints.
 
-## Mandatory pull-request workflow
+## Role boundary
 
-Every change—code, model data, diagrams, documentation, tests, and generated
-artifacts—must be made on a short-lived branch and submitted as a GitHub pull
-request. Never push implementation commits directly to `main`.
+Implementation agents must submit every product change—code, model data,
+diagrams, tests, generated artifacts, build/release behavior, and implementation
+documentation—on a short-lived branch through a GitHub pull request. They never
+push implementation commits directly to `main`.
+
+The designated independent reviewer may maintain issue metadata, acceptance
+records, audit reports, roadmaps, and reviewer-governance instructions directly
+on `main` without opening a pull request. This reviewer exception does not cover
+product implementation or allow the reviewer to implement an issue it will
+later accept.
+
+## Mandatory pull-request workflow for implementers
 
 Each pull request must:
 
