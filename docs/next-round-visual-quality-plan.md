@@ -72,6 +72,24 @@ updated: 2026-09-15
 - renderer 只渲染 PositionedScene，禁止按 model id 写特判。
 - canonical artifact 保持 SVG；交互外壳可以 pan/zoom，但不得改变下载图的确定性。
 
+### 3.4 视觉原型门禁
+
+正式实现 #34 前，先以同一份已审核的 GLM source brief 和 Diagram IR
+生成 3 个低成本构图候选：论文编辑风、工程蓝图风、Atlas 自有风。候选只允许改变
+composition、spacing、typography、shape 和 color token，不允许增加、删除或推断模型事实。
+
+候选按以下顺序评审；前一项失败即淘汰，不以颜值抵消结构错误：
+
+1. 结构忠实度：节点、边、端口、layer schedule 与 source brief 一致；
+2. 阅读层级：main spine、pattern layer、mechanism inset 的主次明确；
+3. 线条辨识度：data、residual、control/routing 不混淆；
+4. 版面质量：留白、对齐、密度和文字尺度达到出版级；
+5. 响应式潜力：构图能拆为 mobile reading states，而非只能缩放整张图。
+
+原型可以使用外部 diagram skill 或 Excalidraw，但仅作为 PR 的评审材料。被选中的视觉决策
+必须回写为仓库内可测试的 design token、layout constraint 或 renderer primitive；不得提交
+由自然语言直接生成、脱离 Diagram IR 的 SVG 作为 canonical artifact。
+
 ## 4. 依赖图
 
 ```text
@@ -132,6 +150,9 @@ Checkpoint：validator 能拒绝 self-loop residual 和悬空端口；compound g
 - renderer 中通用 node/edge/group primitives
 - GLM structural snapshots 与导出 artifact
 
+实施前置：使用冻结的 source brief/Diagram IR 完成 3 个构图候选和统一 rubric 评分，
+记录选择理由；不得让 diagram skill 自行读取论文后直接决定拓扑。
+
 Checkpoint：独立审核方对照固定 config 与四篇机制论文逐区签字；只确认文案存在不算通过。
 
 #### Task 0.3：完成 #35
@@ -143,11 +164,16 @@ Checkpoint：独立审核方对照固定 config 与四篇机制论文逐区签�
 - diagram structural mutation fixtures
 - CI artifact workflow
 
+几何门禁至少覆盖 edge 穿过 node、edge 穿过 reserved/title/legend 区、业务边共线重叠、
+文字溢出、viewBox 截断和外部/active SVG 内容。自动修正最多执行两轮，之后必须报告
+未通过原因，禁止静默删除门禁或继续无限重画。
+
 Checkpoint：至少四个已知错误突变能稳定使测试失败；PR contact sheet 已人工查看。
 
 ### Checkpoint A：GLM 可发布候选
 
 - [ ] #33、#34、#35 各自通过独立 PR review；
+- [ ] 三个构图候选使用同一份已审核事实输入，评审结果和淘汰理由已记录；
 - [ ] GLM 图的结构、证据、几何和桌面视觉均通过；
 - [ ] CI green 之外另有审图记录；
 - [ ] 未通过项保留 issue 开放。
@@ -169,6 +195,9 @@ Checkpoint：URL 可恢复 layer/view/claim；鼠标、键盘、触摸均能返�
 #### Task 1.3：完成 #38
 
 模型详情页默认展示结构摘要与图；Evidence Ledger 退到 advanced 层，Citation Panel 随当前选择显示最相关来源。
+
+补充导出体验：提供复制 SVG、下载 SVG/PNG 和可选 evidence manifest；导出必须来自已审核的
+canonical scene，不得把当前 viewport 的缩放、聚焦或临时批注固化为正式结构图。
 
 Checkpoint：中英文、明暗主题和三个 viewport 的整页 before/after 均提交人工审核。
 
@@ -213,6 +242,20 @@ Checkpoint：隐藏标签后 KDA 与 MLA 仍可从拓扑形状区分；renderer 
 
 Figma 可用于人工构图草案和设计评审，但不作为事实源或 canonical renderer。Image generation 适合 moodboard，不适合生成正式模型结构图：它无法稳定保证节点、数字和连线正确。Mermaid、D2、Graphviz 可做布局 benchmark 或文档草图；正式链路继续采用 Architecture IR → Diagram IR → constraint/ELK layout → semantic SVG。
 
+### 8.1 外部 diagram skills 的采用边界
+
+参考文章：[《别再手画架构图了！3 个 AI Skill 一句话出图，我全装了》](https://mp.weixin.qq.com/s/8_q6oXUxXUJR_tSE-DZTLw)。
+
+| 工具 | 可吸收能力 | 明确不采用 |
+|---|---|---|
+| [architecture-diagram](https://github.com/Cocoon-AI/architecture-diagram-generator) | 语义色彩、深色网格、独立 HTML 和复制/PNG/PDF 导出体验 | 单一暗色审美；自然语言直接生成正式模型拓扑 |
+| [excalidraw-diagram-generator](https://github.com/github/awesome-copilot/blob/main/skills/excalidraw-diagram-generator/SKILL.md) | 可编辑构图草案、人工批注、评审现场调整 | `.excalidraw` 作为模型事实源或 canonical artifact |
+| [fireworks-tech-graph](https://github.com/yizhiyanhua-ai/fireworks-tech-graph/blob/main/README.zh.md) | geometry gate、语义形状/箭头、确定性导出、显式 visual-review 状态和有界修正 | 把通用 Agent/RAG/UML 模板直接套在 Transformer 内部结构；GIF 作为本轮目标 |
+
+这三类工具只进入 **prototype / review / validation** 环节，不进入事实编译链。任何外部
+skill 的输出都必须能够由冻结的 source brief 和 Diagram IR 重建；无法重建的视觉元素视为
+未经证实，不得进入正式 SVG。
+
 ## 9. 风险与对策
 
 | 风险 | 影响 | 对策 |
@@ -222,6 +265,7 @@ Figma 可用于人工构图草案和设计评审，但不作为事实源或 cano
 | 截图测试固化坏设计 | CI 全绿但产品仍难看 | 结构突变 + 几何断言 + 人工 contact sheet 三层门禁 |
 | 手机端靠缩放解决 | 字号不可读 | mobile composition 与受控 canvas，不缩整张 poster |
 | 论文被错误当作精确规格 | 图看似专业但事实错 | exact-model/mechanism-only 分级；精确值优先固定 config/code |
+| 第三方画图 skill 产生漂亮但臆造的拓扑 | 审美改善但事实退化 | 只接收冻结 IR；结构忠实度先行门禁；输出仅作 prototype/review artifact |
 | issue 再次过早关闭 | 验收信息丢失 | 实施者只标 `review pending`；独立审核方关闭 |
 
 ## 10. 本轮完成定义
