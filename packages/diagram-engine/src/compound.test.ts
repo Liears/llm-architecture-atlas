@@ -1,54 +1,26 @@
 /**
  * Compound layout property tests (#33):
  * - fixed input repeats to byte-identical output (20 runs);
- * - no node/node or node/group overlap, in both layout backends;
+ * - the hard geometry gates (node/node overlap, inset/inset overlap, member
+ *   containment, non-member inside a foreign inset, bounds, port segments)
+ *   hold on real layout output of every compound fixture, on BOTH backends;
+ * - a parked-node mutation proves the suite actually detects node/group
+ *   overlap (round 3: the previous helper checked containment only for
+ *   declared members and could be neutered to zero checks);
  * - inset members are laid out INSIDE their box, not on the spine row;
  * - boundary ports sit on the box border.
  */
 
 import { describe, expect, it } from "vitest";
-import { mhcStreamsScene, insetsScene } from "./fixtures.js";
+import ELK from "elkjs/lib/elk.bundled.js";
+import { mhcStreamsScene, insetsScene, nestedScene } from "./fixtures.js";
 import { layoutScene } from "./layout.js";
+import { layoutWithElk } from "./elk.js";
+import { runSceneGates, HARD_GATES } from "./gates.js";
 import type { PositionedScene } from "./positioned.js";
 
-function overlapPairs(scene: PositionedScene): string[] {
-  const problems: string[] = [];
-  const boxes = scene.groups.filter((g) => g.inset);
-  for (let i = 0; i < scene.nodes.length; i++) {
-    for (let j = i + 1; j < scene.nodes.length; j++) {
-      const a = scene.nodes[i]!;
-      const b = scene.nodes[j]!;
-      if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) {
-        problems.push(`node overlap: ${a.id} vs ${b.id}`);
-      }
-    }
-  }
-  for (const box of boxes) {
-    for (const node of scene.nodes) {
-      if (!boxInclusive(box, node)) continue;
-      const inside =
-        node.x >= box.x - 0.5 &&
-        node.y >= box.y - 0.5 &&
-        node.x + node.w <= box.x + box.w + 0.5 &&
-        node.y + node.h <= box.y + box.h + 0.5;
-      if (!inside) problems.push(`node ${node.id} pokes out of box ${box.id}`);
-    }
-    for (const other of boxes) {
-      if (other.id === box.id) continue;
-      if (box.x < other.x + other.w && other.x < box.x + box.w && box.y < other.y + other.h && other.y < box.y + box.h) {
-        problems.push(`box overlap: ${box.id} vs ${other.id}`);
-      }
-    }
-  }
-  return problems;
-}
-
-function boxInclusive(box: { id: string; members?: unknown }, node: { id: string }): boolean {
-  // membership is checked by the caller via fixture knowledge
-  return nodeBelongsTo(node.id) === box.id;
-}
-
-let nodeBelongsTo: (id: string) => string | null = () => null;
+const hard = (scene: PositionedScene): string[] =>
+  runSceneGates(scene).filter((f) => HARD_GATES.has(f.gate)).map((f) => `${f.gate}: ${f.message}`);
 
 describe("compound layout (#33)", () => {
   it("repeats to identical output over 20 runs (mhc streams)", () => {
@@ -63,6 +35,32 @@ describe("compound layout (#33)", () => {
     for (let i = 0; i < 19; i++) {
       expect(layoutScene(insetsScene())).toEqual(first);
     }
+  });
+
+  it("keeps all hard geometry gates clean on every compound fixture (built-in backend)", () => {
+    for (const scene of [insetsScene(), mhcStreamsScene(), nestedScene()]) {
+      expect(hard(layoutScene(scene))).toEqual([]);
+    }
+  });
+
+  it("keeps all hard geometry gates clean on every compound fixture (ELK backend)", async () => {
+    const elk = new ELK();
+    for (const scene of [insetsScene(), mhcStreamsScene(), nestedScene()]) {
+      const laid = await layoutWithElk(scene, elk as never);
+      expect(hard(laid)).toEqual([]);
+    }
+  });
+
+  it("detects a node parked inside a foreign inset on real layout output", () => {
+    const scene = insetsScene();
+    const laid = layoutScene(scene);
+    const dsa = laid.groups.find((g) => g.id === "g-dsa")!;
+    // park a spine node squarely inside the DSA box, then re-run the gates
+    const parked = laid.nodes.find((n) => n.id === "norm")!;
+    parked.x = dsa.x + 20;
+    parked.y = dsa.y + 30;
+    const problems = hard(laid);
+    expect(problems.some((p) => p.includes("norm") && p.includes("g-dsa"))).toBe(true);
   });
 
   it("places mhc stream rails on the left, clear of the content", () => {
@@ -83,11 +81,7 @@ describe("compound layout (#33)", () => {
   it("lays out inset members inside their box, off the spine", () => {
     const scene = insetsScene();
     const laid = layoutScene(scene);
-    nodeBelongsTo = (id) => {
-      for (const g of scene.groups) if (g.members.includes(id)) return g.kind === "inset" ? g.id : null;
-      return null;
-    };
-    expect(overlapPairs(laid)).toEqual([]);
+    expect(hard(laid)).toEqual([]);
 
     const dsa = laid.groups.find((g) => g.id === "g-dsa")!;
     const indexer = laid.nodes.find((n) => n.id === "indexer")!;
@@ -96,13 +90,6 @@ describe("compound layout (#33)", () => {
     expect(core.x + core.w).toBeLessThanOrEqual(dsa.x + dsa.w);
     // local left-to-right direction: indexer left of core
     expect(indexer.x).toBeLessThan(core.x);
-  });
-
-  it("keeps the two insets from overlapping each other or the spine", () => {
-    const laid = layoutScene(insetsScene());
-    nodeBelongsTo = (id) => null;
-    const problems = overlapPairs(laid);
-    expect(problems).toEqual([]);
   });
 
   it("anchors boundary ports on the box border", () => {
@@ -118,6 +105,18 @@ describe("compound layout (#33)", () => {
     const last = edge.points[edge.points.length - 1]!;
     expect(last.x).toBeCloseTo(moe.ports.in!.x, 0);
     expect(last.y).toBeCloseTo(moe.ports.in!.y, 0);
+  });
+
+  it("stream stubs terminate on the operator border, not through its box", () => {
+    const laid = layoutScene(mhcStreamsScene());
+    const attn = laid.nodes.find((n) => n.id === "attn")!;
+    const t = laid.edges.find((e) => e.id === "t-a1")!;
+    const u = laid.edges.find((e) => e.id === "u-a1")!;
+    // t-a1 ends at the operator's left (in) anchor, u-a1 starts at its right
+    const tEnd = t.points[t.points.length - 1]!;
+    const uStart = u.points[0]!;
+    expect(tEnd.x).toBeCloseTo(attn.x, 0);
+    expect(uStart.x).toBeCloseTo(attn.x + attn.w, 0);
   });
 
   it("narrows the canvas: same-depth insets become one box instead of one wide row", () => {
@@ -141,8 +140,7 @@ describe("compound layout (#33)", () => {
       })),
     };
     const flat = layoutScene(flatScene);
-    nodeBelongsTo = () => null;
-    expect(overlapPairs(boxed)).toEqual([]);
+    expect(hard(boxed)).toEqual([]);
     expect(flat.size.w).toBeGreaterThan(boxed.size.w);
   });
 });

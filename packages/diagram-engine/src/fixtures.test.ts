@@ -32,13 +32,17 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
       // connectivity is given). A cross-wired out2 → in1 therefore cannot
       // fake connectivity, while node-internal traversal needs no edge.
       const groupHeads = new Set(scene.groups.map((g) => g.id));
-      const declared = new Map(scene.nodes.map((n) => [n.id, new Set(n.ports ?? [])]));
+      const declared = new Map(scene.nodes.map((n) => [n.id, new Set((n.ports ?? []).map((q) => (typeof q === "string" ? q : q.name)))]));
       const vertex = (ref: string): string => {
         const dot = ref.indexOf(".");
         if (dot === -1) return ref;
         const head = ref.slice(0, dot);
         const port = ref.slice(dot + 1);
         if (groupHeads.has(head)) return ref;
+        // operator internal connectivity is given per stream: entry port eN
+        // and exit port xN of the same operator are one stream vertex
+        const m = /^([ex])(\d)$/.exec(port);
+        if (m && (head === "attn" || head === "ffn")) return `${head}#stream${m[2]}`;
         if (declared.get(head)?.has(port)) return ref;
         return head;
       };
@@ -67,6 +71,12 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     const scene = mhcStreamsScene();
     for (let i = 1; i <= 4; i++) expect(reach(scene, i)).toBe(true);
 
+    // round 3: the path must VISIT the stage operator — cutting the port→
+    // operator edge disconnects the stream (a group self-edge would not)
+    const noOperator = mhcStreamsScene();
+    noOperator.edges = noOperator.edges.filter((e) => e.id !== "t-a1");
+    expect(reach(noOperator, 1)).toBe(false);
+
     // cross-wire stream 1's inter-stage leg onto stream 2's attention
     // out-port: stream 1 must lose its read → write connection
     const crossed = mhcStreamsScene();
@@ -74,9 +84,9 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     expect(reach(crossed, 1)).toBe(false);
     expect(reach(crossed, 2)).toBe(true);
 
-    // and dropping a stage's in→out connection breaks the stream the same way
+    // and dropping the operator's exit edge breaks the stream the same way
     const broken = mhcStreamsScene();
-    broken.edges = broken.edges.filter((e) => e.id !== "x-a3");
+    broken.edges = broken.edges.filter((e) => e.id !== "u-a3");
     expect(reach(broken, 3)).toBe(false);
   });
 

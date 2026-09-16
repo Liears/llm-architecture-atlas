@@ -29,6 +29,14 @@ function stagePorts(stage: StageSpec): SemanticGroupPort[] {
 const ATTN: StageSpec = { group: "g-attn", member: "attn", label: "Attention stage", kind: "attention" };
 const FFN: StageSpec = { group: "g-ffn", member: "ffn", label: "FFN stage", kind: "ffn" };
 
+/** per-stream operator ports: entries left, exits right (round 3) */
+function operatorPorts(): Array<{ name: string; side: "left" | "right" }> {
+  return [
+    ...[1, 2, 3, 4].map((i) => ({ name: `e${i}`, side: "left" as const })),
+    ...[1, 2, 3, 4].map((i) => ({ name: `x${i}`, side: "right" as const })),
+  ];
+}
+
 function stageGroup(stage: StageSpec): SemanticGroup {
   return {
     id: stage.group,
@@ -49,10 +57,10 @@ export function mhcStreamsScene(): DiagramScene {
     nodes: [
       { id: "tok", kind: "io", label: "Tokenized text" },
       { id: "embed", kind: "embedding", label: "Token embedding" },
-      { id: "read", kind: "split", label: "Stream read", ports: ["s1", "s2", "s3", "s4"] },
-      { id: attn.member, kind: attn.kind, label: "Attention" },
-      { id: ffn.member, kind: ffn.kind, label: "FFN" },
-      { id: "write", kind: "merge", label: "Stream write", ports: ["w1", "w2", "w3", "w4"] },
+      { id: "read", kind: "split", label: "Stream read", ports: [1, 2, 3, 4].map((i) => ({ name: `s${i}`, side: "left" as const })) },
+      { id: attn.member, kind: attn.kind, label: "Attention", ports: operatorPorts() },
+      { id: ffn.member, kind: ffn.kind, label: "FFN", ports: operatorPorts() },
+      { id: "write", kind: "merge", label: "Stream write", ports: [1, 2, 3, 4].map((i) => ({ name: `w${i}`, side: "left" as const })) },
       { id: "norm", kind: "norm", label: "Final RMSNorm" },
       { id: "head", kind: "output", label: "LM head" },
     ],
@@ -72,12 +80,15 @@ export function mhcStreamsScene(): DiagramScene {
       // stream traversals THROUGH the stage operator: the IR connection from
       // a stage's in-port to its out-port (round 2: without these, port
       // identity collapses and cross-wired mutations look connected)
-      // IR connection through each stage: the stream's in-port to its
-      // out-port inside the same group (round 2: without these, port
-      // identity collapses and cross-wired mutations look connected)
+      // IR connection through each stage: the stream enters the operator
+      // node and leaves it again (round 3: a border-to-border group self-edge
+      // never visits the operator — ELK sees a compound self-loop and the
+      // drawn line crosses the node rectangle)
       ...[1, 2, 3, 4].flatMap((i) => [
-        { id: `x-a${i}`, from: `${attn.group}.in${i}`, to: `${attn.group}.out${i}`, kind: "flow" as const },
-        { id: `x-f${i}`, from: `${ffn.group}.in${i}`, to: `${ffn.group}.out${i}`, kind: "flow" as const },
+        { id: `t-a${i}`, from: `${attn.group}.in${i}`, to: `${attn.member}.e${i}`, kind: "flow" as const },
+        { id: `u-a${i}`, from: `${attn.member}.x${i}`, to: `${attn.group}.out${i}`, kind: "flow" as const },
+        { id: `t-f${i}`, from: `${ffn.group}.in${i}`, to: `${ffn.member}.e${i}`, kind: "flow" as const },
+        { id: `u-f${i}`, from: `${ffn.member}.x${i}`, to: `${ffn.group}.out${i}`, kind: "flow" as const },
       ]),
     ],
     groups: [stageGroup(attn), stageGroup(ffn)],

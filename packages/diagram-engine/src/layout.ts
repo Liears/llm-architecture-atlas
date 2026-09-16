@@ -11,7 +11,7 @@
  * through the ELK adapter in elk.ts.
  */
 
-import type { DiagramScene, SemanticEdge, SemanticGroup } from "./types.js";
+import type { DiagramScene, SemanticEdge, SemanticGroup, SemanticNode } from "./types.js";
 import type { LayoutOptions, Point, PositionedEdge, PositionedGroup, PositionedNode, PositionedScene } from "./positioned.js";
 import { measureText } from "./text.js";
 
@@ -21,7 +21,7 @@ const RAIL_FIRST = 24; // x of the outermost left rail
 const RAIL_STEP = 18; // distance between rails
 
 interface Internal {
-  node: { id: string; kind: string; label: string; detail?: string; claimPath?: string; claims?: Array<{ claimPath: string; label: string }>; ports?: string[] };
+  node: SemanticNode;
   w: number;
   h: number;
   x: number;
@@ -470,9 +470,13 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
           in: { x: it.x, y: it.y + it.h / 2 },
           out: { x: it.x + it.w, y: it.y + it.h / 2 },
         };
-    const side = it.node.ports ?? [];
-    const leftNames = side.filter((_, i) => i % 2 === 0);
-    const rightNames = side.filter((_, i) => i % 2 === 1);
+    const side = (it.node.ports ?? []).map((p, i) =>
+      typeof p === "string"
+        ? { name: p, side: (i % 2 === 0 ? "left" : "right") as "left" | "right" }
+        : p,
+    );
+    const leftNames = side.filter((p) => p.side === "left").map((p) => p.name);
+    const rightNames = side.filter((p) => p.side === "right").map((p) => p.name);
     leftNames.forEach((name, i) => {
       ports[name] = { x: it.x, y: it.y + (it.h * (i + 1)) / (leftNames.length + 1) };
     });

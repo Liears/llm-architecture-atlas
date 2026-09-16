@@ -106,6 +106,18 @@ export function validateScene(scene: DiagramScene): string[] {
       if (!group.members.includes(innerNode)) {
         errors.push(`group ${group.id}: port "${port.id}" inner "${port.inner}" does not reference a member node`);
       }
+      // round 3: the member-side anchor may name a node port, which must
+      // exist — "attn.ghost" inside inner is as dangling as "embed.ghost"
+      const dot = port.inner.indexOf(".");
+      if (dot !== -1) {
+        const pNode = port.inner.slice(0, dot);
+        const pPort = port.inner.slice(dot + 1);
+        const node = scene.nodes.find((n) => n.id === pNode);
+        const declaredInner = (node?.ports ?? []).map((q) => (typeof q === "string" ? q : q.name));
+        if (!node || (pPort !== "in" && pPort !== "out" && !declaredInner.includes(pPort))) {
+          errors.push(`group ${group.id}: port "${port.id}" inner "${port.inner}" references an undeclared node port`);
+        }
+      }
     }
   }
   for (const group of scene.groups) {
@@ -158,7 +170,8 @@ export function validateScene(scene: DiagramScene): string[] {
         // allowed, anything else must be declared in SemanticNode.ports (#33
         // dangling-port negative, round 2)
         const node = scene.nodes.find((n) => n.id === end.head);
-        if (node && end.port !== "in" && end.port !== "out" && !(node.ports ?? []).includes(end.port)) {
+        const declared = (node?.ports ?? []).map((p) => (typeof p === "string" ? p : p.name));
+        if (node && end.port !== "in" && end.port !== "out" && !declared.includes(end.port)) {
           errors.push(`edge ${edge.id}: endpoint "${end.raw}" references undeclared port on node ${end.head}`);
         }
       }

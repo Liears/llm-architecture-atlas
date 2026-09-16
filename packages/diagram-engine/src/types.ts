@@ -17,7 +17,12 @@ export interface SemanticNode {
   label: string;
   detail?: string;
   parent?: string; // containing node id, for nested blocks
-  ports?: string[];
+  /**
+   * Declared named ports. A bare string gets the default alternating
+   * left/right placement; the object form pins the side (round 3: per-stream
+   * operator ports need entry ports left and exit ports right).
+   */
+  ports?: Array<string | { name: string; side: "left" | "right" }>;
   /** IR claim path backing this node's label, for evidence annotations. */
   claimPath?: string;
   /** Per-segment evidence: every number-bearing text piece references its claim. */

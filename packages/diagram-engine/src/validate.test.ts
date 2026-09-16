@@ -165,6 +165,18 @@ describe("validateScene compound rules (#33)", () => {
     expect(validateScene(scene).join("\n")).toMatch(/port "in" inner "head" does not reference a member node/);
   });
 
+  it("rejects a boundary port whose inner anchor names an undeclared node port (round 3)", () => {
+    const scene = insetScene();
+    scene.groups[0]!.ports![0]!.inner = "attn.ghost";
+    expect(validateScene(scene).join("\n")).toMatch(/inner "attn.ghost" references an undeclared node port/);
+  });
+
+  it("accepts implicit in/out as a boundary port inner anchor", () => {
+    const scene = insetScene();
+    scene.groups[0]!.ports![0]!.inner = "attn.in";
+    expect(validateScene(scene)).toEqual([]);
+  });
+
   it("rejects residual self-loops — pseudo streams are not streams", () => {
     const scene = insetScene();
     scene.edges.push({ id: "s1", from: "embed", to: "embed", kind: "residual" });

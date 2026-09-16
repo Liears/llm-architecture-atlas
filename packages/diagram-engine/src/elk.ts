@@ -224,9 +224,13 @@ export async function layoutWithElk(
           in: { x: p.x, y: p.y + p.h / 2 },
           out: { x: p.x + p.w, y: p.y + p.h / 2 },
         };
-    const side = node.ports ?? [];
-    const leftNames = side.filter((_, i) => i % 2 === 0);
-    const rightNames = side.filter((_, i) => i % 2 === 1);
+    const side = (node.ports ?? []).map((q, i) =>
+      typeof q === "string"
+        ? { name: q, side: (i % 2 === 0 ? "left" : "right") as "left" | "right" }
+        : q,
+    );
+    const leftNames = side.filter((q) => q.side === "left").map((q) => q.name);
+    const rightNames = side.filter((q) => q.side === "right").map((q) => q.name);
     leftNames.forEach((name, i) => {
       ports[name] = { x: p.x, y: p.y + (p.h * (i + 1)) / (leftNames.length + 1) };
     });
