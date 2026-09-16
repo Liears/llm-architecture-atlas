@@ -88,6 +88,19 @@ export interface EvidenceAnnotation {
   status?: "verified" | "reported" | "derived" | "inferred" | "conflict" | "unknown";
 }
 
+/**
+ * Scene-level declaration of one residual stream (issue #33, round 7): an
+ * ordered list of port references from source to sink. Port-level stream
+ * tags/roles are metadata; this declaration is the structure that cannot be
+ * erased independently — the validator requires every consecutive pair to be
+ * connected by an edge and every referenced port to carry this stream's tag
+ * and a role.
+ */
+export interface StreamDeclaration {
+  id: string;
+  path: string[]; // port refs, source first: "read.s1", "g-attn.in1", ...
+}
+
 export type LayoutConstraint =
   | { type: "direction"; value: "bottom-to-top" | "top-to-bottom" | "left-to-right" }
   | { type: "emphasize"; target: string }
@@ -103,4 +116,6 @@ export interface DiagramScene {
   groups: SemanticGroup[];
   annotations: EvidenceAnnotation[];
   constraints: LayoutConstraint[];
+  /** declared residual streams (round 7); required to draw residual edges */
+  streams?: StreamDeclaration[];
 }

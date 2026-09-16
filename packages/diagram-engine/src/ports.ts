@@ -33,6 +33,21 @@ export function portStream(node: Pick<SemanticNode, "ports">, port: string): str
   return resolveSidePorts(node).find((p) => p.name === port)?.stream;
 }
 
+/**
+ * Round 6/7 guard, shared by the node-port and group-port loops: a
+ * stream-tagged port must declare a valid role, otherwise the traversal
+ * contract would be optional metadata.
+ */
+export function streamRoleError(
+  ref: string,
+  port: { stream?: string; role?: "ingress" | "egress" },
+): string | undefined {
+  if (port.stream && port.role !== "ingress" && port.role !== "egress") {
+    return `port ${ref}: stream-tagged port must declare role ingress or egress`;
+  }
+  return undefined;
+}
+
 export interface PortRect {
   x: number;
   y: number;

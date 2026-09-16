@@ -47,6 +47,52 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     expect(tagged).toHaveLength(28); // 12 residual legs + 16 operator traversals
   });
 
+  it("rejects removing ALL stream metadata: declarations are the structure (round 7)", () => {
+    const stripAll = (scene: DiagramScene): DiagramScene => ({
+      ...scene,
+      nodes: scene.nodes.map((n) => ({
+        ...n,
+        ...(n.ports
+          ? {
+              ports: n.ports.map((p) => {
+                if (typeof p === "string") return p;
+                const { role: _r, stream: _s, ...rest } = p;
+                return rest;
+              }),
+            }
+          : {}),
+      })),
+      groups: scene.groups.map((g) => ({
+        ...g,
+        ...(g.ports
+          ? {
+              ports: g.ports.map((p) => {
+                const { role: _r, stream: _s, ...rest } = p;
+                return rest;
+              }),
+            }
+          : {}),
+      })),
+    });
+    const bare = stripAll(mhcStreamsScene());
+    bare.edges = bare.edges.filter((e) => e.id !== "u-a1");
+    const joined = validateScene(bare).join("\n");
+    expect(joined).toMatch(/does not carry this stream's tag|lacks a valid role/);
+    expect(joined).toMatch(/missing leg attn.x1 -> g-attn.out1/);
+  });
+
+  it("rejects a deleted traversal leg via the stream declaration (round 7)", () => {
+    const scene = mhcStreamsScene();
+    scene.edges = scene.edges.filter((e) => e.id !== "u-a1");
+    expect(validateScene(scene).join("\n")).toMatch(/stream s1: missing leg attn.x1 -> g-attn.out1/);
+  });
+
+  it("rejects residual edges not covered by a declared stream (round 7)", () => {
+    const scene = mhcStreamsScene();
+    scene.edges.push({ id: "rogue", from: "read.s1", to: "g-ffn.in2", kind: "residual", rail: "left" });
+    expect(validateScene(scene).join("\n")).toMatch(/residual edges must be covered by a declared stream path/);
+  });
+
   it("rejects stream tags without roles: the traversal contract is not optional (round 6)", () => {
     const stripRoles = (scene: DiagramScene): DiagramScene => ({
       ...scene,

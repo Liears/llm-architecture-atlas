@@ -11,7 +11,7 @@
  */
 
 import type { DiagramScene, SemanticGroup, SemanticGroupPort } from "./types.js";
-import { declaredPortNames, portStream, resolveSidePorts } from "./ports.js";
+import { declaredPortNames, portStream, resolveSidePorts, streamRoleError } from "./ports.js";
 
 const COORDINATE_KEYS = new Set(["x", "y", "width", "height", "cx", "cy", "rx", "ry"]);
 
@@ -276,8 +276,9 @@ export function validateScene(scene: DiagramScene): string[] {
     for (const p of resolveSidePorts(n)) {
       // round 6: a stream tag without a role would make the traversal
       // contract optional — require every tagged port to declare its role
-      if (p.stream && p.role !== "ingress" && p.role !== "egress") {
-        errors.push(`port ${n.id}.${p.name}: stream-tagged port must declare role ingress or egress`);
+      const roleErr = streamRoleError(`${n.id}.${p.name}`, p);
+      if (roleErr) {
+        errors.push(roleErr);
         continue;
       }
       if (p.role) nodePortDefs.set(`${n.id}.${p.name}`, p);
@@ -318,8 +319,9 @@ export function validateScene(scene: DiagramScene): string[] {
     }
   }
   for (const [ref, gp] of groupPortDefs) {
-    if (gp.stream && gp.role !== "ingress" && gp.role !== "egress") {
-      errors.push(`port ${ref}: stream-tagged port must declare role ingress or egress`);
+    const gpRoleErr = streamRoleError(ref, gp);
+    if (gpRoleErr) {
+      errors.push(gpRoleErr);
       continue;
     }
     if (!gp.role) continue;
@@ -338,6 +340,57 @@ export function validateScene(scene: DiagramScene): string[] {
       if (src !== gp.inner) {
         errors.push(`port ${ref}: group egress must collect from its bound inner ${gp.inner} (got ${src ?? "none"})`);
       }
+    }
+  }
+
+  // -- round 7: stream declarations are the non-erasable structure behind
+  // the port metadata. Every consecutive path pair must be connected by an
+  // edge, except an ingress→egress hop inside one node (the operator's
+  // interior is given). Every referenced port must carry this stream's tag
+  // and a valid role, and residual edges must be covered by a declaration.
+  const edgeKeys = new Set(scene.edges.map((e) => `${e.from}->${e.to}`));
+  const portMeta = (ref: string): { stream?: string; role?: "ingress" | "egress" } | undefined => {
+    const { head, port } = parseEndpoint(ref);
+    if (!port) return undefined;
+    const group = groupById.get(head);
+    if (group) return group.ports?.find((q) => q.id === port);
+    const node = scene.nodes.find((n) => n.id === head);
+    if (!node) return undefined;
+    return resolveSidePorts(node).find((q) => q.name === port);
+  };
+  const sameNodeInterior = (a: string, b: string): boolean => {
+    const ea = parseEndpoint(a);
+    const eb = parseEndpoint(b);
+    if (ea.head !== eb.head || !ea.port || !eb.port) return false;
+    const ma = portMeta(a);
+    const mb = portMeta(b);
+    return ma?.role === "ingress" && mb?.role === "egress";
+  };
+  const declaredPairs = new Set<string>();
+  for (const stream of scene.streams ?? []) {
+    for (let i = 0; i + 1 < stream.path.length; i++) {
+      const a = stream.path[i]!;
+      const b = stream.path[i + 1]!;
+      if (edgeKeys.has(`${a}->${b}`)) declaredPairs.add(`${a}->${b}`);
+      else if (!sameNodeInterior(a, b)) errors.push(`stream ${stream.id}: missing leg ${a} -> ${b}`);
+    }
+    for (const ref of stream.path) {
+      const meta = portMeta(ref);
+      if (!meta) {
+        errors.push(`stream ${stream.id}: path reference ${ref} is not a declared port`);
+        continue;
+      }
+      if (meta.stream !== stream.id) {
+        errors.push(`stream ${stream.id}: port ${ref} does not carry this stream's tag (got ${meta.stream ?? "none"})`);
+      }
+      if (meta.role !== "ingress" && meta.role !== "egress") {
+        errors.push(`stream ${stream.id}: port ${ref} lacks a valid role`);
+      }
+    }
+  }
+  for (const e of scene.edges) {
+    if (e.kind === "residual" && !declaredPairs.has(`${e.from}->${e.to}`)) {
+      errors.push(`edge ${e.id}: residual edges must be covered by a declared stream path`);
     }
   }
 

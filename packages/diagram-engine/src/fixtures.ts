@@ -92,6 +92,23 @@ export function mhcStreamsScene(): DiagramScene {
       ]),
     ],
     groups: [stageGroup(attn), stageGroup(ffn)],
+    // round 7: scene-level stream declarations — the structure behind the
+    // port tags/roles; cannot be erased independently of them
+    streams: [1, 2, 3, 4].map((i) => ({
+      id: `s${i}`,
+      path: [
+        `read.s${i}`,
+        `${attn.group}.in${i}`,
+        `${attn.member}.e${i}`,
+        `${attn.member}.x${i}`,
+        `${attn.group}.out${i}`,
+        `${ffn.group}.in${i}`,
+        `${ffn.member}.e${i}`,
+        `${ffn.member}.x${i}`,
+        `${ffn.group}.out${i}`,
+        `write.w${i}`,
+      ],
+    })),
     annotations: [],
     constraints: [
       { type: "direction", value: "bottom-to-top" },

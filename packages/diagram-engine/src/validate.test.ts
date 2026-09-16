@@ -190,10 +190,10 @@ describe("validateScene compound rules (#33)", () => {
     expect(validateScene(scene).join("\n")).toMatch(/residual edge s1: does not cross a sublayer boundary/);
   });
 
-  it("accepts a residual edge that enters through a boundary port", () => {
+  it("rejects residual edges not covered by a declared stream path (round 7)", () => {
     const scene = insetScene();
     scene.edges.push({ id: "s1", from: "embed", to: "g-attn.in", kind: "residual" });
-    expect(validateScene(scene)).toEqual([]);
+    expect(validateScene(scene).join("\n")).toMatch(/residual edges must be covered by a declared stream path/);
   });
 
   it("rejects split nodes with a single fan-out", () => {
