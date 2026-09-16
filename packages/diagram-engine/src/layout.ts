@@ -14,6 +14,7 @@
 import type { DiagramScene, SemanticEdge, SemanticGroup, SemanticNode } from "./types.js";
 import type { LayoutOptions, Point, PositionedEdge, PositionedGroup, PositionedNode, PositionedScene } from "./positioned.js";
 import { measureText } from "./text.js";
+import { resolveSidePorts } from "./ports.js";
 
 const MARGIN = 28;
 const LABEL_BAND = 20; // group label strip on top of a box/frame
@@ -470,11 +471,7 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
           in: { x: it.x, y: it.y + it.h / 2 },
           out: { x: it.x + it.w, y: it.y + it.h / 2 },
         };
-    const side = (it.node.ports ?? []).map((p, i) =>
-      typeof p === "string"
-        ? { name: p, side: (i % 2 === 0 ? "left" : "right") as "left" | "right" }
-        : p,
-    );
+    const side = resolveSidePorts(it.node);
     const leftNames = side.filter((p) => p.side === "left").map((p) => p.name);
     const rightNames = side.filter((p) => p.side === "right").map((p) => p.name);
     leftNames.forEach((name, i) => {

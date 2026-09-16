@@ -51,6 +51,16 @@ describe("compound layout (#33)", () => {
     }
   });
 
+  it("is deterministic over 20 runs on every compound fixture (ELK backend, round 4)", async () => {
+    const elk = new ELK();
+    for (const scene of [insetsScene(), mhcStreamsScene(), nestedScene()]) {
+      const first = await layoutWithElk(scene, elk as never);
+      for (let i = 0; i < 19; i++) {
+        expect(await layoutWithElk(scene, elk as never)).toEqual(first);
+      }
+    }
+  }, 120_000);
+
   it("detects a node parked inside a foreign inset on real layout output", () => {
     const scene = insetsScene();
     const laid = layoutScene(scene);

@@ -20,9 +20,9 @@ interface StageSpec {
 function stagePorts(stage: StageSpec): SemanticGroupPort[] {
   return [
     { id: "enter", side: "left", inner: stage.member },
-    ...[1, 2, 3, 4].map((i) => ({ id: `in${i}`, side: "left" as const, inner: stage.member })),
+    ...[1, 2, 3, 4].map((i) => ({ id: `in${i}`, side: "left" as const, inner: stage.member, stream: `s${i}` })),
     { id: "exit", side: "right", inner: stage.member },
-    ...[1, 2, 3, 4].map((i) => ({ id: `out${i}`, side: "right" as const, inner: stage.member })),
+    ...[1, 2, 3, 4].map((i) => ({ id: `out${i}`, side: "right" as const, inner: stage.member, stream: `s${i}` })),
   ];
 }
 
@@ -32,8 +32,8 @@ const FFN: StageSpec = { group: "g-ffn", member: "ffn", label: "FFN stage", kind
 /** per-stream operator ports: entries left, exits right (round 3) */
 function operatorPorts(): Array<{ name: string; side: "left" | "right" }> {
   return [
-    ...[1, 2, 3, 4].map((i) => ({ name: `e${i}`, side: "left" as const })),
-    ...[1, 2, 3, 4].map((i) => ({ name: `x${i}`, side: "right" as const })),
+    ...[1, 2, 3, 4].map((i) => ({ name: `e${i}`, side: "left" as const, stream: `s${i}` })),
+    ...[1, 2, 3, 4].map((i) => ({ name: `x${i}`, side: "right" as const, stream: `s${i}` })),
   ];
 }
 
@@ -57,10 +57,10 @@ export function mhcStreamsScene(): DiagramScene {
     nodes: [
       { id: "tok", kind: "io", label: "Tokenized text" },
       { id: "embed", kind: "embedding", label: "Token embedding" },
-      { id: "read", kind: "split", label: "Stream read", ports: [1, 2, 3, 4].map((i) => ({ name: `s${i}`, side: "left" as const })) },
+      { id: "read", kind: "split", label: "Stream read", ports: [1, 2, 3, 4].map((i) => ({ name: `s${i}`, side: "left" as const, stream: `s${i}` })) },
       { id: attn.member, kind: attn.kind, label: "Attention", ports: operatorPorts() },
       { id: ffn.member, kind: ffn.kind, label: "FFN", ports: operatorPorts() },
-      { id: "write", kind: "merge", label: "Stream write", ports: [1, 2, 3, 4].map((i) => ({ name: `w${i}`, side: "left" as const })) },
+      { id: "write", kind: "merge", label: "Stream write", ports: [1, 2, 3, 4].map((i) => ({ name: `w${i}`, side: "left" as const, stream: `s${i}` })) },
       { id: "norm", kind: "norm", label: "Final RMSNorm" },
       { id: "head", kind: "output", label: "LM head" },
     ],

@@ -1,6 +1,7 @@
 export * from "./types.js";
 export * from "./validate.js";
 export * from "./audit.js";
+export * from "./ports.js";
 export * from "./gates.js";
 export * from "./positioned.js";
 export * from "./text.js";

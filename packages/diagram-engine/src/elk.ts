@@ -13,6 +13,7 @@
 import type { DiagramScene, SemanticGroup } from "./types.js";
 import type { Point, PositionedEdge, PositionedGroup, PositionedNode, PositionedScene } from "./positioned.js";
 import { boundaryPortAnchors } from "./layout.js";
+import { resolveSidePorts } from "./ports.js";
 
 export interface ElkPort {
   id: string;
@@ -224,11 +225,7 @@ export async function layoutWithElk(
           in: { x: p.x, y: p.y + p.h / 2 },
           out: { x: p.x + p.w, y: p.y + p.h / 2 },
         };
-    const side = (node.ports ?? []).map((q, i) =>
-      typeof q === "string"
-        ? { name: q, side: (i % 2 === 0 ? "left" : "right") as "left" | "right" }
-        : q,
-    );
+    const side = resolveSidePorts(node);
     const leftNames = side.filter((q) => q.side === "left").map((q) => q.name);
     const rightNames = side.filter((q) => q.side === "right").map((q) => q.name);
     leftNames.forEach((name, i) => {

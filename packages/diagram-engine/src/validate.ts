@@ -11,6 +11,7 @@
  */
 
 import type { DiagramScene, SemanticGroup } from "./types.js";
+import { declaredPortNames, portStream } from "./ports.js";
 
 const COORDINATE_KEYS = new Set(["x", "y", "width", "height", "cx", "cy", "rx", "ry"]);
 
@@ -113,7 +114,7 @@ export function validateScene(scene: DiagramScene): string[] {
         const pNode = port.inner.slice(0, dot);
         const pPort = port.inner.slice(dot + 1);
         const node = scene.nodes.find((n) => n.id === pNode);
-        const declaredInner = (node?.ports ?? []).map((q) => (typeof q === "string" ? q : q.name));
+        const declaredInner = node ? declaredPortNames(node) : [];
         if (!node || (pPort !== "in" && pPort !== "out" && !declaredInner.includes(pPort))) {
           errors.push(`group ${group.id}: port "${port.id}" inner "${port.inner}" references an undeclared node port`);
         }
@@ -155,6 +156,22 @@ export function validateScene(scene: DiagramScene): string[] {
     const to = parseEndpoint(edge.to);
     const ends = [from, to];
 
+    // round 4: stream tags are an IR invariant — an edge whose two tagged
+    // endpoints carry different stream identities is a cross-wire, rejected
+    // here rather than only in tests
+    const tagOf = (end: Endpoint): string | undefined => {
+      if (!end.port) return undefined;
+      const group = groupById.get(end.head);
+      if (group) return group.ports?.find((p) => p.id === end.port)?.stream;
+      const node = scene.nodes.find((n) => n.id === end.head);
+      return node ? portStream(node, end.port) : undefined;
+    };
+    const fromTag = tagOf(from);
+    const toTag = tagOf(to);
+    if (fromTag && toTag && fromTag !== toTag) {
+      errors.push(`edge ${edge.id}: stream tag mismatch (${fromTag} vs ${toTag}) — streams may not be cross-wired`);
+    }
+
     for (const end of ends) {
       if (!nodeIds.has(end.head) && !groupById.has(end.head)) {
         errors.push(`edge ${edge.id}: endpoint "${end.raw}" does not reference a known node`);
@@ -170,7 +187,7 @@ export function validateScene(scene: DiagramScene): string[] {
         // allowed, anything else must be declared in SemanticNode.ports (#33
         // dangling-port negative, round 2)
         const node = scene.nodes.find((n) => n.id === end.head);
-        const declared = (node?.ports ?? []).map((p) => (typeof p === "string" ? p : p.name));
+        const declared = node ? declaredPortNames(node) : [];
         if (node && end.port !== "in" && end.port !== "out" && !declared.includes(end.port)) {
           errors.push(`edge ${edge.id}: endpoint "${end.raw}" references undeclared port on node ${end.head}`);
         }

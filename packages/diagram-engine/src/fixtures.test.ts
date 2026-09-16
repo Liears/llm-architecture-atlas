@@ -24,70 +24,27 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     }
   });
 
-  it("connects each read port to its corresponding write port, port-identity intact (round 2 regression)", () => {
-    const reach = (scene: DiagramScene, stream: number): boolean => {
-      // vertices: group ports AND declared node ports (split/merge stream
-      // ports) stay DISTINCT — they carry stream identity; implicit node
-      // in/out references collapse to the node id (a node's internal
-      // connectivity is given). A cross-wired out2 → in1 therefore cannot
-      // fake connectivity, while node-internal traversal needs no edge.
-      const groupHeads = new Set(scene.groups.map((g) => g.id));
-      const declared = new Map(scene.nodes.map((n) => [n.id, new Set((n.ports ?? []).map((q) => (typeof q === "string" ? q : q.name)))]));
-      const vertex = (ref: string): string => {
-        const dot = ref.indexOf(".");
-        if (dot === -1) return ref;
-        const head = ref.slice(0, dot);
-        const port = ref.slice(dot + 1);
-        if (groupHeads.has(head)) return ref;
-        // operator internal connectivity is given per stream: entry port eN
-        // and exit port xN of the same operator are one stream vertex
-        const m = /^([ex])(\d)$/.exec(port);
-        if (m && (head === "attn" || head === "ffn")) return `${head}#stream${m[2]}`;
-        if (declared.get(head)?.has(port)) return ref;
-        return head;
-      };
-      const adjacency = new Map<string, string[]>();
-      for (const edge of scene.edges) {
-        const from = vertex(edge.from);
-        const to = vertex(edge.to);
-        adjacency.set(from, [...(adjacency.get(from) ?? []), to]);
-      }
-      const start = `read.s${stream}`;
-      const goal = `write.w${stream}`;
-      const seen = new Set<string>([start]);
-      const queue = [start];
-      while (queue.length) {
-        const cur = queue.shift()!;
-        for (const next of adjacency.get(cur) ?? []) {
-          if (!seen.has(next)) {
-            seen.add(next);
-            queue.push(next);
-          }
-        }
-      }
-      return seen.has(goal);
-    };
+  it("makes stream identity an IR invariant: cross-wires are validator errors (round 4)", () => {
+    // mis-target a traversal onto another stream's operator port
+    const misTarget = mhcStreamsScene();
+    misTarget.edges.find((e) => e.id === "t-a1")!.to = "attn.e2";
+    expect(validateScene(misTarget).join("\n")).toMatch(/stream tag mismatch \(s1 vs s2\)/);
 
-    const scene = mhcStreamsScene();
-    for (let i = 1; i <= 4; i++) expect(reach(scene, i)).toBe(true);
-
-    // round 3: the path must VISIT the stage operator — cutting the port→
-    // operator edge disconnects the stream (a group self-edge would not)
-    const noOperator = mhcStreamsScene();
-    noOperator.edges = noOperator.edges.filter((e) => e.id !== "t-a1");
-    expect(reach(noOperator, 1)).toBe(false);
-
-    // cross-wire stream 1's inter-stage leg onto stream 2's attention
-    // out-port: stream 1 must lose its read → write connection
+    // cross-wire the inter-stage leg onto another stream's stage port
     const crossed = mhcStreamsScene();
     crossed.edges.find((e) => e.id === "p1")!.from = "g-attn.out2";
-    expect(reach(crossed, 1)).toBe(false);
-    expect(reach(crossed, 2)).toBe(true);
+    expect(validateScene(crossed).join("\n")).toMatch(/stream tag mismatch \(s2 vs s1\)/);
 
-    // and dropping the operator's exit edge breaks the stream the same way
-    const broken = mhcStreamsScene();
-    broken.edges = broken.edges.filter((e) => e.id !== "u-a3");
-    expect(reach(broken, 3)).toBe(false);
+    // mis-return a stream into another stream's write port
+    const misReturn = mhcStreamsScene();
+    misReturn.edges.find((e) => e.id === "r1")!.to = "write.w2";
+    expect(validateScene(misReturn).join("\n")).toMatch(/stream tag mismatch \(s1 vs s2\)/);
+
+    // the intact fixture tags every stream leg consistently
+    const scene = mhcStreamsScene();
+    expect(validateScene(scene)).toEqual([]);
+    const tagged = scene.edges.filter((e) => ["s", "p", "r", "t", "u"].includes(e.id[0]!) && e.id.length <= 4);
+    expect(tagged).toHaveLength(28); // 12 residual legs + 16 operator traversals
   });
 
   it("reaches an independent write/merge port per stream", () => {
