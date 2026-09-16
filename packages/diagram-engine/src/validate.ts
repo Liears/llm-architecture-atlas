@@ -10,8 +10,8 @@
  * - groups form a tree (unique membership, acyclic parent chain).
  */
 
-import type { DiagramScene, SemanticGroup } from "./types.js";
-import { declaredPortNames, portStream } from "./ports.js";
+import type { DiagramScene, SemanticGroup, SemanticGroupPort } from "./types.js";
+import { declaredPortNames, portStream, resolveSidePorts } from "./ports.js";
 
 const COORDINATE_KEYS = new Set(["x", "y", "width", "height", "cx", "cy", "rx", "ry"]);
 
@@ -258,6 +258,76 @@ export function validateScene(scene: DiagramScene): string[] {
     }
     if (node.kind === "merge" && (inDegree.get(node.id) ?? 0) < 2) {
       errors.push(`merge node ${node.id} must collect at least 2 sources`);
+    }
+  }
+
+  // -- round 5: stream port degree/direction contract. Tagged ports with a
+  // role make operator traversal an IR invariant: ingress ports accept exactly
+  // one incoming edge and emit none (egress: mirrored); operator ports are
+  // bound to a group port via SemanticGroupPort.inner, and the single edge on
+  // each side must respect that binding. Entering through an exit port,
+  // leaving through an entry port, or deleting a traversal leg all violate it.
+  const groupPortDefs = new Map<string, SemanticGroupPort & { group: string }>();
+  for (const g of scene.groups) {
+    for (const p of g.ports ?? []) groupPortDefs.set(`${g.id}.${p.id}`, { ...p, group: g.id });
+  }
+  const nodePortDefs = new Map<string, { role?: "ingress" | "egress"; stream?: string }>();
+  for (const n of scene.nodes) {
+    for (const p of resolveSidePorts(n)) {
+      if (p.role) nodePortDefs.set(`${n.id}.${p.name}`, p);
+    }
+  }
+  const boundRefs = new Set([...groupPortDefs.values()].map((p) => p.inner));
+  const outBy = new Map<string, typeof scene.edges>();
+  const inBy = new Map<string, typeof scene.edges>();
+  for (const e of scene.edges) {
+    outBy.set(e.from, [...(outBy.get(e.from) ?? []), e]);
+    inBy.set(e.to, [...(inBy.get(e.to) ?? []), e]);
+  }
+  const deg = (ref: string): [number, number] => [(inBy.get(ref) ?? []).length, (outBy.get(ref) ?? []).length];
+
+  for (const [ref, def] of nodePortDefs) {
+    const [i, o] = deg(ref);
+    if (def.role === "ingress" && (i !== 1 || o !== 0)) {
+      errors.push(`port ${ref}: ingress stream port must have exactly one incoming edge and no outgoing (got in=${i} out=${o})`);
+    }
+    if (def.role === "egress" && (o !== 1 || i !== 0)) {
+      errors.push(`port ${ref}: egress stream port must have exactly one outgoing edge and no incoming (got in=${i} out=${o})`);
+    }
+    if (boundRefs.has(ref)) {
+      if (def.role === "ingress") {
+        const src = (inBy.get(ref) ?? [])[0]?.from;
+        const gp = src ? groupPortDefs.get(src) : undefined;
+        if (!gp || gp.inner !== ref) {
+          errors.push(`port ${ref}: operator ingress must be fed by the group port bound to it (got ${src ?? "none"})`);
+        }
+      }
+      if (def.role === "egress") {
+        const dst = (outBy.get(ref) ?? [])[0]?.to;
+        const gp = dst ? groupPortDefs.get(dst) : undefined;
+        if (!gp || gp.inner !== ref) {
+          errors.push(`port ${ref}: operator egress must feed the group port bound to it (got ${dst ?? "none"})`);
+        }
+      }
+    }
+  }
+  for (const [ref, gp] of groupPortDefs) {
+    if (!gp.role) continue;
+    const [i, o] = deg(ref);
+    if (i !== 1 || o !== 1) {
+      errors.push(`port ${ref}: stream boundary port must have exactly one incoming and one outgoing edge (got in=${i} out=${o})`);
+    }
+    if (gp.role === "ingress") {
+      const dst = (outBy.get(ref) ?? [])[0]?.to;
+      if (dst !== gp.inner) {
+        errors.push(`port ${ref}: group ingress must forward to its bound inner ${gp.inner} (got ${dst ?? "none"})`);
+      }
+    }
+    if (gp.role === "egress") {
+      const src = (inBy.get(ref) ?? [])[0]?.from;
+      if (src !== gp.inner) {
+        errors.push(`port ${ref}: group egress must collect from its bound inner ${gp.inner} (got ${src ?? "none"})`);
+      }
     }
   }
 

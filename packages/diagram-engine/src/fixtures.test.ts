@@ -47,6 +47,29 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     expect(tagged).toHaveLength(28); // 12 residual legs + 16 operator traversals
   });
 
+  it("makes operator traversal an IR invariant via port roles (round 5)", () => {
+    // entering the operator through an EXIT port
+    const enterViaExit = mhcStreamsScene();
+    enterViaExit.edges.find((e) => e.id === "t-a1")!.to = "attn.x1";
+    expect(validateScene(enterViaExit).join("\n")).toMatch(/egress stream port must have exactly one outgoing/);
+
+    // deleting the traversal leg that leaves the operator
+    const neverLeaves = mhcStreamsScene();
+    neverLeaves.edges = neverLeaves.edges.filter((e) => e.id !== "u-a1");
+    expect(validateScene(neverLeaves).join("\n")).toMatch(/egress stream port must have exactly one outgoing/);
+
+    // reversing a traversal leg (leaving through an entry port)
+    const reversed = mhcStreamsScene();
+    const t = reversed.edges.find((e) => e.id === "t-a1")!;
+    [t.from, t.to] = [t.to, t.from];
+    expect(validateScene(reversed).join("\n")).toMatch(/ingress stream port must have exactly one incoming/);
+
+    // a group ingress port forwarding to the wrong operator port
+    const misForward = mhcStreamsScene();
+    misForward.edges.find((e) => e.id === "t-a2")!.to = "attn.e3";
+    expect(validateScene(misForward).join("\n")).toMatch(/stream tag mismatch|group ingress must forward/);
+  });
+
   it("reaches an independent write/merge port per stream", () => {
     const scene = mhcStreamsScene();
     const writes = scene.edges.filter((e) => e.id.startsWith("r"));
@@ -63,10 +86,10 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     expect(validateScene(scene).join("\n")).toMatch(/residual edge p2: self-loop/);
   });
 
-  it("keeps validating when a stream is dropped: stream count is a model fact, boundary crossing is the IR rule", () => {
+  it("rejects a dropped stream: dangling tagged ports violate the degree contract (round 5)", () => {
     const scene = mhcStreamsScene();
     scene.edges = scene.edges.filter((e) => !e.id.endsWith("4") || !["s", "p", "r"].includes(e.id[0]!));
-    expect(validateScene(scene)).toEqual([]);
+    expect(validateScene(scene).join("\n")).toMatch(/ingress stream port must have exactly one incoming/);
   });
 
   it("negative: a stream leg bypassing the boundary port fails validation", () => {

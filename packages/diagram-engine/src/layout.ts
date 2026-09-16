@@ -14,7 +14,7 @@
 import type { DiagramScene, SemanticEdge, SemanticGroup, SemanticNode } from "./types.js";
 import type { LayoutOptions, Point, PositionedEdge, PositionedGroup, PositionedNode, PositionedScene } from "./positioned.js";
 import { measureText } from "./text.js";
-import { resolveSidePorts } from "./ports.js";
+import { nodePortAnchors } from "./ports.js";
 
 const MARGIN = 28;
 const LABEL_BAND = 20; // group label strip on top of a box/frame
@@ -462,25 +462,7 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
     const insetId = insetOfNode.get(node.id) ?? null;
     const dir: Direction = insetId ? (groupById.get(insetId)?.direction ?? "left-to-right") : mainDirection;
     const vertical = dir !== "left-to-right";
-    const ports: Record<string, Point> = vertical
-      ? {
-          in: { x: it.x + it.w / 2, y: it.y + it.h },
-          out: { x: it.x + it.w / 2, y: it.y },
-        }
-      : {
-          in: { x: it.x, y: it.y + it.h / 2 },
-          out: { x: it.x + it.w, y: it.y + it.h / 2 },
-        };
-    const side = resolveSidePorts(it.node);
-    const leftNames = side.filter((p) => p.side === "left").map((p) => p.name);
-    const rightNames = side.filter((p) => p.side === "right").map((p) => p.name);
-    leftNames.forEach((name, i) => {
-      ports[name] = { x: it.x, y: it.y + (it.h * (i + 1)) / (leftNames.length + 1) };
-    });
-    rightNames.forEach((name, i) => {
-      ports[name] = { x: it.x + it.w, y: it.y + (it.h * (i + 1)) / (rightNames.length + 1) };
-    });
-    it.ports = ports;
+    it.ports = nodePortAnchors({ x: it.x, y: it.y, w: it.w, h: it.h }, vertical, it.node);
   }
 
   // -- edges

@@ -116,8 +116,10 @@ export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): G
       // ancestor groups) parked inside the box is foreign intrusion
       // (round 4 fix: previously only ungrouped nodes were checked)
       if (memberOf && ancestors(memberOf, semantic).has(box.id)) continue;
-      if (contains(box, node, -eps)) {
-        push("overlap", `${node.id}+${box.id}`, `node ${node.id} sits inside foreign inset ${box.id}`);
+      // partial overlap counts: a node straddling the inset border is still
+      // an overlap with the frame (round 5: was full containment only)
+      if (overlaps(box, node, eps)) {
+        push("overlap", `${node.id}+${box.id}`, `node ${node.id} overlaps foreign inset ${box.id}`);
       }
     }
     for (const [name, p] of Object.entries(box.ports)) {

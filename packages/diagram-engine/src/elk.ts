@@ -13,7 +13,7 @@
 import type { DiagramScene, SemanticGroup } from "./types.js";
 import type { Point, PositionedEdge, PositionedGroup, PositionedNode, PositionedScene } from "./positioned.js";
 import { boundaryPortAnchors } from "./layout.js";
-import { resolveSidePorts } from "./ports.js";
+import { nodePortAnchors } from "./ports.js";
 
 export interface ElkPort {
   id: string;
@@ -216,24 +216,7 @@ export async function layoutWithElk(
     const insetId = insetOfNode.get(node.id) ?? null;
     const dir: string = insetId ? (insetById.get(insetId)?.direction ?? "left-to-right") : mainDirection;
     const vertical = dir !== "left-to-right";
-    const ports: Record<string, Point> = vertical
-      ? {
-          in: { x: p.x + p.w / 2, y: p.y + p.h },
-          out: { x: p.x + p.w / 2, y: p.y },
-        }
-      : {
-          in: { x: p.x, y: p.y + p.h / 2 },
-          out: { x: p.x + p.w, y: p.y + p.h / 2 },
-        };
-    const side = resolveSidePorts(node);
-    const leftNames = side.filter((q) => q.side === "left").map((q) => q.name);
-    const rightNames = side.filter((q) => q.side === "right").map((q) => q.name);
-    leftNames.forEach((name, i) => {
-      ports[name] = { x: p.x, y: p.y + (p.h * (i + 1)) / (leftNames.length + 1) };
-    });
-    rightNames.forEach((name, i) => {
-      ports[name] = { x: p.x + p.w, y: p.y + (p.h * (i + 1)) / (rightNames.length + 1) };
-    });
+    const ports: Record<string, Point> = nodePortAnchors({ x: p.x, y: p.y, w: p.w, h: p.h }, vertical, node);
     return {
       id: node.id,
       kind: node.kind,

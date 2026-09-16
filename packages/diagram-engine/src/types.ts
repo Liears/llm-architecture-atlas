@@ -20,11 +20,13 @@ export interface SemanticNode {
   /**
    * Declared named ports. A bare string gets the default alternating
    * left/right placement; the object form pins the side (round 3: per-stream
-   * operator ports need entry ports left and exit ports right) and may carry
-   * a stream tag (round 4): ports of one residual stream share a tag, and
-   * the validator rejects edges whose two tagged endpoints disagree.
+   * operator ports need entry ports left and exit ports right), may carry a
+   * stream tag (round 4: ports of one residual stream share a tag; the
+   * validator rejects edges whose two tagged endpoints disagree) and a role
+   * (round 5): ingress ports accept exactly one incoming edge and emit none,
+   * egress ports the mirror — which makes operator traversal an IR invariant.
    */
-  ports?: Array<string | { name: string; side: "left" | "right"; stream?: string }>;
+  ports?: Array<string | { name: string; side: "left" | "right"; stream?: string; role?: "ingress" | "egress" }>;
   /** IR claim path backing this node's label, for evidence annotations. */
   claimPath?: string;
   /** Per-segment evidence: every number-bearing text piece references its claim. */
@@ -57,6 +59,8 @@ export interface SemanticGroupPort {
   inner: string;
   /** stream identity tag (round 4); see SemanticNode.ports */
   stream?: string;
+  /** ingress/egress role (round 5); see SemanticNode.ports */
+  role?: "ingress" | "egress";
 }
 
 export interface SemanticGroup {

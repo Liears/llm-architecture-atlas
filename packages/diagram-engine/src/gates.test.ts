@@ -139,6 +139,20 @@ describe("geometry gates (#33 minimal set)", () => {
     expect(runSceneGates(layoutScene(nestedScene())).filter((f) => f.gate === "overlap")).toEqual([]);
   });
 
+  it("flags a node straddling an inset border (partial overlap, round 5)", () => {
+    const scene = literal({
+      scene: { ...emptyScene, groups: [{ id: "g", label: "G", kind: "inset", members: ["a"] }] },
+      groups: [{ id: "g", label: "G", inset: true, x: 100, y: 100, w: 200, h: 100, ports: {} }],
+      nodes: [
+        { id: "a", kind: "io", label: "A", x: 120, y: 140, w: 40, h: 20, ports: {} },
+        // half in, half out of the box
+        { id: "straddler", kind: "io", label: "S", x: 60, y: 120, w: 80, h: 40, ports: {} },
+      ],
+    });
+    const findings = runSceneGates(scene);
+    expect(findings.some((f) => f.gate === "overlap" && f.target === "straddler+g")).toBe(true);
+  });
+
   it("flags out-of-canvas geometry", () => {
     const scene = literal({
       size: { w: 200, h: 200 },
