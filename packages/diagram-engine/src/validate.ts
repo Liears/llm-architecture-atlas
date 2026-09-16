@@ -153,15 +153,35 @@ export function validateScene(scene: DiagramScene): string[] {
         if (!end.port || !group.ports?.some((p) => p.id === end.port)) {
           errors.push(`edge ${edge.id}: endpoint "${end.raw}" does not match a boundary port of group ${end.head}`);
         }
+      } else if (end.port) {
+        // node-qualified tails must exist: implicit in/out anchors are always
+        // allowed, anything else must be declared in SemanticNode.ports (#33
+        // dangling-port negative, round 2)
+        const node = scene.nodes.find((n) => n.id === end.head);
+        if (node && end.port !== "in" && end.port !== "out" && !(node.ports ?? []).includes(end.port)) {
+          errors.push(`edge ${edge.id}: endpoint "${end.raw}" references undeclared port on node ${end.head}`);
+        }
       }
-      // node-qualified tails ("node.port") stay permissive: they are anchor
-      // hints resolved by layout (implicit in/out are always allowed)
     }
 
     const fromNode = endpointNode(from, groupById);
     const toNode = endpointNode(to, groupById);
     if (fromNode && nodeIds.has(fromNode)) outDegree.set(fromNode, (outDegree.get(fromNode) ?? 0) + 1);
     if (toNode && nodeIds.has(toNode)) inDegree.set(toNode, (inDegree.get(toNode) ?? 0) + 1);
+
+    // a boundary port connected to a raw node INSIDE its own group is a
+    // stream traversal and must pair with the port's inner member; raw nodes
+    // outside the group are boundary crossings and stay exempt
+    for (const [end, other] of [[from, to], [to, from]] as const) {
+      const group = groupById.get(end.head);
+      const portDef = group?.ports?.find((p) => p.id === end.port);
+      if (!portDef || !group) continue;
+      if (other.port || groupById.has(other.head)) continue;
+      if (!resolvesInside(group.id, other, groupById, memberGroup)) continue;
+      if (other.head !== portDef.inner.split(".")[0]!) {
+        errors.push(`edge ${edge.id}: boundary port ${end.head}.${end.port} must pair with its inner member ${portDef.inner} inside the group`);
+      }
+    }
 
     // boundary discipline, ancestry-aware (#33 review fix): walk every group
     // on the endpoint's ancestor chain — a group's boundary counts as crossed

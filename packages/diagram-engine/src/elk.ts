@@ -160,6 +160,10 @@ export async function layoutWithElk(
       "elk.edgeRouting": "ORTHOGONAL",
       "elk.layered.spacing.nodeNodeBetweenLayers": "56",
       "elk.spacing.nodeNode": "36",
+      // edges are declared at the root but may connect nodes at different
+      // hierarchy levels (boundary ports resolve into insets); without this
+      // the layered algorithm rejects the graph (round 2 review)
+      "elk.hierarchyHandling": "INCLUDE_CHILDREN",
     },
     children: rootChildren,
     edges: scene.edges.map((edge) => ({

@@ -69,6 +69,16 @@ export function mhcStreamsScene(): DiagramScene {
         { id: `p${i}`, from: `${attn.group}.out${i}`, to: `${ffn.group}.in${i}`, kind: "residual" as const, rail: "left" as const },
         { id: `r${i}`, from: `${ffn.group}.out${i}`, to: `write.w${i}`, kind: "residual" as const, rail: "left" as const },
       ]),
+      // stream traversals THROUGH the stage operator: the IR connection from
+      // a stage's in-port to its out-port (round 2: without these, port
+      // identity collapses and cross-wired mutations look connected)
+      // IR connection through each stage: the stream's in-port to its
+      // out-port inside the same group (round 2: without these, port
+      // identity collapses and cross-wired mutations look connected)
+      ...[1, 2, 3, 4].flatMap((i) => [
+        { id: `x-a${i}`, from: `${attn.group}.in${i}`, to: `${attn.group}.out${i}`, kind: "flow" as const },
+        { id: `x-f${i}`, from: `${ffn.group}.in${i}`, to: `${ffn.group}.out${i}`, kind: "flow" as const },
+      ]),
     ],
     groups: [stageGroup(attn), stageGroup(ffn)],
     annotations: [],
@@ -76,6 +86,61 @@ export function mhcStreamsScene(): DiagramScene {
       { type: "direction", value: "bottom-to-top" },
       { type: "order", targets: ["tok", "embed", "read", attn.group, ffn.group, "write", "norm", "head"] },
     ],
+  };
+}
+
+/**
+ * Nested compound scene (round 2 regression): an outer inset containing a
+ * nested inset. Validator must accept outer-member ↔ nested-port edges
+ * without an outer boundary port, and the real ELK backend must lay it out
+ * (hierarchical edges, #33 review round 2).
+ */
+export function nestedScene(): DiagramScene {
+  return {
+    irVersion: "0.1.0",
+    view: "overview",
+    modelId: "fixture/nested",
+    nodes: [
+      { id: "spine", kind: "io", label: "Spine" },
+      { id: "outerMember", kind: "ffn", label: "Outer member" },
+      { id: "inner", kind: "attention", label: "Inner" },
+      { id: "sink", kind: "output", label: "Sink" },
+    ],
+    edges: [
+      { id: "e-in", from: "spine", to: "g-outer.in", kind: "flow" },
+      { id: "e-descend", from: "g-outer.out", to: "g-inner.in", kind: "flow" },
+      { id: "e-exit", from: "g-inner.out", to: "g-outer.exit", kind: "flow" },
+      { id: "e-out", from: "g-outer.out2", to: "sink", kind: "flow" },
+    ],
+    groups: [
+      {
+        id: "g-outer",
+        label: "Outer",
+        kind: "inset",
+        members: ["outerMember"],
+        direction: "left-to-right",
+        ports: [
+          { id: "in", side: "left", inner: "outerMember" },
+          { id: "out", side: "right", inner: "outerMember" },
+          { id: "exit", side: "right", inner: "outerMember" },
+          { id: "out2", side: "right", inner: "outerMember" },
+        ],
+      },
+      {
+        id: "g-inner",
+        label: "Inner",
+        kind: "inset",
+        parent: "g-outer",
+        members: ["inner"],
+        direction: "left-to-right",
+        ports: [
+          { id: "in", side: "left", inner: "inner" },
+          { id: "out", side: "right", inner: "inner" },
+        ],
+      },
+    ],
+    annotations: [],
+    constraints: [{ type: "direction", value: "bottom-to-top" }],
   };
 }
 

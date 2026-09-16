@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramScene } from "./types.js";
 import { validateScene } from "./validate.js";
+import { nestedScene } from "./fixtures.js";
 
 function glmOverview(): DiagramScene {
   return {
@@ -9,7 +10,7 @@ function glmOverview(): DiagramScene {
     modelId: "zai-org/glm-5.3-flash",
     nodes: [
       { id: "embed", kind: "embedding", label: "Token embedding layer", claimPath: "facts.hidden_size" },
-      { id: "block", kind: "stack", label: "Decoder block" },
+      { id: "block", kind: "stack", label: "Decoder block", ports: ["sum"] },
       { id: "attn", kind: "attention", label: "KDA / MLA+DSA", parent: "block", ports: ["q", "kv", "out"] },
       { id: "ffn", kind: "moe", label: "MoE (288 experts)", parent: "block", claimPath: "topology.experts.routed_total" },
       { id: "head", kind: "output", label: "Linear output layer" },
@@ -63,6 +64,42 @@ describe("validateScene", () => {
     const errors = validateScene(scene);
     expect(errors.join("\n")).toMatch(/member "ghost" is not a known node/);
     expect(errors.join("\n")).toMatch(/unknown target missing/);
+  });
+
+  it("rejects a boundary port paired with a non-inner member inside its group", () => {
+    const scene: DiagramScene = {
+      irVersion: "0.1.0",
+      view: "overview",
+      modelId: "fixture/pairing",
+      nodes: [
+        { id: "m1", kind: "attention", label: "M1" },
+        { id: "m2", kind: "ffn", label: "M2" },
+      ],
+      edges: [{ id: "t", from: "g.in", to: "m2", kind: "flow" }],
+      groups: [
+        {
+          id: "g",
+          label: "G",
+          kind: "inset",
+          members: ["m1", "m2"],
+          direction: "left-to-right",
+          ports: [{ id: "in", side: "left", inner: "m1" }],
+        },
+      ],
+      annotations: [],
+      constraints: [],
+    };
+    expect(validateScene(scene).join("\n")).toMatch(/boundary port g.in must pair with its inner member m1/);
+  });
+
+  it("rejects dangling node ports (round 2 regression)", () => {
+    const scene = glmOverview();
+    scene.edges[0]!.from = "embed.ghost";
+    expect(validateScene(scene).join("\n")).toMatch(/endpoint "embed.ghost" references undeclared port on node embed/);
+  });
+
+  it("keeps implicit in/out anchors valid without declaration", () => {
+    expect(validateScene(glmOverview())).toEqual([]);
   });
 
   it("rejects constraints on unknown targets", () => {
@@ -187,54 +224,6 @@ describe("validateScene compound rules (#33)", () => {
   });
 
   describe("nested subgraphs (review fix: ancestry-aware boundaries)", () => {
-    /** outer inset containing a nested inset; spine nodes outside. */
-    function nestedScene(): DiagramScene {
-      return {
-        irVersion: "0.1.0",
-        view: "overview",
-        modelId: "fixture/nested",
-        nodes: [
-          { id: "spine", kind: "io", label: "Spine" },
-          { id: "outerMember", kind: "ffn", label: "Outer member" },
-          { id: "inner", kind: "attention", label: "Inner" },
-          { id: "sink", kind: "output", label: "Sink" },
-        ],
-        edges: [
-          { id: "e-in", from: "spine", to: "g-outer.in", kind: "flow" },
-          { id: "e-descend", from: "g-outer.out", to: "g-inner.in", kind: "flow" },
-          { id: "e-exit", from: "g-inner.out", to: "g-outer.exit", kind: "flow" },
-          { id: "e-out", from: "g-outer.out2", to: "sink", kind: "flow" },
-        ],
-        groups: [
-          {
-            id: "g-outer",
-            label: "Outer",
-            kind: "inset",
-            members: ["outerMember"],
-            ports: [
-              { id: "in", side: "left", inner: "outerMember" },
-              { id: "out", side: "right", inner: "outerMember" },
-              { id: "exit", side: "right", inner: "outerMember" },
-              { id: "out2", side: "right", inner: "outerMember" },
-            ],
-          },
-          {
-            id: "g-inner",
-            label: "Inner",
-            kind: "inset",
-            parent: "g-outer",
-            members: ["inner"],
-            ports: [
-              { id: "in", side: "left", inner: "inner" },
-              { id: "out", side: "right", inner: "inner" },
-            ],
-          },
-        ],
-        annotations: [],
-        constraints: [{ type: "direction", value: "bottom-to-top" }],
-      };
-    }
-
     it("accepts outer member ↔ nested boundary-port edges without an outer port", () => {
       expect(validateScene(nestedScene())).toEqual([]);
     });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import ELK from "elkjs/lib/elk.bundled.js";
 import { layoutWithElk } from "./elk.js";
 import { glmScene } from "./test-scene.js";
-import { mhcStreamsScene, insetsScene } from "./fixtures.js";
+import { mhcStreamsScene, insetsScene, nestedScene } from "./fixtures.js";
 
 describe("layoutWithElk (adapter over injected engine)", () => {
   it("produces positioned nodes through the real ELK engine", async () => {
@@ -66,6 +66,22 @@ describe("layoutWithElk (adapter over injected engine)", () => {
       const again = await layoutWithElk(insetsScene(), elk as never);
       expect(again).toEqual(first);
     }
+  });
+
+  it("lays out validator-accepted nested compounds without hierarchy errors (round 2 regression)", async () => {
+    const elk = new ELK();
+    const scene = nestedScene();
+    const laid = await layoutWithElk(scene, elk as never);
+    // inner members of both nesting levels are positioned, finite, positive
+    for (const id of ["spine", "outerMember", "inner", "sink"]) {
+      const node = laid.nodes.find((n) => n.id === id)!;
+      expect(Number.isFinite(node.x)).toBe(true);
+      expect(node.w).toBeGreaterThan(0);
+    }
+    const inner = laid.nodes.find((n) => n.id === "inner")!;
+    const box = laid.groups.find((g) => g.id === "g-inner")!;
+    expect(inner.x).toBeGreaterThanOrEqual(box.x - 0.5);
+    expect(inner.x + inner.w).toBeLessThanOrEqual(box.x + box.w + 0.5);
   });
 
   it("terminates boundary-port edges exactly at the declared port anchors", async () => {
