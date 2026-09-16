@@ -3,6 +3,8 @@ export * from "./validate.js";
 export * from "./audit.js";
 export * from "./ports.js";
 export * from "./gates.js";
+export * from "./gates-report.js";
+export * from "./structural-assertions.js";
 export * from "./positioned.js";
 export * from "./text.js";
 export * from "./layout.js";

@@ -70,7 +70,7 @@ const ffnCell = (c: { label: string; role: string } | null) =>
     Columns align by layer index; the shorter model pads with —.
     {result.genome.attentionDiffer} aligned column(s) differ in attention type.
   </p>
-  <div class="tracks" data-testid="genome-tracks">
+  <div class="tracks" data-atlas-scroll="x" data-testid="genome-tracks">
     <div class="track">
       <span class="track-label">{ea!.label}</span>
       <div class="cells" set:html={result.genome.aLayers.map(cell).join("")} />
