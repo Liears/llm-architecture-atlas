@@ -1,23 +1,47 @@
 /**
  * Compound-scene fixtures (#33): reusable across validator, layout, ELK and
  * renderer tests. Each fixture is a contract exercise, not a model snapshot:
- * - mhcStreamsScene: 4 real residual streams, each crossing the sublayer
- *   inset boundary through its own port and returning to its own write port;
+ * - mhcStreamsScene: 4 real residual streams; each stream is a CONNECTED
+ *   per-stream path read → attention stage → FFN stage → write, crossing a
+ *   group boundary at every hop through its own port (review fix: the stream
+ *   no longer breaks at the sublayer);
  * - insetsScene: two independently laid-out insets on a spine.
  */
 
-import type { DiagramScene, SemanticGroupPort } from "./types.js";
+import type { DiagramScene, SemanticGroup, SemanticGroupPort } from "./types.js";
 
-function streamPorts(): SemanticGroupPort[] {
+interface StageSpec {
+  group: string;
+  member: string;
+  label: string;
+  kind: string;
+}
+
+function stagePorts(stage: StageSpec): SemanticGroupPort[] {
   return [
-    { id: "enter", side: "left", inner: "attn" },
-    ...[1, 2, 3, 4].map((i) => ({ id: `pre${i}`, side: "left" as const, inner: "attn" })),
-    { id: "exit", side: "right", inner: "ffn" },
-    ...[1, 2, 3, 4].map((i) => ({ id: `post${i}`, side: "right" as const, inner: "ffn" })),
+    { id: "enter", side: "left", inner: stage.member },
+    ...[1, 2, 3, 4].map((i) => ({ id: `in${i}`, side: "left" as const, inner: stage.member })),
+    { id: "exit", side: "right", inner: stage.member },
+    ...[1, 2, 3, 4].map((i) => ({ id: `out${i}`, side: "right" as const, inner: stage.member })),
   ];
 }
 
+const ATTN: StageSpec = { group: "g-attn", member: "attn", label: "Attention stage", kind: "attention" };
+const FFN: StageSpec = { group: "g-ffn", member: "ffn", label: "FFN stage", kind: "ffn" };
+
+function stageGroup(stage: StageSpec): SemanticGroup {
+  return {
+    id: stage.group,
+    label: stage.label,
+    kind: "inset",
+    members: [stage.member],
+    direction: "left-to-right",
+    ports: stagePorts(stage),
+  };
+}
+
 export function mhcStreamsScene(): DiagramScene {
+  const [attn, ffn] = [ATTN, FFN];
   return {
     irVersion: "0.1.0",
     view: "overview",
@@ -26,46 +50,31 @@ export function mhcStreamsScene(): DiagramScene {
       { id: "tok", kind: "io", label: "Tokenized text" },
       { id: "embed", kind: "embedding", label: "Token embedding" },
       { id: "read", kind: "split", label: "Stream read", ports: ["s1", "s2", "s3", "s4"] },
-      { id: "attn", kind: "attention", label: "Attention" },
-      { id: "ffn", kind: "ffn", label: "FFN" },
+      { id: attn.member, kind: attn.kind, label: "Attention" },
+      { id: ffn.member, kind: ffn.kind, label: "FFN" },
       { id: "write", kind: "merge", label: "Stream write", ports: ["w1", "w2", "w3", "w4"] },
       { id: "norm", kind: "norm", label: "Final RMSNorm" },
       { id: "head", kind: "output", label: "LM head" },
     ],
     edges: [
       { id: "e-tok", from: "tok", to: "embed", kind: "flow" },
-      { id: "e-embed-sub", from: "embed", to: "g-sub.enter", kind: "flow" },
-      ...[1, 2, 3, 4].map((i) => ({
-        id: `s${i}`,
-        from: `read.s${i}`,
-        to: `g-sub.pre${i}`,
-        kind: "residual" as const,
-        rail: "left" as const,
-        label: `S${i}`,
-      })),
-      ...[1, 2, 3, 4].map((i) => ({
-        id: `w${i}`,
-        from: `g-sub.post${i}`,
-        to: `write.w${i}`,
-        kind: "flow" as const,
-      })),
-      { id: "e-sub-norm", from: "g-sub.exit", to: "norm", kind: "flow" },
+      { id: "e-embed-attn", from: "embed", to: `${attn.group}.enter`, kind: "flow" },
+      { id: "e-attn-ffn", from: `${attn.group}.exit`, to: `${ffn.group}.enter`, kind: "flow" },
+      { id: "e-ffn-norm", from: `${ffn.group}.exit`, to: "norm", kind: "flow" },
       { id: "e-norm-head", from: "norm", to: "head", kind: "flow" },
+      // per-stream connected path: read → attn stage → ffn stage → write;
+      // every hop crosses a group boundary through the stream's own port
+      ...[1, 2, 3, 4].flatMap((i) => [
+        { id: `s${i}`, from: `read.s${i}`, to: `${attn.group}.in${i}`, kind: "residual" as const, rail: "left" as const, label: `S${i}` },
+        { id: `p${i}`, from: `${attn.group}.out${i}`, to: `${ffn.group}.in${i}`, kind: "residual" as const, rail: "left" as const },
+        { id: `r${i}`, from: `${ffn.group}.out${i}`, to: `write.w${i}`, kind: "residual" as const, rail: "left" as const },
+      ]),
     ],
-    groups: [
-      {
-        id: "g-sub",
-        label: "Sublayer",
-        kind: "inset",
-        members: ["attn", "ffn"],
-        direction: "left-to-right",
-        ports: streamPorts(),
-      },
-    ],
+    groups: [stageGroup(attn), stageGroup(ffn)],
     annotations: [],
     constraints: [
       { type: "direction", value: "bottom-to-top" },
-      { type: "order", targets: ["tok", "embed", "read", "g-sub", "write", "norm", "head"] },
+      { type: "order", targets: ["tok", "embed", "read", attn.group, ffn.group, "write", "norm", "head"] },
     ],
   };
 }

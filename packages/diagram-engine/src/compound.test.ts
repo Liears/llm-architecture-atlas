@@ -68,7 +68,7 @@ describe("compound layout (#33)", () => {
   it("places mhc stream rails on the left, clear of the content", () => {
     const laid = layoutScene(mhcStreamsScene());
     const residual = laid.edges.filter((e) => e.kind === "residual");
-    expect(residual).toHaveLength(4);
+    expect(residual).toHaveLength(12); // 4 streams × 3 legs (read→attn→ffn→write)
     for (const edge of residual) {
       const railXs = edge.points.slice(1, 3).map((p) => p.x);
       for (const x of railXs) {

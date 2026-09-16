@@ -249,8 +249,10 @@ export function layoutScene(scene: DiagramScene, opts: LayoutOptions = {}): Posi
 
   function containsScope(descendant: string, ancestor: string | null): boolean {
     let g: string | null = groupById.get(descendant)?.parent ?? null;
-    while (g) {
+    const seen = new Set<string>();
+    while (g && !seen.has(g)) {
       if (g === ancestor) return true;
+      seen.add(g);
       g = groupById.get(g)?.parent ?? null;
     }
     return ancestor === null;

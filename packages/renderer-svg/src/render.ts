@@ -95,7 +95,14 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   }
 
   for (const edge of scene.edges) {
-    const cls = edge.kind === "skip" ? "e-skip" : edge.kind === "control" ? "e-control" : "e-flow";
+    const cls =
+      edge.kind === "skip"
+        ? "e-skip"
+        : edge.kind === "residual"
+          ? "e-residual" // residual streams are visually distinct (#33)
+          : edge.kind === "control"
+            ? "e-control"
+            : "e-flow";
     const edgeClaim = edge.claimPath ? ` data-claim-path="${esc(edge.claimPath)}"` : "";
     const mid = edge.points[Math.floor(edge.points.length / 2)]!;
     const edgeLabel = edge.label

@@ -67,4 +67,18 @@ describe("layoutWithElk (adapter over injected engine)", () => {
       expect(again).toEqual(first);
     }
   });
+
+  it("terminates boundary-port edges exactly at the declared port anchors", async () => {
+    const elk = new ELK();
+    const scene = insetsScene();
+    const laid = await layoutWithElk(scene, elk as never);
+    const moe = laid.groups.find((g) => g.id === "g-moe")!;
+    const edge = laid.edges.find((e) => e.id === "e-block-moe")!;
+    const last = edge.points[edge.points.length - 1]!;
+    expect(last.x).toBe(moe.ports.in!.x);
+    expect(last.y).toBe(moe.ports.in!.y);
+    const out = laid.edges.find((e) => e.id === "e-moe-norm")!;
+    expect(out.points[0]!.x).toBe(moe.ports.out!.x);
+    expect(out.points[0]!.y).toBe(moe.ports.out!.y);
+  });
 });

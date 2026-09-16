@@ -40,6 +40,25 @@ function groupOf(nodeId: string, memberGroup: Map<string, string>): string | nul
   return memberGroup.get(nodeId) ?? null;
 }
 
+/** whether an edge endpoint resolves to a node inside the group's subtree (any depth). */
+function resolvesInside(
+  targetGroup: string,
+  end: Endpoint,
+  groupById: Map<string, SemanticGroup>,
+  memberGroup: Map<string, string>,
+): boolean {
+  const node = endpointNode(end, groupById);
+  if (!node) return false;
+  let g: string | null = memberGroup.get(node) ?? null;
+  const seen = new Set<string>();
+  while (g && !seen.has(g)) {
+    if (g === targetGroup) return true;
+    seen.add(g);
+    g = groupById.get(g)?.parent ?? null;
+  }
+  return false;
+}
+
 function groupParentChain(id: string, groupById: Map<string, SemanticGroup>): string[] {
   const chain: string[] = [];
   const seen = new Set<string>([id]);
@@ -144,21 +163,29 @@ export function validateScene(scene: DiagramScene): string[] {
     if (fromNode && nodeIds.has(fromNode)) outDegree.set(fromNode, (outDegree.get(fromNode) ?? 0) + 1);
     if (toNode && nodeIds.has(toNode)) inDegree.set(toNode, (inDegree.get(toNode) ?? 0) + 1);
 
-    // boundary discipline: an edge leaving an inset member to the outside
-    // must land on that inset's boundary port (internal edges are exempt)
+    // boundary discipline, ancestry-aware (#33 review fix): walk every group
+    // on the endpoint's ancestor chain — a group's boundary counts as crossed
+    // when the other endpoint does NOT resolve inside that group's subtree,
+    // and the edge must then reference that group's boundary port. Edges
+    // between an outer member and a nested group's port stay internal to the
+    // outer group (the nested port sits inside the outer frame).
     for (const [end, other] of [[from, to], [to, from]] as const) {
       const node = endpointNode(end, groupById);
       if (!node) continue;
-      const groupId = groupOf(node, memberGroup);
-      if (!groupId) continue;
-      const group = groupById.get(groupId)!;
-      if (group.kind !== "inset" && !(group.ports?.length)) continue;
-      const otherNode = endpointNode(other, groupById);
-      const otherGroup = otherNode ? groupOf(otherNode, memberGroup) : null;
-      if (otherGroup === groupId) continue; // both ends inside: internal edge
-      const referencesBoundary = ends.some((e) => e.head === groupId && e.port);
-      if (!referencesBoundary) {
-        errors.push(`edge ${edge.id}: crosses group ${groupId} boundary without a boundary port`);
+      let g = groupOf(node, memberGroup);
+      const walked = new Set<string>();
+      while (g && !walked.has(g)) {
+        walked.add(g);
+        const group = groupById.get(g);
+        if (!group) break; // unknown parent: reported by the group-tree checks
+        const guarded = group.kind === "inset" || (group.ports?.length ?? 0) > 0;
+        if (guarded && !resolvesInside(g, other, groupById, memberGroup)) {
+          const referencesBoundary = ends.some((e) => e.head === g && e.port);
+          if (!referencesBoundary) {
+            errors.push(`edge ${edge.id}: crosses group ${g} boundary without a boundary port`);
+          }
+        }
+        g = group.parent ?? null;
       }
     }
 

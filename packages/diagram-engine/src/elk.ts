@@ -304,13 +304,18 @@ export async function layoutWithElk(
 
   const positionedEdges: PositionedEdge[] = scene.edges.map((edge) => {
     const section = result.edges?.find((e) => e.id === edge.id)?.sections?.[0];
+    // semantic endpoints win (review fix): the declared anchors — boundary
+    // ports for group references, direction-aware ports for nodes — replace
+    // ELK's chosen attach points; ELK keeps only the interior bends
+    const a = anchorOf(edge.from);
+    const b = anchorOf(edge.to);
     const points: Point[] = section
       ? [
-          { x: section.startPoint.x + offsetX, y: section.startPoint.y + offsetY },
-          ...(section.bendPoints ?? []).map((b) => ({ x: b.x + offsetX, y: b.y + offsetY })),
-          { x: section.endPoint.x + offsetX, y: section.endPoint.y + offsetY },
+          a,
+          ...(section.bendPoints ?? []).map((pt) => ({ x: pt.x + offsetX, y: pt.y + offsetY })),
+          b,
         ]
-      : [anchorOf(edge.from), anchorOf(edge.to)];
+      : [a, b];
     return { id: edge.id, kind: edge.kind, label: edge.label, claimPath: edge.claimPath, points };
   });
 

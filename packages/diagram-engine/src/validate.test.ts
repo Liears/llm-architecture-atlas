@@ -185,4 +185,65 @@ describe("validateScene compound rules (#33)", () => {
     (scene.groups[0] as unknown as Record<string, unknown>).x = 40;
     expect(validateScene(scene).join("\n")).toMatch(/group g-attn: coordinate key "x" is forbidden/);
   });
+
+  describe("nested subgraphs (review fix: ancestry-aware boundaries)", () => {
+    /** outer inset containing a nested inset; spine nodes outside. */
+    function nestedScene(): DiagramScene {
+      return {
+        irVersion: "0.1.0",
+        view: "overview",
+        modelId: "fixture/nested",
+        nodes: [
+          { id: "spine", kind: "io", label: "Spine" },
+          { id: "outerMember", kind: "ffn", label: "Outer member" },
+          { id: "inner", kind: "attention", label: "Inner" },
+          { id: "sink", kind: "output", label: "Sink" },
+        ],
+        edges: [
+          { id: "e-in", from: "spine", to: "g-outer.in", kind: "flow" },
+          { id: "e-descend", from: "g-outer.out", to: "g-inner.in", kind: "flow" },
+          { id: "e-exit", from: "g-inner.out", to: "g-outer.exit", kind: "flow" },
+          { id: "e-out", from: "g-outer.out2", to: "sink", kind: "flow" },
+        ],
+        groups: [
+          {
+            id: "g-outer",
+            label: "Outer",
+            kind: "inset",
+            members: ["outerMember"],
+            ports: [
+              { id: "in", side: "left", inner: "outerMember" },
+              { id: "out", side: "right", inner: "outerMember" },
+              { id: "exit", side: "right", inner: "outerMember" },
+              { id: "out2", side: "right", inner: "outerMember" },
+            ],
+          },
+          {
+            id: "g-inner",
+            label: "Inner",
+            kind: "inset",
+            parent: "g-outer",
+            members: ["inner"],
+            ports: [
+              { id: "in", side: "left", inner: "inner" },
+              { id: "out", side: "right", inner: "inner" },
+            ],
+          },
+        ],
+        annotations: [],
+        constraints: [{ type: "direction", value: "bottom-to-top" }],
+      };
+    }
+
+    it("accepts outer member ↔ nested boundary-port edges without an outer port", () => {
+      expect(validateScene(nestedScene())).toEqual([]);
+    });
+
+    it("rejects a spine edge piercing straight into a nested group", () => {
+      const scene = nestedScene();
+      scene.edges[0]!.to = "g-inner.in";
+      const errors = validateScene(scene);
+      expect(errors.join("\n")).toMatch(/crosses group g-outer boundary without a boundary port/);
+    });
+  });
 });
