@@ -47,6 +47,38 @@ describe("mhcStreamsScene (#33 acceptance)", () => {
     expect(tagged).toHaveLength(28); // 12 residual legs + 16 operator traversals
   });
 
+  it("rejects stream tags without roles: the traversal contract is not optional (round 6)", () => {
+    const stripRoles = (scene: DiagramScene): DiagramScene => ({
+      ...scene,
+      nodes: scene.nodes.map((n) => ({
+        ...n,
+        ...(n.ports
+          ? {
+              ports: n.ports.map((p) => {
+                if (typeof p === "string") return p;
+                const { role: _role, ...rest } = p;
+                return rest;
+              }),
+            }
+          : {}),
+      })),
+      groups: scene.groups.map((g) => ({
+        ...g,
+        ...(g.ports
+          ? {
+              ports: g.ports.map((p) => {
+                const { role: _role, ...rest } = p;
+                return rest;
+              }),
+            }
+          : {}),
+      })),
+    });
+    const roleless = stripRoles(mhcStreamsScene());
+    roleless.edges = roleless.edges.filter((e) => e.id !== "u-a1");
+    expect(validateScene(roleless).join("\n")).toMatch(/stream-tagged port must declare role/);
+  });
+
   it("makes operator traversal an IR invariant via port roles (round 5)", () => {
     // entering the operator through an EXIT port
     const enterViaExit = mhcStreamsScene();

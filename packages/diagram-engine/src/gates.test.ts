@@ -153,6 +153,38 @@ describe("geometry gates (#33 minimal set)", () => {
     expect(findings.some((f) => f.gate === "overlap" && f.target === "straddler+g")).toBe(true);
   });
 
+  it("flags a declared child inset escaping its parent frame (round 6)", () => {
+    const straddling = literal({
+      scene: {
+        ...emptyScene,
+        groups: [
+          { id: "p", label: "P", kind: "inset", members: [] },
+          { id: "c", label: "C", kind: "inset", members: [], parent: "p" },
+        ],
+      },
+      groups: [
+        { id: "p", label: "P", inset: true, x: 100, y: 100, w: 200, h: 100, ports: {} },
+        { id: "c", label: "C", inset: true, x: 250, y: 120, w: 100, h: 60, ports: {} },
+      ],
+    });
+    expect(runSceneGates(straddling).some((f) => f.gate === "containment" && f.target === "p+c")).toBe(true);
+
+    const escaped = literal({
+      scene: {
+        ...emptyScene,
+        groups: [
+          { id: "p", label: "P", kind: "inset", members: [] },
+          { id: "c", label: "C", kind: "inset", members: [], parent: "p" },
+        ],
+      },
+      groups: [
+        { id: "p", label: "P", inset: true, x: 100, y: 100, w: 200, h: 100, ports: {} },
+        { id: "c", label: "C", inset: true, x: 400, y: 400, w: 80, h: 60, ports: {} },
+      ],
+    });
+    expect(runSceneGates(escaped).some((f) => f.gate === "containment" && f.target === "p+c")).toBe(true);
+  });
+
   it("flags out-of-canvas geometry", () => {
     const scene = literal({
       size: { w: 200, h: 200 },

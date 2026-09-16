@@ -274,6 +274,12 @@ export function validateScene(scene: DiagramScene): string[] {
   const nodePortDefs = new Map<string, { role?: "ingress" | "egress"; stream?: string }>();
   for (const n of scene.nodes) {
     for (const p of resolveSidePorts(n)) {
+      // round 6: a stream tag without a role would make the traversal
+      // contract optional — require every tagged port to declare its role
+      if (p.stream && p.role !== "ingress" && p.role !== "egress") {
+        errors.push(`port ${n.id}.${p.name}: stream-tagged port must declare role ingress or egress`);
+        continue;
+      }
       if (p.role) nodePortDefs.set(`${n.id}.${p.name}`, p);
     }
   }
@@ -312,6 +318,10 @@ export function validateScene(scene: DiagramScene): string[] {
     }
   }
   for (const [ref, gp] of groupPortDefs) {
+    if (gp.stream && gp.role !== "ingress" && gp.role !== "egress") {
+      errors.push(`port ${ref}: stream-tagged port must declare role ingress or egress`);
+      continue;
+    }
     if (!gp.role) continue;
     const [i, o] = deg(ref);
     if (i !== 1 || o !== 1) {

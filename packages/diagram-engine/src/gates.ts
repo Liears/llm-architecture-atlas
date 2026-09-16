@@ -136,6 +136,20 @@ export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): G
     }
   }
 
+  // declared nesting must hold geometrically: a child inset that straddles or
+  // leaves its parent frame is a containment violation (round 6: ancestor
+  // pairs were skipped unconditionally before)
+  const posGroup = new Map(scene.groups.map((g) => [g.id, g]));
+  for (const g of semantic.groups) {
+    if (!g.parent) continue;
+    const child = posGroup.get(g.id);
+    const parent = posGroup.get(g.parent);
+    if (!child || !parent) continue;
+    if (!contains(parent, child, eps)) {
+      push("containment", `${g.parent}+${g.id}`, `group ${g.id} escapes declared parent ${g.parent}`);
+    }
+  }
+
   // canvas bounds
   for (const n of scene.nodes) {
     if (!contains({ x: 0, y: 0, w: size.w, h: size.h }, n, eps)) {
