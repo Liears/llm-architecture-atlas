@@ -2,8 +2,9 @@
 
 Input: the SAME frozen, reviewed source brief — `models/zai-org/glm-5-3-flash/main/`
 (architecture.json @ revision `f93128cf` + evidence.json). The generator
-(`render-candidates.ts`) asserts every drawn number against the pinned config
-and the publishable evidence claims before emitting anything; the three
+(`render-candidates.ts`) binds every drawn number to a publishable evidence
+claim first and cross-checks it against the pinned config / IR before emitting
+anything; the three
 candidates differ in composition (geometry), not only in skin:
 
 - **A · paper-editorial** — portrait poster 1080×1220: vertical spine with a
@@ -35,6 +36,12 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
 - Reproducibility: the generator has no randomness or timestamps; two runs emit
   byte-identical SVGs (checked by sha256). PNGs are playwright screenshots of
   those SVGs, identical across runs.
+- Evidence binding: every drawn number goes through `claim()` first
+  (publishable status enforced), then cross-checks the pinned config or the
+  Architecture IR with `eq()`; prose schedule/partition claims are pinned by
+  substring checks on the numbers they carry. Negative-tested: deleting
+  `topology.experts.routed_total` from evidence.json stops emit, and
+  downgrading it to `disputed` stops emit; the file was restored afterwards.
 
 ## Scores
 
@@ -76,14 +83,15 @@ time and throws on drift.
 
 | Drawn element | Values | Source |
 |---|---|---|
-| Layer count + schedule | 45; K,K,K,D ×11 + K | pinned config `num_hidden_layers`; evidence topology group membership (exact-membership `eq()` in the generator) |
-| hidden / vocab / heads / context | 4,096 / 154,880 / 64 / 1M | config facts `hidden_size`, `vocab_size`, `num_attention_heads`, `context_tokens` |
-| Param totals | 320B-A18B | config facts `total_params`, `active_params` |
+| Layer count + schedule | 45; K,K,K,D ×11 + K | claim `facts.num_hidden_layers` cross-checked with config; prose claims `topology.attention_groups[0..1]` pinned by substring; exact per-layer membership asserted against the IR groups |
+| hidden / vocab / heads / context | 4,096 / 154,880 / 64 / 1M | claims `facts.hidden_size`, `facts.vocab_size`, `facts.num_attention_heads`, `facts.context_tokens`, each cross-checked with the pinned config |
+| Param totals | 320B-A18B | claims `facts.total_params`, `facts.active_params` cross-checked with config |
 | KDA chain | Q/K/V ShortConv → KDA core (decay + recurrent state) → output gate | Kimi Linear §4, Fig 3 (p.6) |
 | DSA chain | Lightning indexer 32 heads → Top-k 2048 → selected KV → MLA core | DeepSeek-V3.2 §2.1, Fig 2 (pp.3–4); 32 and 2048 from evidence claims `topology.attention.dsa_indexer_heads`, `topology.attention.dsa_topk` (publishable status enforced) |
-| MoE | router → 288 routed top-8 + 1 shared; layers 3–44 | config `topology.experts.{routed_total,active_routed,shared}`; `ffn_groups` moe partition (asserted) |
-| Dense/MoE split | first 3 dense, then 42 MoE | `ffn_groups` dense partition asserted `[0,1,2]` |
-| mHC | 4 streams, pre-mix → sublayer → post-mix → write merge | mHC paper Fig 1(c), §3–§4; stream count from `topology.residual.streams` |
+| MoE | router → 288 routed top-8 + 1 shared; layers 3–44 | evidence claims `topology.experts.{routed_total,active_routed,shared}` cross-checked against config; `ffn_groups` moe partition (asserted) |
+| Dense/MoE split | first 3 dense, then 42 MoE | prose claims `topology.ffn_groups[0..1]` pinned by substring; dense partition asserted `[0,1,2]` |
+| mHC | 4 streams, pre-mix → sublayer → post-mix → write merge | mHC paper Fig 1(c), §3–§4; count from claim `topology.residual.streams` cross-checked against IR; scheme claim `mhc` |
+| KDA short conv | kernel 4 on Q/K/V | claim `topology.attention.kda_short_conv_kernel`; Kimi Linear §4 |
 | Scope note | vision encoder + MTP head omitted | model-card scope; pinned config carries the text decoder only |
 
 ## What the selected composition fixes vs the current canonical figure

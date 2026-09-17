@@ -39,43 +39,82 @@ const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8"));
 
 // ---------------------------------------------------------------- evidence
 const PUBLISHABLE = new Set(["verified", "reported", "derived"]);
-function claim(path: string): number {
+function claimRec(path: string): unknown {
   const c = evidence.claims.find((x: { path: string }) => x.path === path);
   if (!c || !PUBLISHABLE.has(c.status)) throw new Error(`claim ${path} missing or not publishable`);
-  return c.value as number;
+  return c.value;
+}
+function claim(path: string): number {
+  const v = claimRec(path);
+  if (typeof v !== "number") throw new Error(`claim ${path} is not a number`);
+  return v;
+}
+function claimStr(path: string): string {
+  const v = claimRec(path);
+  if (typeof v !== "string") throw new Error(`claim ${path} is not a string`);
+  return v;
 }
 function fact(key: string): number {
   const v = (arch.facts as Record<string, unknown>)[key];
   if (typeof v !== "number") throw new Error(`fact ${key} is not a number`);
   return v;
 }
+const eq = (a: unknown, b: unknown, what: string): void => {
+  if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`frozen fact drift: ${what}`);
+};
+const ok = (cond: boolean, what: string): void => {
+  if (!cond) throw new Error(`frozen fact drift: ${what}`);
+};
+// Every drawn number binds to an evidence claim first, then cross-checks the
+// pinned config / IR. Deleting or downgrading any of these claims stops emit.
+const bothFact = (path: string, key: string, what: string): number => {
+  const c = claim(path);
+  eq(c, fact(key), `${what} (claim vs config)`);
+  return c;
+};
+const bothIr = (path: string, ir: number, what: string): number => {
+  const c = claim(path);
+  eq(c, ir, `${what} (claim vs IR)`);
+  return c;
+};
 
 const F = {
-  layers: fact("num_hidden_layers"),
-  hidden: fact("hidden_size"),
-  vocab: fact("vocab_size"),
-  heads: fact("num_attention_heads"),
-  context: fact("context_tokens"),
-  total: fact("total_params"),
-  active: fact("active_params"),
+  layers: bothFact("facts.num_hidden_layers", "num_hidden_layers", "layers"),
+  hidden: bothFact("facts.hidden_size", "hidden_size", "hidden"),
+  vocab: bothFact("facts.vocab_size", "vocab_size", "vocab"),
+  heads: bothFact("facts.num_attention_heads", "num_attention_heads", "heads"),
+  context: bothFact("facts.context_tokens", "context_tokens", "context"),
+  total: bothFact("facts.total_params", "total_params", "total"),
+  active: bothFact("facts.active_params", "active_params", "active"),
 };
 const linear = arch.topology.attention_groups.find((g: { kind: string }) => g.kind === "linear_attention")!;
 const mla = arch.topology.attention_groups.find((g: { kind: string }) => g.kind === "mla_sparse")!;
 const KDA_LAYERS: number[] = linear.layers;
 const MLA_LAYERS: number[] = mla.layers;
-const routed = (arch.topology.experts as { routed_total: number }).routed_total;
-const activeRouted = (arch.topology.experts as { active_routed: number }).active_routed;
-const shared = (arch.topology.experts as { shared: number }).shared;
-const streams = (arch.topology.residual as { streams: number }).streams;
+const routed = bothIr("topology.experts.routed_total", (arch.topology.experts as { routed_total: number }).routed_total, "routed");
+const activeRouted = bothIr("topology.experts.active_routed", (arch.topology.experts as { active_routed: number }).active_routed, "activeRouted");
+const shared = bothIr("topology.experts.shared", (arch.topology.experts as { shared: number }).shared, "shared");
+const streams = bothIr("topology.residual.streams", (arch.topology.residual as { streams: number }).streams, "streams");
 const indexerHeads = claim("topology.attention.dsa_indexer_heads");
 const topk = claim("topology.attention.dsa_topk");
+const convKernel = claim("topology.attention.kda_short_conv_kernel");
+eq(claim("topology.attention.kda_heads"), F.heads, "kda heads == attention heads");
+eq(claimStr("topology.residual.scheme"), "mhc", "residual scheme is mhc");
+eq(claim("topology.mtp.predict_layers"), 1, "mtp predict layers (backs the omission note)");
 const denseLayers: number[] = arch.topology.ffn_groups.find((g: { kind: string }) => g.kind === "dense_ffn")!.layers;
 const moeLayers: number[] = arch.topology.ffn_groups.find((g: { kind: string }) => g.kind === "moe")!.layers;
+const UNITS = MLA_LAYERS.length; // 11 four-layer units
+const DENSE_COUNT = denseLayers.length;
+const MOE_COUNT = moeLayers.length;
+const D_PERIOD = 4; // K,K,K,D period
+// prose schedule/partition claims: pin the numbers they carry
+ok(claimStr("topology.attention_groups[0]").includes(`${KDA_LAYERS.length} KDA`), "attention_groups[0] KDA count");
+ok(claimStr("topology.attention_groups[0]").includes("K,K,K,D"), "attention_groups[0] schedule shape");
+ok(claimStr("topology.attention_groups[1]").includes(`${MLA_LAYERS.length} MLA/DSA`), "attention_groups[1] MLA count");
+ok(claimStr("topology.ffn_groups[0]").includes(`first ${DENSE_COUNT} blocks dense`), "ffn_groups[0] dense count");
+ok(claimStr("topology.ffn_groups[1]").includes(`${MOE_COUNT} sparse MoE`), "ffn_groups[1] MoE count");
 
 // frozen assertions: counts, membership and partition, before any drawing
-const eq = (a: unknown, b: unknown, what: string): void => {
-  if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`frozen fact drift: ${what}`);
-};
 eq(F.layers, 45, "layers");
 eq(F.hidden, 4096, "hidden");
 eq(F.vocab, 154880, "vocab");
@@ -89,18 +128,14 @@ eq(topk, 2048, "topk");
 const expectedLinear = new Set<number>();
 const expectedMla = new Set<number>();
 for (let i = 0; i < F.layers; i++) {
-  if (i === F.layers - 1 || i % 4 !== 3) expectedLinear.add(i);
+  if (i === F.layers - 1 || i % D_PERIOD !== D_PERIOD - 1) expectedLinear.add(i);
   else expectedMla.add(i);
 }
 eq([...KDA_LAYERS].sort((a, b) => a - b), [...expectedLinear].sort((a, b) => a - b), "K,K,K,D x11 + K membership (linear)");
 eq([...MLA_LAYERS].sort((a, b) => a - b), [...expectedMla].sort((a, b) => a - b), "K,K,K,D x11 + K membership (mla)");
 eq(denseLayers, [0, 1, 2], "dense partition");
-eq(moeLayers.length, F.layers - 3, "moe partition length");
-eq(moeLayers[0], 3, "moe partition start");
-const UNITS = MLA_LAYERS.length; // 11 four-layer units
-const DENSE_COUNT = denseLayers.length;
-const MOE_COUNT = moeLayers.length;
-const D_PERIOD = 4; // K,K,K,D period
+eq(moeLayers.length, F.layers - DENSE_COUNT, "moe partition length");
+eq(moeLayers[0], DENSE_COUNT, "moe partition start");
 
 const commas = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const billions = (n: number): string => `${Math.round((n / 1e9) * 10) / 10}B`;
@@ -236,7 +271,7 @@ function connect(ctx: MechCtx, a: R, b: R, label?: string): void {
 function drawKda(ctx: MechCtx, x: number, y: number, w: number, h: number): void {
   const s = ctx.svg;
   const [qkv, core, gate] = slots(ctx, x, y, w, h, 3);
-  s.node(qkv.x, qkv.y, qkv.w, qkv.h, "Q/K/V ShortConv", { size: 12.5 });
+  s.node(qkv.x, qkv.y, qkv.w, qkv.h, "Q/K/V ShortConv", { size: 12.5, detail: `kernel ${convKernel}` });
   s.node(core.x, core.y, core.w, core.h, "KDA core", { fill: s.s.mech, stroke: s.s.mechStroke, detail: "decay + recurrent state", size: 12.5, dfill: "#eaf3fb" });
   s.node(gate.x, gate.y, gate.w, gate.h, "output gate", { size: 12.5 });
   connect(ctx, qkv, core);

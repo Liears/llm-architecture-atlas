@@ -42,7 +42,8 @@
 <rect x="640" y="96" width="416" height="258" rx="8" fill="#ffffff" stroke="#3b4046" stroke-width="1.6" stroke-dasharray="2 4"/>
 <text x="652" y="116" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">KDA — 34 layers (Kimi Linear §4 Fig 3)</text>
 <rect x="654" y="136" width="388" height="52" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
-<text x="848" y="166.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Q/K/V ShortConv</text>
+<text x="848" y="160" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Q/K/V ShortConv</text>
+<text x="848" y="175" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">kernel 4</text>
 <rect x="654" y="214" width="388" height="52" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.5"/>
 <text x="848" y="238" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">KDA core</text>
 <text x="848" y="253" font-size="12" fill="#eaf3fb" font-weight="400" text-anchor="middle">decay + recurrent state</text>

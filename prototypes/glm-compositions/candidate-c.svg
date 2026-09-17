@@ -17,7 +17,8 @@
 <rect x="210" y="322" width="540" height="250" rx="12" fill="#ffffff" stroke="#b9c2d2" stroke-width="1.6" stroke-dasharray="5 4"/>
 <text x="222" y="342" font-size="13.5" fill="#172033" font-weight="700" text-anchor="start">KDA block — 34 layers</text>
 <rect x="390" y="356" width="180" height="52" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.5"/>
-<text x="480" y="386.5" font-size="12.5" fill="#172033" font-weight="600" text-anchor="middle">Q/K/V ShortConv</text>
+<text x="480" y="380" font-size="12.5" fill="#172033" font-weight="600" text-anchor="middle">Q/K/V ShortConv</text>
+<text x="480" y="395" font-size="12" fill="#5d6778" font-weight="400" text-anchor="middle">kernel 4</text>
 <rect x="390" y="434" width="180" height="52" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.5"/>
 <text x="480" y="458" font-size="12.5" fill="#172033" font-weight="600" text-anchor="middle">KDA core</text>
 <text x="480" y="473" font-size="12" fill="#eaf3fb" font-weight="400" text-anchor="middle">decay + recurrent state</text>
