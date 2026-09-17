@@ -137,34 +137,32 @@ function ancestors(groupId: string, scene: DiagramScene): Set<string> {
   return out;
 }
 
-export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
-  const { maxAspect, epsilon, baseFontSize } = { ...DEFAULTS, ...opts };
-  const findings: GateFinding[] = [];
-  const push = (gate: string, target: string, message: string): void => {
-    findings.push({ gate, target, message });
-  };
-  const { size } = scene;
-
-  const aspect = size.w / size.h;
+/** aspect ratio cap (#32 §3.3): portrait poster, not a landscape strip */
+export function aspectGate(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { maxAspect } = { ...DEFAULTS, ...opts };
+  const aspect = scene.size.w / scene.size.h;
   if (aspect > maxAspect) {
-    push("aspect", "canvas", `aspect ratio ${aspect.toFixed(2)}:1 exceeds ${maxAspect}:1 — split into main figure + insets instead of shrinking text`);
+    return [{ gate: "aspect", target: "canvas", message: `aspect ratio ${aspect.toFixed(2)}:1 exceeds ${maxAspect}:1 — split into main figure + insets instead of shrinking text` }];
   }
+  return [];
+}
 
-  // node/node overlap
+/** node/node, inset/inset and foreign-node intrusion overlaps */
+export function overlapGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
   for (let i = 0; i < scene.nodes.length; i++) {
     for (let j = i + 1; j < scene.nodes.length; j++) {
       const a = scene.nodes[i]!;
       const b = scene.nodes[j]!;
-      if (overlaps(a, b, epsilon)) push("overlap", `${a.id}+${b.id}`, `node overlap: ${a.id} vs ${b.id}`);
+      if (overlaps(a, b, epsilon)) out.push({ gate: "overlap", target: `${a.id}+${b.id}`, message: `node overlap: ${a.id} vs ${b.id}` });
     }
   }
-
   const insets = scene.groups.filter((g) => g.inset);
   const membership = new Map<string, string>();
   for (const g of scene.scene.groups) {
     for (const m of g.members) membership.set(m, g.id);
   }
-
   for (let i = 0; i < insets.length; i++) {
     for (let j = i + 1; j < insets.length; j++) {
       const a = insets[i]!;
@@ -174,93 +172,96 @@ export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): G
       // parked inside another (round 4 fix)
       if (ancestors(a.id, scene.scene).has(b.id) || ancestors(b.id, scene.scene).has(a.id)) continue;
       if (overlaps(a, b, epsilon) || contains(a, b, -epsilon) || contains(b, a, -epsilon)) {
-        push("overlap", `${a.id}+${b.id}`, `inset overlap: ${a.id} vs ${b.id}`);
+        out.push({ gate: "overlap", target: `${a.id}+${b.id}`, message: `inset overlap: ${a.id} vs ${b.id}` });
       }
     }
   }
   for (const box of insets) {
     for (const node of scene.nodes) {
       const memberOf = membership.get(node.id);
-      if (memberOf === box.id) {
-        if (!contains(box, node, epsilon)) {
-          push("containment", `${box.id}/${node.id}`, `inset ${box.id} does not contain member ${node.id}`);
-        }
-        continue;
-      }
+      if (memberOf === box.id) continue; // containment gate owns members
       // a node belonging to a group nested INSIDE this box is correctly
       // inside it; everyone else (ungrouped nodes AND members of sibling or
-      // ancestor groups) parked inside the box is foreign intrusion
-      // (round 4 fix: previously only ungrouped nodes were checked)
+      // ancestor groups) overlapping the box is foreign intrusion
+      // (round 4/5: partial overlap counts, straddling included)
       if (memberOf && ancestors(memberOf, scene.scene).has(box.id)) continue;
-      // partial overlap counts: a node straddling the inset border is still
-      // an overlap with the frame (round 5: was full containment only)
       if (overlaps(box, node, epsilon)) {
-        push("overlap", `${node.id}+${box.id}`, `node ${node.id} overlaps foreign inset ${box.id}`);
-      }
-    }
-    for (const [name, p] of Object.entries(box.ports)) {
-      const onLeft = Math.abs(p.x - box.x) < epsilon && p.y >= box.y - epsilon && p.y <= box.y + box.h + epsilon;
-      const onRight = Math.abs(p.x - (box.x + box.w)) < epsilon && p.y >= box.y - epsilon && p.y <= box.y + box.h + epsilon;
-      const onTop = Math.abs(p.y - box.y) < epsilon && p.x >= box.x - epsilon && p.x <= box.x + box.w + epsilon;
-      const onBottom = Math.abs(p.y - (box.y + box.h)) < epsilon && p.x >= box.x - epsilon && p.x <= box.x + box.w + epsilon;
-      if (!(onLeft || onRight || onTop || onBottom)) {
-        push("port-border", `${box.id}.${name}`, `inset ${box.id} port ${name} at (${p.x},${p.y}) is not on the group border segment`);
-      }
-      if (p.x < -epsilon || p.y < -epsilon || p.x > size.w + epsilon || p.y > size.h + epsilon) {
-        push("bounds", `${box.id}.${name}`, `inset ${box.id} port ${name} at (${p.x},${p.y}) exceeds the canvas`);
+        out.push({ gate: "overlap", target: `${node.id}+${box.id}`, message: `node ${node.id} overlaps foreign inset ${box.id}` });
       }
     }
   }
+  return out;
+}
 
-  // declared nesting must hold geometrically: a child inset that straddles or
-  // leaves its parent frame is a containment violation (round 6: ancestor
-  // pairs were skipped unconditionally before)
+/** members inside their inset; declared child insets inside their parent */
+export function containmentGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
+  const membership = new Map<string, string>();
+  for (const g of scene.scene.groups) {
+    for (const m of g.members) membership.set(m, g.id);
+  }
   const posGroup = new Map(scene.groups.map((g) => [g.id, g]));
+  for (const box of scene.groups.filter((g) => g.inset)) {
+    for (const node of scene.nodes) {
+      if (membership.get(node.id) !== box.id) continue;
+      if (!contains(box, node, epsilon)) {
+        out.push({ gate: "containment", target: `${box.id}/${node.id}`, message: `inset ${box.id} does not contain member ${node.id}` });
+      }
+    }
+  }
   for (const g of scene.scene.groups) {
     if (!g.parent) continue;
     const child = posGroup.get(g.id);
     const parent = posGroup.get(g.parent);
     if (!child || !parent) continue;
     if (!contains(parent, child, epsilon)) {
-      push("containment", `${g.parent}+${g.id}`, `group ${g.id} escapes declared parent ${g.parent}`);
+      out.push({ gate: "containment", target: `${g.parent}+${g.id}`, message: `group ${g.id} escapes declared parent ${g.parent}` });
     }
   }
+  return out;
+}
 
-  // everything inside the canvas
-  for (const n of scene.nodes) {
-    if (!contains({ x: 0, y: 0, w: size.w, h: size.h }, n, epsilon)) {
-      push("bounds", n.id, `node ${n.id} exceeds the ${size.w}×${size.h} canvas`);
+/** boundary ports on their border segment; everything inside the canvas */
+export function boundsAndPortGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
+  const { size } = scene;
+  const canvas = { x: 0, y: 0, w: size.w, h: size.h };
+  for (const box of scene.groups.filter((g) => g.inset)) {
+    for (const [name, p] of Object.entries(box.ports)) {
+      const onLeft = Math.abs(p.x - box.x) < epsilon && p.y >= box.y - epsilon && p.y <= box.y + box.h + epsilon;
+      const onRight = Math.abs(p.x - (box.x + box.w)) < epsilon && p.y >= box.y - epsilon && p.y <= box.y + box.h + epsilon;
+      const onTop = Math.abs(p.y - box.y) < epsilon && p.x >= box.x - epsilon && p.x <= box.x + box.w + epsilon;
+      const onBottom = Math.abs(p.y - (box.y + box.h)) < epsilon && p.x >= box.x - epsilon && p.x <= box.x + box.w + epsilon;
+      if (!(onLeft || onRight || onTop || onBottom)) {
+        out.push({ gate: "port-border", target: `${box.id}.${name}`, message: `inset ${box.id} port ${name} at (${p.x},${p.y}) is not on the group border segment` });
+      }
+      if (p.x < -epsilon || p.y < -epsilon || p.x > size.w + epsilon || p.y > size.h + epsilon) {
+        out.push({ gate: "bounds", target: `${box.id}.${name}`, message: `inset ${box.id} port ${name} at (${p.x},${p.y}) exceeds the canvas` });
+      }
     }
+  }
+  for (const n of scene.nodes) {
+    if (!contains(canvas, n, epsilon)) out.push({ gate: "bounds", target: n.id, message: `node ${n.id} exceeds the ${size.w}×${size.h} canvas` });
   }
   for (const g of scene.groups) {
-    if (!contains({ x: 0, y: 0, w: size.w, h: size.h }, g, epsilon)) {
-      push("bounds", g.id, `group ${g.id} exceeds the ${size.w}×${size.h} canvas`);
-    }
+    if (!contains(canvas, g, epsilon)) out.push({ gate: "bounds", target: g.id, message: `group ${g.id} exceeds the ${size.w}×${size.h} canvas` });
   }
   for (const e of scene.edges) {
     for (const p of e.points) {
       if (p.x < -epsilon || p.y < -epsilon || p.x > size.w + epsilon || p.y > size.h + epsilon) {
-        push("bounds", e.id, `edge ${e.id} waypoint (${p.x},${p.y}) exceeds the canvas`);
+        out.push({ gate: "bounds", target: e.id, message: `edge ${e.id} waypoint (${p.x},${p.y}) exceeds the canvas` });
       }
     }
   }
+  return out;
+}
 
-  // reserved regions: group label strip + repeat badge
-  const reserved: Array<{ id: string; rect: Rect }> = [];
-  for (const g of scene.groups) {
-    reserved.push({ id: `${g.id}:label`, rect: { x: g.x, y: g.y, w: g.w, h: LABEL_BAND } });
-    if (g.repeatBadge) {
-      reserved.push({ id: `${g.id}:badge`, rect: { x: g.x + g.w - 58, y: g.y + 6, w: BADGE_W, h: BADGE_H } });
-    }
-  }
-
-  // edge geometry: node intersection, reserved intersection, collinear overlap
-  const edgeSegments = scene.edges.map((e) => ({
-    id: e.id,
-    segs: e.points.slice(0, -1).map((p, i) => [p, e.points[i + 1]!] as [{ x: number; y: number }, { x: number; y: number }]),
-  }));
-  // port-to-port edges inside one group represent flow THROUGH the inner
-  // member; the member box intentionally covers them (fixtures x-aN/x-fN)
+/** edges through node boxes (port-to-port traversals of their own member exempt) */
+export function edgeNodeGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
   const exemptNodes = new Map<string, Set<string>>();
   for (const e of scene.scene.edges) {
     const fromGroup = scene.scene.groups.find((g) => g.id === splitHead(e.from));
@@ -271,32 +272,58 @@ export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): G
     );
     exemptNodes.set(e.id, new Set(inners));
   }
-
   for (const e of scene.edges) {
     const segs = e.points.slice(0, -1).map((p, i) => [p, e.points[i + 1]!] as const);
     for (const node of scene.nodes) {
       if (exemptNodes.get(e.id)?.has(node.id)) continue;
-      // an edge may leave/enter its own endpoint nodes
       const isEndpoint =
         (e.points[0] && touches(e.points[0], node, epsilon)) ||
         (e.points[e.points.length - 1] && touches(e.points[e.points.length - 1]!, node, epsilon));
       if (isEndpoint) continue;
       for (const [p, q] of segs) {
         if (segmentHitsRect(p, q, node, epsilon)) {
-          push("edge-node", `${e.id}/${node.id}`, `edge ${e.id} passes through node ${node.id}`);
-          break;
-        }
-      }
-    }
-    for (const region of reserved) {
-      for (const [p, q] of segs) {
-        if (segmentHitsRect(p, q, region.rect, epsilon)) {
-          push("edge-reserved", `${e.id}/${region.id}`, `edge ${e.id} passes through reserved region ${region.id}`);
+          out.push({ gate: "edge-node", target: `${e.id}/${node.id}`, message: `edge ${e.id} passes through node ${node.id}` });
           break;
         }
       }
     }
   }
+  return out;
+}
+
+/** edges through reserved regions: group label strip and repeat badge */
+export function edgeReservedGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
+  const reserved: Array<{ id: string; rect: Rect }> = [];
+  for (const g of scene.groups) {
+    reserved.push({ id: `${g.id}:label`, rect: { x: g.x, y: g.y, w: g.w, h: LABEL_BAND } });
+    if (g.repeatBadge) {
+      reserved.push({ id: `${g.id}:badge`, rect: { x: g.x + g.w - 58, y: g.y + 6, w: BADGE_W, h: BADGE_H } });
+    }
+  }
+  for (const e of scene.edges) {
+    const segs = e.points.slice(0, -1).map((p, i) => [p, e.points[i + 1]!] as const);
+    for (const region of reserved) {
+      for (const [p, q] of segs) {
+        if (segmentHitsRect(p, q, region.rect, epsilon)) {
+          out.push({ gate: "edge-reserved", target: `${e.id}/${region.id}`, message: `edge ${e.id} passes through reserved region ${region.id}` });
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** collinear overlapping business edges */
+export function edgeOverlapGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
+  const edgeSegments = scene.edges.map((e) => ({
+    id: e.id,
+    segs: e.points.slice(0, -1).map((p, i) => [p, e.points[i + 1]!] as [{ x: number; y: number }, { x: number; y: number }]),
+  }));
   for (let i = 0; i < edgeSegments.length; i++) {
     for (let j = i + 1; j < edgeSegments.length; j++) {
       const a = edgeSegments[i]!;
@@ -311,21 +338,26 @@ export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): G
         }
         if (hit) break;
       }
-      if (hit) push("edge-overlap", `${a.id}+${b.id}`, `edges ${a.id} and ${b.id} overlap collinearly`);
+      if (hit) out.push({ gate: "edge-overlap", target: `${a.id}+${b.id}`, message: `edges ${a.id} and ${b.id} overlap collinearly` });
     }
   }
+  return out;
+}
 
-  // text overflow: measured label width vs available inner width
+/** measured label/detail width vs available inner width */
+export function textOverflowGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  const { epsilon, baseFontSize } = { ...DEFAULTS, ...opts };
+  const out: GateFinding[] = [];
   for (const n of scene.nodes) {
     const inner = n.w - 28; // layout padding 14×2
     const labelW = measureText(n.label, baseFontSize, true) * 1.14;
     if (labelW > inner + epsilon) {
-      push("text-overflow", n.id, `node ${n.id} label needs ${Math.ceil(labelW)}px but has ${Math.ceil(inner)}px`);
+      out.push({ gate: "text-overflow", target: n.id, message: `node ${n.id} label needs ${Math.ceil(labelW)}px but has ${Math.ceil(inner)}px` });
     }
     if (n.detail) {
       const detailW = measureText(n.detail, baseFontSize * 0.8) * 1.14;
       if (detailW > inner + epsilon) {
-        push("text-overflow", n.id, `node ${n.id} detail needs ${Math.ceil(detailW)}px but has ${Math.ceil(inner)}px`);
+        out.push({ gate: "text-overflow", target: n.id, message: `node ${n.id} detail needs ${Math.ceil(detailW)}px but has ${Math.ceil(inner)}px` });
       }
     }
   }
@@ -334,12 +366,28 @@ export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): G
     if (showLabel) {
       const labelW = measureText(g.label, baseFontSize * 0.8, true);
       if (labelW + 24 > g.w + epsilon) {
-        push("text-overflow", g.id, `group ${g.id} label needs ${Math.ceil(labelW + 24)}px but frame is ${Math.ceil(g.w)}px`);
+        out.push({ gate: "text-overflow", target: g.id, message: `group ${g.id} label needs ${Math.ceil(labelW + 24)}px but frame is ${Math.ceil(g.w)}px` });
       }
     }
   }
+  return out;
+}
 
-  return findings;
+/**
+ * Aggregator (round 2 P2): each gate is a small function above; this only
+ * concatenates in stable order so baselines stay comparable.
+ */
+export function runSceneGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
+  return [
+    ...aspectGate(scene, opts),
+    ...overlapGates(scene, opts),
+    ...containmentGates(scene, opts),
+    ...boundsAndPortGates(scene, opts),
+    ...edgeNodeGates(scene, opts),
+    ...edgeReservedGates(scene, opts),
+    ...edgeOverlapGates(scene, opts),
+    ...textOverflowGates(scene, opts),
+  ];
 }
 
 function touches(p: { x: number; y: number }, r: Rect, eps: number): boolean {
