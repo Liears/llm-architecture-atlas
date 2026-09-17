@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { layoutScene } from "@atlas/diagram-engine";
 import { renderSvg } from "./render.js";
 import { glmScene } from "../../diagram-engine/src/test-scene.js";
+import { mhcStreamsScene } from "../../diagram-engine/src/fixtures.js";
 
 function positioned() {
   return layoutScene(glmScene(), { fontSize: 16 });
@@ -17,6 +18,12 @@ describe("renderSvg", () => {
     expect(svg).toContain("--attention:#1769e0"); // theme vars inlined
     expect(svg).toContain('id="atlas-title"');
     expect(svg).toContain("<marker");
+  });
+
+  it("renders residual streams with the residual class (review regression)", () => {
+    const svg = renderSvg(layoutScene(mhcStreamsScene(), { fontSize: 16 }), {});
+    expect(svg).toContain('class="e-residual"');
+    expect(svg).not.toContain('class="e-flow" data-edge-id="s1"');
   });
 
   it("switches themes via tokens, not re-layout", () => {

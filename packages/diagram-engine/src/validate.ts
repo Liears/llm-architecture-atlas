@@ -1,8 +1,77 @@
-/** Structural validation for DiagramScene (pure checks, no layout). */
+/**
+ * Structural validation for DiagramScene (pure checks, no layout).
+ *
+ * Compound-graph rules (#33):
+ * - inset groups are compound layout units; an edge that crosses an inset
+ *   boundary must land on a declared boundary port (groupId.port);
+ * - residual edges are real multi-stream paths: no self-loops, and each must
+ *   cross at least one sublayer (group) boundary;
+ * - split nodes fan out to >=2 targets, merge nodes collect >=2 sources;
+ * - groups form a tree (unique membership, acyclic parent chain).
+ */
 
-import type { DiagramScene } from "./types.js";
+import type { DiagramScene, SemanticGroup, SemanticGroupPort } from "./types.js";
+import { declaredPortNames, portStream, resolveSidePorts, streamRoleError } from "./ports.js";
 
 const COORDINATE_KEYS = new Set(["x", "y", "width", "height", "cx", "cy", "rx", "ry"]);
+
+interface Endpoint {
+  raw: string;
+  head: string; // node or group id
+  port?: string;
+}
+
+function parseEndpoint(raw: string): Endpoint {
+  const dot = raw.indexOf(".");
+  if (dot === -1) return { raw, head: raw };
+  return { raw, head: raw.slice(0, dot), port: raw.slice(dot + 1) };
+}
+
+/** node id behind an endpoint: the head itself, or a group port's inner member. */
+function endpointNode(end: Endpoint, groupById: Map<string, SemanticGroup>): string | null {
+  const group = groupById.get(end.head);
+  if (!group) return end.head;
+  const port = group.ports?.find((p) => p.id === end.port);
+  if (!port) return null;
+  return port.inner.split(".")[0]!;
+}
+
+/** innermost group id containing the node, or null when on the spine. */
+function groupOf(nodeId: string, memberGroup: Map<string, string>): string | null {
+  return memberGroup.get(nodeId) ?? null;
+}
+
+/** whether an edge endpoint resolves to a node inside the group's subtree (any depth). */
+function resolvesInside(
+  targetGroup: string,
+  end: Endpoint,
+  groupById: Map<string, SemanticGroup>,
+  memberGroup: Map<string, string>,
+): boolean {
+  const node = endpointNode(end, groupById);
+  if (!node) return false;
+  let g: string | null = memberGroup.get(node) ?? null;
+  const seen = new Set<string>();
+  while (g && !seen.has(g)) {
+    if (g === targetGroup) return true;
+    seen.add(g);
+    g = groupById.get(g)?.parent ?? null;
+  }
+  return false;
+}
+
+function groupParentChain(id: string, groupById: Map<string, SemanticGroup>): string[] {
+  const chain: string[] = [];
+  const seen = new Set<string>([id]);
+  let cur = groupById.get(id)?.parent;
+  while (cur) {
+    if (seen.has(cur)) return [...chain, cur]; // cycle marker
+    seen.add(cur);
+    chain.push(cur);
+    cur = groupById.get(cur)?.parent;
+  }
+  return chain;
+}
 
 export function validateScene(scene: DiagramScene): string[] {
   const errors: string[] = [];
@@ -19,19 +88,309 @@ export function validateScene(scene: DiagramScene): string[] {
     }
   }
 
-  const edgeIds = new Set<string>();
-  for (const edge of scene.edges) {
-    if (edgeIds.has(edge.id)) errors.push(`duplicate edge id: ${edge.id}`);
-    edgeIds.add(edge.id);
-    for (const end of [edge.from, edge.to] as const) {
-      const nodeId = end.split(".")[0]!;
-      if (!nodeIds.has(nodeId)) errors.push(`edge ${edge.id}: endpoint "${end}" does not reference a known node`);
+  // -- groups: known members, unique membership, acyclic parent tree, valid ports
+  const groupById = new Map<string, SemanticGroup>();
+  for (const group of scene.groups) {
+    if (groupById.has(group.id)) errors.push(`duplicate group id: ${group.id}`);
+    groupById.set(group.id, group);
+    for (const key of Object.keys(group)) {
+      if (COORDINATE_KEYS.has(key)) errors.push(`group ${group.id}: coordinate key "${key}" is forbidden in Diagram IR`);
+    }
+    for (const member of group.members) {
+      if (!nodeIds.has(member)) errors.push(`group ${group.id}: member "${member}" is not a known node`);
+    }
+    const portIds = new Set<string>();
+    for (const port of group.ports ?? []) {
+      if (portIds.has(port.id)) errors.push(`group ${group.id}: duplicate port "${port.id}"`);
+      portIds.add(port.id);
+      const innerNode = port.inner.split(".")[0]!;
+      if (!group.members.includes(innerNode)) {
+        errors.push(`group ${group.id}: port "${port.id}" inner "${port.inner}" does not reference a member node`);
+      }
+      // round 3: the member-side anchor may name a node port, which must
+      // exist — "attn.ghost" inside inner is as dangling as "embed.ghost"
+      const dot = port.inner.indexOf(".");
+      if (dot !== -1) {
+        const pNode = port.inner.slice(0, dot);
+        const pPort = port.inner.slice(dot + 1);
+        const node = scene.nodes.find((n) => n.id === pNode);
+        const declaredInner = node ? declaredPortNames(node) : [];
+        if (!node || (pPort !== "in" && pPort !== "out" && !declaredInner.includes(pPort))) {
+          errors.push(`group ${group.id}: port "${port.id}" inner "${port.inner}" references an undeclared node port`);
+        }
+      }
+    }
+  }
+  for (const group of scene.groups) {
+    if (group.parent && !groupById.has(group.parent)) {
+      errors.push(`group ${group.id}: unknown parent ${group.parent}`);
+    }
+    const chain = groupParentChain(group.id, groupById);
+    if (chain.includes(group.id)) {
+      errors.push(`group ${group.id}: parent cycle ${[group.id, ...chain].join(" -> ")}`);
     }
   }
 
+  // membership must be unique: a node lives in exactly one group (or none)
+  const memberGroup = new Map<string, string>();
   for (const group of scene.groups) {
     for (const member of group.members) {
-      if (!nodeIds.has(member)) errors.push(`group ${group.id}: member "${member}" is not a known node`);
+      const existing = memberGroup.get(member);
+      if (existing) {
+        errors.push(`node ${member} belongs to multiple groups: ${existing} and ${group.id}`);
+      } else {
+        memberGroup.set(member, group.id);
+      }
+    }
+  }
+
+  // -- edges: known endpoints, boundary-port discipline, residual semantics
+  const edgeIds = new Set<string>();
+  const outDegree = new Map<string, number>();
+  const inDegree = new Map<string, number>();
+  for (const edge of scene.edges) {
+    if (edgeIds.has(edge.id)) errors.push(`duplicate edge id: ${edge.id}`);
+    edgeIds.add(edge.id);
+
+    const from = parseEndpoint(edge.from);
+    const to = parseEndpoint(edge.to);
+    const ends = [from, to];
+
+    // round 4: stream tags are an IR invariant — an edge whose two tagged
+    // endpoints carry different stream identities is a cross-wire, rejected
+    // here rather than only in tests
+    const tagOf = (end: Endpoint): string | undefined => {
+      if (!end.port) return undefined;
+      const group = groupById.get(end.head);
+      if (group) return group.ports?.find((p) => p.id === end.port)?.stream;
+      const node = scene.nodes.find((n) => n.id === end.head);
+      return node ? portStream(node, end.port) : undefined;
+    };
+    const fromTag = tagOf(from);
+    const toTag = tagOf(to);
+    if (fromTag && toTag && fromTag !== toTag) {
+      errors.push(`edge ${edge.id}: stream tag mismatch (${fromTag} vs ${toTag}) — streams may not be cross-wired`);
+    }
+
+    for (const end of ends) {
+      if (!nodeIds.has(end.head) && !groupById.has(end.head)) {
+        errors.push(`edge ${edge.id}: endpoint "${end.raw}" does not reference a known node`);
+        continue;
+      }
+      if (groupById.has(end.head)) {
+        const group = groupById.get(end.head)!;
+        if (!end.port || !group.ports?.some((p) => p.id === end.port)) {
+          errors.push(`edge ${edge.id}: endpoint "${end.raw}" does not match a boundary port of group ${end.head}`);
+        }
+      } else if (end.port) {
+        // node-qualified tails must exist: implicit in/out anchors are always
+        // allowed, anything else must be declared in SemanticNode.ports (#33
+        // dangling-port negative, round 2)
+        const node = scene.nodes.find((n) => n.id === end.head);
+        const declared = node ? declaredPortNames(node) : [];
+        if (node && end.port !== "in" && end.port !== "out" && !declared.includes(end.port)) {
+          errors.push(`edge ${edge.id}: endpoint "${end.raw}" references undeclared port on node ${end.head}`);
+        }
+      }
+    }
+
+    const fromNode = endpointNode(from, groupById);
+    const toNode = endpointNode(to, groupById);
+    if (fromNode && nodeIds.has(fromNode)) outDegree.set(fromNode, (outDegree.get(fromNode) ?? 0) + 1);
+    if (toNode && nodeIds.has(toNode)) inDegree.set(toNode, (inDegree.get(toNode) ?? 0) + 1);
+
+    // a boundary port connected to a raw node INSIDE its own group is a
+    // stream traversal and must pair with the port's inner member; raw nodes
+    // outside the group are boundary crossings and stay exempt
+    for (const [end, other] of [[from, to], [to, from]] as const) {
+      const group = groupById.get(end.head);
+      const portDef = group?.ports?.find((p) => p.id === end.port);
+      if (!portDef || !group) continue;
+      if (other.port || groupById.has(other.head)) continue;
+      if (!resolvesInside(group.id, other, groupById, memberGroup)) continue;
+      if (other.head !== portDef.inner.split(".")[0]!) {
+        errors.push(`edge ${edge.id}: boundary port ${end.head}.${end.port} must pair with its inner member ${portDef.inner} inside the group`);
+      }
+    }
+
+    // boundary discipline, ancestry-aware (#33 review fix): walk every group
+    // on the endpoint's ancestor chain — a group's boundary counts as crossed
+    // when the other endpoint does NOT resolve inside that group's subtree,
+    // and the edge must then reference that group's boundary port. Edges
+    // between an outer member and a nested group's port stay internal to the
+    // outer group (the nested port sits inside the outer frame).
+    for (const [end, other] of [[from, to], [to, from]] as const) {
+      const node = endpointNode(end, groupById);
+      if (!node) continue;
+      let g = groupOf(node, memberGroup);
+      const walked = new Set<string>();
+      while (g && !walked.has(g)) {
+        walked.add(g);
+        const group = groupById.get(g);
+        if (!group) break; // unknown parent: reported by the group-tree checks
+        const guarded = group.kind === "inset" || (group.ports?.length ?? 0) > 0;
+        if (guarded && !resolvesInside(g, other, groupById, memberGroup)) {
+          const referencesBoundary = ends.some((e) => e.head === g && e.port);
+          if (!referencesBoundary) {
+            errors.push(`edge ${edge.id}: crosses group ${g} boundary without a boundary port`);
+          }
+        }
+        g = group.parent ?? null;
+      }
+    }
+
+    if (edge.kind === "residual") {
+      if (fromNode && toNode && fromNode === toNode) {
+        errors.push(`residual edge ${edge.id}: self-loop ${edge.from} -> ${edge.to} is not a real stream`);
+      }
+      const fromGroup = fromNode ? groupOf(fromNode, memberGroup) : null;
+      const toGroup = toNode ? groupOf(toNode, memberGroup) : null;
+      if (fromGroup === toGroup) {
+        errors.push(`residual edge ${edge.id}: does not cross a sublayer boundary`);
+      }
+    }
+  }
+
+  // -- explicit fan control (#32 visual grammar): split out, merge in
+  for (const node of scene.nodes) {
+    if (node.kind === "split" && (outDegree.get(node.id) ?? 0) < 2) {
+      errors.push(`split node ${node.id} must fan out to at least 2 targets`);
+    }
+    if (node.kind === "merge" && (inDegree.get(node.id) ?? 0) < 2) {
+      errors.push(`merge node ${node.id} must collect at least 2 sources`);
+    }
+  }
+
+  // -- round 5: stream port degree/direction contract. Tagged ports with a
+  // role make operator traversal an IR invariant: ingress ports accept exactly
+  // one incoming edge and emit none (egress: mirrored); operator ports are
+  // bound to a group port via SemanticGroupPort.inner, and the single edge on
+  // each side must respect that binding. Entering through an exit port,
+  // leaving through an entry port, or deleting a traversal leg all violate it.
+  const groupPortDefs = new Map<string, SemanticGroupPort & { group: string }>();
+  for (const g of scene.groups) {
+    for (const p of g.ports ?? []) groupPortDefs.set(`${g.id}.${p.id}`, { ...p, group: g.id });
+  }
+  const nodePortDefs = new Map<string, { role?: "ingress" | "egress"; stream?: string }>();
+  for (const n of scene.nodes) {
+    for (const p of resolveSidePorts(n)) {
+      // round 6: a stream tag without a role would make the traversal
+      // contract optional — require every tagged port to declare its role
+      const roleErr = streamRoleError(`${n.id}.${p.name}`, p);
+      if (roleErr) {
+        errors.push(roleErr);
+        continue;
+      }
+      if (p.role) nodePortDefs.set(`${n.id}.${p.name}`, p);
+    }
+  }
+  const boundRefs = new Set([...groupPortDefs.values()].map((p) => p.inner));
+  const outBy = new Map<string, typeof scene.edges>();
+  const inBy = new Map<string, typeof scene.edges>();
+  for (const e of scene.edges) {
+    outBy.set(e.from, [...(outBy.get(e.from) ?? []), e]);
+    inBy.set(e.to, [...(inBy.get(e.to) ?? []), e]);
+  }
+  const deg = (ref: string): [number, number] => [(inBy.get(ref) ?? []).length, (outBy.get(ref) ?? []).length];
+
+  for (const [ref, def] of nodePortDefs) {
+    const [i, o] = deg(ref);
+    if (def.role === "ingress" && (i !== 1 || o !== 0)) {
+      errors.push(`port ${ref}: ingress stream port must have exactly one incoming edge and no outgoing (got in=${i} out=${o})`);
+    }
+    if (def.role === "egress" && (o !== 1 || i !== 0)) {
+      errors.push(`port ${ref}: egress stream port must have exactly one outgoing edge and no incoming (got in=${i} out=${o})`);
+    }
+    if (boundRefs.has(ref)) {
+      if (def.role === "ingress") {
+        const src = (inBy.get(ref) ?? [])[0]?.from;
+        const gp = src ? groupPortDefs.get(src) : undefined;
+        if (!gp || gp.inner !== ref) {
+          errors.push(`port ${ref}: operator ingress must be fed by the group port bound to it (got ${src ?? "none"})`);
+        }
+      }
+      if (def.role === "egress") {
+        const dst = (outBy.get(ref) ?? [])[0]?.to;
+        const gp = dst ? groupPortDefs.get(dst) : undefined;
+        if (!gp || gp.inner !== ref) {
+          errors.push(`port ${ref}: operator egress must feed the group port bound to it (got ${dst ?? "none"})`);
+        }
+      }
+    }
+  }
+  for (const [ref, gp] of groupPortDefs) {
+    const gpRoleErr = streamRoleError(ref, gp);
+    if (gpRoleErr) {
+      errors.push(gpRoleErr);
+      continue;
+    }
+    if (!gp.role) continue;
+    const [i, o] = deg(ref);
+    if (i !== 1 || o !== 1) {
+      errors.push(`port ${ref}: stream boundary port must have exactly one incoming and one outgoing edge (got in=${i} out=${o})`);
+    }
+    if (gp.role === "ingress") {
+      const dst = (outBy.get(ref) ?? [])[0]?.to;
+      if (dst !== gp.inner) {
+        errors.push(`port ${ref}: group ingress must forward to its bound inner ${gp.inner} (got ${dst ?? "none"})`);
+      }
+    }
+    if (gp.role === "egress") {
+      const src = (inBy.get(ref) ?? [])[0]?.from;
+      if (src !== gp.inner) {
+        errors.push(`port ${ref}: group egress must collect from its bound inner ${gp.inner} (got ${src ?? "none"})`);
+      }
+    }
+  }
+
+  // -- round 7: stream declarations are the non-erasable structure behind
+  // the port metadata. Every consecutive path pair must be connected by an
+  // edge, except an ingress→egress hop inside one node (the operator's
+  // interior is given). Every referenced port must carry this stream's tag
+  // and a valid role, and residual edges must be covered by a declaration.
+  const edgeKeys = new Set(scene.edges.map((e) => `${e.from}->${e.to}`));
+  const portMeta = (ref: string): { stream?: string; role?: "ingress" | "egress" } | undefined => {
+    const { head, port } = parseEndpoint(ref);
+    if (!port) return undefined;
+    const group = groupById.get(head);
+    if (group) return group.ports?.find((q) => q.id === port);
+    const node = scene.nodes.find((n) => n.id === head);
+    if (!node) return undefined;
+    return resolveSidePorts(node).find((q) => q.name === port);
+  };
+  const sameNodeInterior = (a: string, b: string): boolean => {
+    const ea = parseEndpoint(a);
+    const eb = parseEndpoint(b);
+    if (ea.head !== eb.head || !ea.port || !eb.port) return false;
+    const ma = portMeta(a);
+    const mb = portMeta(b);
+    return ma?.role === "ingress" && mb?.role === "egress";
+  };
+  const declaredPairs = new Set<string>();
+  for (const stream of scene.streams ?? []) {
+    for (let i = 0; i + 1 < stream.path.length; i++) {
+      const a = stream.path[i]!;
+      const b = stream.path[i + 1]!;
+      if (edgeKeys.has(`${a}->${b}`)) declaredPairs.add(`${a}->${b}`);
+      else if (!sameNodeInterior(a, b)) errors.push(`stream ${stream.id}: missing leg ${a} -> ${b}`);
+    }
+    for (const ref of stream.path) {
+      const meta = portMeta(ref);
+      if (!meta) {
+        errors.push(`stream ${stream.id}: path reference ${ref} is not a declared port`);
+        continue;
+      }
+      if (meta.stream !== stream.id) {
+        errors.push(`stream ${stream.id}: port ${ref} does not carry this stream's tag (got ${meta.stream ?? "none"})`);
+      }
+      if (meta.role !== "ingress" && meta.role !== "egress") {
+        errors.push(`stream ${stream.id}: port ${ref} lacks a valid role`);
+      }
+    }
+  }
+  for (const e of scene.edges) {
+    if (e.kind === "residual" && !declaredPairs.has(`${e.from}->${e.to}`)) {
+      errors.push(`edge ${e.id}: residual edges must be covered by a declared stream path`);
     }
   }
 
@@ -44,7 +403,10 @@ export function validateScene(scene: DiagramScene): string[] {
   for (const c of scene.constraints) {
     const targets = "target" in c ? [c.target] : "targets" in c ? c.targets : [];
     for (const t of targets) {
-      if (!nodeIds.has(t)) errors.push(`constraint ${c.type}: unknown target ${t}`);
+      // order/align may target inset groups: boxes are layout units (#33)
+      if (!nodeIds.has(t) && !groupById.has(t)) {
+        errors.push(`constraint ${c.type}: unknown target ${t}`);
+      }
     }
   }
 

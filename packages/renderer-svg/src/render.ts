@@ -61,8 +61,11 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.n-port{fill:var(--attention);stroke:none}` +
       `.e-flow{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.flow};marker-end:url(#arrow)}` +
       `.e-skip{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.outline};stroke-dasharray:6 5;marker-end:url(#arrow)}` +
+      `.e-residual{fill:none;stroke:var(--attention);stroke-width:${strokeWidths.outline};stroke-dasharray:10 6;marker-end:url(#arrow)}` +
       `.e-control{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2 4} .e-label{fill:var(--muted);font-size:11.5px;font-family:var(--font-mono)}` +
       `.g-frame{fill:none;stroke:var(--line);stroke-width:${strokeWidths.hairline}}` +
+      `.g-inset{stroke:var(--muted);fill:var(--paper)}` +
+      `.g-port{fill:var(--attention);stroke:var(--paper);stroke-width:1}` +
       `.g-label{fill:var(--muted);font-size:12.8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}` +
       `.g-badge{fill:var(--attention);color:#fff}` +
       `.attn{stroke:var(--attention)}` +
@@ -76,9 +79,14 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   for (const group of scene.groups) {
     // when a repeat badge is present the label text would collide on narrow frames
     const showLabel = !(group.repeatBadge && group.w < 300);
+    const frameCls = group.inset ? "g-frame g-inset" : "g-frame";
+    const portDots = Object.values(group.ports)
+      .map((p) => `<rect class="g-port" x="${fmt(p.x - 3)}" y="${fmt(p.y - 3)}" width="6" height="6" rx="1.5"/>`)
+      .join("");
     lines.push(
-      `  <g class="grp" data-group-id="${esc(group.id)}"${group.claimPath ? ` data-claim-path="${esc(group.claimPath)}"` : ""}><rect class="g-frame" x="${fmt(group.x)}" y="${fmt(group.y)}" width="${fmt(group.w)}" height="${fmt(group.h)}" rx="${radii.container}"/>` +
+      `  <g class="grp" data-group-id="${esc(group.id)}"${group.claimPath ? ` data-claim-path="${esc(group.claimPath)}"` : ""}><rect class="${frameCls}" x="${fmt(group.x)}" y="${fmt(group.y)}" width="${fmt(group.w)}" height="${fmt(group.h)}" rx="${radii.container}"/>` +
         (showLabel ? `<text class="g-label" x="${fmt(group.x + 12)}" y="${fmt(group.y + 16)}">${esc(group.label)}</text>` : "") +
+        portDots +
         (group.repeatBadge
           ? `<g transform="translate(${fmt(group.x + group.w - 58)},${fmt(group.y + 6)})"><rect width="52" height="20" rx="${radii.chip}" class="g-badge"/><text x="26" y="14" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">${esc(group.repeatBadge)}</text></g>`
           : "") +
@@ -87,7 +95,14 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   }
 
   for (const edge of scene.edges) {
-    const cls = edge.kind === "skip" ? "e-skip" : edge.kind === "control" ? "e-control" : "e-flow";
+    const cls =
+      edge.kind === "skip"
+        ? "e-skip"
+        : edge.kind === "residual"
+          ? "e-residual" // residual streams are visually distinct (#33)
+          : edge.kind === "control"
+            ? "e-control"
+            : "e-flow";
     const edgeClaim = edge.claimPath ? ` data-claim-path="${esc(edge.claimPath)}"` : "";
     const mid = edge.points[Math.floor(edge.points.length / 2)]!;
     const edgeLabel = edge.label

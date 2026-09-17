@@ -40,6 +40,10 @@ export interface PositionedGroup {
   w: number;
   h: number;
   repeatBadge?: string;
+  /** compound inset: members were laid out inside this box, not on the spine */
+  inset?: boolean;
+  /** boundary port name -> absolute anchor on the group frame */
+  ports: Record<string, Point>;
 }
 
 export interface PositionedScene {
