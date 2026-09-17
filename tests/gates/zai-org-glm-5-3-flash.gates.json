@@ -11,12 +11,6 @@
       "owner": "#34"
     },
     {
-      "gate": "edge-reserved",
-      "target": "e-tail-norm/g-decoder:label",
-      "message": "edge e-tail-norm passes through reserved region g-decoder:label",
-      "owner": "#34"
-    },
-    {
       "gate": "edge-node",
       "target": "e-dsa-q/indexer",
       "message": "edge e-dsa-q passes through node indexer",
@@ -29,33 +23,15 @@
       "owner": "#34"
     },
     {
-      "gate": "edge-reserved",
-      "target": "e-dsa-q/g-dsa:label",
-      "message": "edge e-dsa-q passes through reserved region g-dsa:label",
-      "owner": "#34"
-    },
-    {
       "gate": "edge-node",
       "target": "e-moe-router/mhc",
       "message": "edge e-moe-router passes through node mhc",
       "owner": "#34"
     },
     {
-      "gate": "edge-reserved",
-      "target": "e-moe-router/g-mhc:label",
-      "message": "edge e-moe-router passes through reserved region g-mhc:label",
-      "owner": "#34"
-    },
-    {
       "gate": "edge-node",
       "target": "e-shared/mhc",
       "message": "edge e-shared passes through node mhc",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-shared/g-mhc:label",
-      "message": "edge e-shared passes through reserved region g-mhc:label",
       "owner": "#34"
     },
     {
@@ -74,6 +50,30 @@
       "gate": "edge-node",
       "target": "e-mhc-head/norm",
       "message": "edge e-mhc-head passes through node norm",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-reserved",
+      "target": "e-tail-norm/g-decoder:label",
+      "message": "edge e-tail-norm passes through reserved region g-decoder:label",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-reserved",
+      "target": "e-dsa-q/g-dsa:label",
+      "message": "edge e-dsa-q passes through reserved region g-dsa:label",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-reserved",
+      "target": "e-moe-router/g-mhc:label",
+      "message": "edge e-moe-router passes through reserved region g-mhc:label",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-reserved",
+      "target": "e-shared/g-mhc:label",
+      "message": "edge e-shared passes through reserved region g-mhc:label",
       "owner": "#34"
     },
     {
@@ -247,19 +247,13 @@
     {
       "gate": "mhc-streams",
       "target": "mhc",
-      "message": "mHC: expected 4 cross-sublayer residual streams with distinct read/write ports, found 0 residual edges (placeholder self-rails until #34)",
-      "owner": "#34"
-    },
-    {
-      "gate": "moe-fanout",
-      "target": "router",
-      "message": "MoE router fans out to 1 targets; expected routed experts plus the shared path (explicit fan-out until #34)",
+      "message": "mHC: expected 4 declared cross-sublayer streams, found 0 (placeholder self-rails until #34)",
       "owner": "#34"
     },
     {
       "gate": "moe-fanin",
       "target": "experts",
-      "message": "MoE has no merge node collecting routed + shared outputs (explicit fan-in until #34)",
+      "message": "MoE has no merge node whose inputs are exactly the routed experts and the shared expert (explicit fan-in until #34)",
       "owner": "#34"
     }
   ]

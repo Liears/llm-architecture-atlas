@@ -8,61 +8,71 @@
       "gate": "edge-overlap",
       "target": "e-embed-block+e-block-norm",
       "message": "edges e-embed-block and e-block-norm overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "e-embed-block+c-attn",
       "message": "edges e-embed-block and c-attn overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "e-embed-block+c-ctx",
       "message": "edges e-embed-block and c-ctx overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "e-embed-block+c-gqa",
       "message": "edges e-embed-block and c-gqa overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "e-block-norm+c-attn",
       "message": "edges e-block-norm and c-attn overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "e-block-norm+c-ctx",
       "message": "edges e-block-norm and c-ctx overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "e-block-norm+c-gqa",
       "message": "edges e-block-norm and c-gqa overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "c-attn+c-ctx",
       "message": "edges c-attn and c-ctx overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "c-attn+c-gqa",
       "message": "edges c-attn and c-gqa overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     },
     {
       "gate": "edge-overlap",
       "target": "c-ctx+c-gqa",
       "message": "edges c-ctx and c-gqa overlap collinearly",
-      "owner": "#34"
+      "owner": "#32",
+      "note": "per-model migration issue not opened yet; roadmap #32 owns this debt until then"
     }
   ]
 }
