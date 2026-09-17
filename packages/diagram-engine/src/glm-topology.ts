@@ -160,14 +160,16 @@ export function compileGlmTopologyScene(arch: ModelDocument, evidence: EvidenceF
     { id: "e-unit-tail", from: "unit", to: "tail-kda", kind: "flow" },
     { id: "e-tail-norm", from: "tail-kda", to: "norm", kind: "flow" },
     { id: "e-norm-head", from: "norm", to: "head", kind: "flow" },
-    // DSA chain: hidden → indexer → topk → MLA core
-    { id: "e-dsa-q", from: "unit.out", to: "indexer", kind: "control", label: "Q" },
-    { id: "e-index-topk", from: "indexer", to: "topk", kind: "control", claimPath: "topology.attention.dsa_indexer_heads" },
-    { id: "e-topk-sel", from: "topk", to: "dsa.sel", kind: "control", label: "selected KV", claimPath: "topology.attention.dsa_topk" },
+    // DSA chain: hidden → indexer → topk → MLA core (crosses the inset
+    // boundary through its declared port, #33). The selection pipeline is
+    // data flow (#32 grammar); the Q probe from the block stays control.
+    { id: "e-dsa-q", from: "unit.out", to: "g-dsa.q", kind: "control", label: "Q" },
+    { id: "e-index-topk", from: "indexer", to: "topk", kind: "flow", claimPath: "topology.attention.dsa_indexer_heads" },
+    { id: "e-topk-sel", from: "topk", to: "dsa.sel", kind: "flow", label: "selected KV", claimPath: "topology.attention.dsa_topk" },
     // MoE chain
-    { id: "e-moe-router", from: "moe42", to: "router", kind: "control" },
+    { id: "e-moe-router", from: "moe42", to: "g-moe.r", kind: "control" },
     { id: "e-router-experts", from: "router", to: "experts", kind: "control", label: "top-8", claimPath: "topology.experts.active_routed" },
-    { id: "e-shared", from: "moe42", to: "shared", kind: "control", claimPath: "topology.experts.shared" },
+    { id: "e-shared", from: "moe42", to: "g-moe.s", kind: "control", claimPath: "topology.experts.shared" },
     // FFN schedule
     { id: "e-dense-moe", from: "dense3", to: "moe42", kind: "flow", claimPath: "topology.ffn_groups[0]" },
     // mHC: four stream rails from embed area through mixers to head
@@ -205,9 +207,11 @@ export function compileGlmTopologyScene(arch: ModelDocument, evidence: EvidenceF
         repeat: { count: facts.num_hidden_layers, label: "45 ×" },
         claimPath: "facts.num_hidden_layers",
       },
-      { id: "g-dsa", label: "DSA (1 of 4 layers)", kind: "inset", members: ["indexer", "topk", "dsa"], claimPath: dsaClaim },
-      { id: "g-moe", label: "Sparse MoE block", kind: "inset", members: ["router", "experts", "shared"], claimPath: "topology.experts.routed_total" },
-      { id: "g-mhc", label: `mHC · ${streams} streams`, kind: "inset", members: ["mhc"], claimPath: "topology.residual.streams" },
+      { id: "g-dsa", label: "DSA (1 of 4 layers)", kind: "inset", members: ["indexer", "topk", "dsa"], direction: "left-to-right", ports: [{ id: "q", side: "left", inner: "indexer" }], claimPath: dsaClaim },
+      { id: "g-moe", label: "Sparse MoE block", kind: "inset", members: ["router", "experts", "shared"], direction: "left-to-right", ports: [{ id: "r", side: "left", inner: "router" }, { id: "s", side: "left", inner: "shared" }], claimPath: "topology.experts.routed_total" },
+      // mHC real multi-stream paths land in #34; until then the mixer stays
+      // a spine node (no fake inset around the self-rails)
+      { id: "g-mhc", label: `mHC · ${streams} streams`, kind: "stack", members: ["mhc"], claimPath: "topology.residual.streams" },
     ],
     annotations: [],
     constraints: [
