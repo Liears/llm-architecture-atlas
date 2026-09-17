@@ -168,16 +168,64 @@ const scene: DiagramScene = {
         { claimPath: "facts.vocab_size", label: `vocab ${commas(F.vocab)}` },
       ],
     },
-    { id: "read", kind: "split", label: "stream read", ports: streamNodePorts("s", "egress") },
+    { id: "read", kind: "split", label: "stream read x0", ports: streamNodePorts("s", "egress") },
+    // mHC (Fig 1c / Eq 3) per sublayer: split → {H-pre aggregate, H-res skip};
+    // ONE sublayer pass; H-post write-back and the skip mix meet at ⊕ (sum)
+    ...SID.flatMap((i) => [
+      { id: `sp0-${i}`, kind: "split", label: `split S${i}`, ports: [
+        { name: "in", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "a", side: "right" as const, stream: `s${i}`, role: "egress" as const },
+        { name: "b", side: "right" as const, stream: `s${i}`, role: "egress" as const },
+      ] },
+      { id: `sp1-${i}`, kind: "split", label: `split S${i}`, ports: [
+        { name: "in", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "a", side: "right" as const, stream: `s${i}`, role: "egress" as const },
+        { name: "b", side: "right" as const, stream: `s${i}`, role: "egress" as const },
+      ] },
+      { id: `sum1-${i}`, kind: "merge", label: "⊕", ports: [
+        { name: "skip", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "f", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "out", side: "right" as const, stream: `s${i}`, role: "egress" as const },
+      ] },
+      { id: `sum2-${i}`, kind: "merge", label: "⊕", ports: [
+        { name: "skip", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "f", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "out", side: "right" as const, stream: `s${i}`, role: "egress" as const },
+      ] },
+    ]),
+    { id: "hpre1", kind: "merge", label: "H-pre (n→1)", ports: [
+      ...SID.map((i) => ({ name: `in${i}`, side: "left" as const, stream: `s${i}`, role: "ingress" as const })),
+      { name: "out", side: "right" as const },
+    ] },
+    { id: "hpost1", kind: "split", label: "H-post (1→n)", ports: [
+      { name: "in", side: "left" as const },
+      ...SID.map((i) => ({ name: `out${i}`, side: "right" as const, stream: `s${i}`, role: "egress" as const })),
+    ] },
+    { id: "hpre2", kind: "merge", label: "H-pre (n→1)", ports: [
+      ...SID.map((i) => ({ name: `in${i}`, side: "left" as const, stream: `s${i}`, role: "ingress" as const })),
+      { name: "out", side: "right" as const },
+    ] },
+    { id: "hpost2", kind: "split", label: "H-post (1→n)", ports: [
+      { name: "in", side: "left" as const },
+      ...SID.map((i) => ({ name: `out${i}`, side: "right" as const, stream: `s${i}`, role: "egress" as const })),
+    ] },
+    { id: "hres1", kind: "mix", label: "H-res mix", ports: [
+      ...SID.map((i) => ({ name: `in${i}`, side: "left" as const, stream: `s${i}`, role: "ingress" as const })),
+      ...SID.map((i) => ({ name: `out${i}`, side: "right" as const, stream: `s${i}`, role: "egress" as const })),
+    ] },
+    { id: "hres2", kind: "mix", label: "H-res mix", ports: [
+      ...SID.map((i) => ({ name: `in${i}`, side: "left" as const, stream: `s${i}`, role: "ingress" as const })),
+      ...SID.map((i) => ({ name: `out${i}`, side: "right" as const, stream: `s${i}`, role: "egress" as const })),
+    ] },
     {
-      id: "slot-attn", kind: "attention", label: "attention slot",
-      detail: `K,K,K,D per ${D_PERIOD} layers`, ports: operatorPorts(),
+      id: "slot-attn", kind: "attention", label: "attention slot = sublayer F",
+      detail: `K,K,K,D per ${D_PERIOD} layers`, ports: [{ name: "in", side: "left" as const }, { name: "out", side: "right" as const }],
     },
     {
-      id: "slot-ffn", kind: "ffn", label: "FFN slot",
-      detail: `${DENSE_COUNT} dense → ${MOE_COUNT} MoE`, ports: operatorPorts(),
+      id: "slot-ffn", kind: "ffn", label: "FFN slot = sublayer F",
+      detail: `${DENSE_COUNT} dense → ${MOE_COUNT} MoE`, ports: [{ name: "in", side: "left" as const }, { name: "out", side: "right" as const }],
     },
-    { id: "write", kind: "merge", label: "stream write", ports: streamNodePorts("w", "ingress") },
+    { id: "write", kind: "merge", label: "stream write x1", ports: streamNodePorts("w", "ingress") },
     { id: "norm", kind: "norm", label: "Final RMSNorm" },
     { id: "head", kind: "output", label: "Linear output", detail: `vocab ${commas(F.vocab)}` },
     { id: "kda-qkv", kind: "attention", label: "Q/K/V ShortConv", detail: `kernel ${convKernel}`, claimPath: "topology.attention.kda_short_conv_kernel" },
@@ -194,12 +242,20 @@ const scene: DiagramScene = {
   ] as SemanticNode[],
   edges: [
     { id: "e-tok", from: "tok", to: "embed", kind: "flow" },
-    { id: "e-emb", from: "embed", to: "g-dec.enter", kind: "flow" },
-    { id: "e-sa", from: "g-dec.enter", to: "slot-attn", kind: "flow" },
-    { id: "e-attn-ffn", from: "slot-attn", to: "slot-ffn", kind: "flow" },
-    { id: "e-sf", from: "slot-ffn", to: "g-dec.exit", kind: "flow" },
-    { id: "e-norm", from: "g-dec.exit", to: "norm", kind: "flow" },
+    { id: "e-emb", from: "embed", to: "read", kind: "flow" },
+    { id: "e-write-norm", from: "write", to: "norm", kind: "flow" },
     { id: "e-head", from: "norm", to: "head", kind: "flow" },
+    // mHC Eq.(3): aggregate → ONE pass → write-back; ⊕ adds the H-res skip
+    ...SID.flatMap((i) => [
+      { id: `m-sp0a${i}`, from: `sp0-${i}.a`, to: `hpre1.in${i}`, kind: "flow" as const },
+      { id: `m-sp1a${i}`, from: `sp1-${i}.a`, to: `hpre2.in${i}`, kind: "flow" as const },
+      { id: `m-hp1${i}`, from: `hpost1.out${i}`, to: `sum1-${i}.f`, kind: "flow" as const },
+      { id: `m-hp2${i}`, from: `hpost2.out${i}`, to: `sum2-${i}.f`, kind: "flow" as const },
+    ]),
+    { id: "m-hpre1-f", from: "hpre1.out", to: "slot-attn.in", kind: "flow" },
+    { id: "m-f-hpost1", from: "slot-attn.out", to: "hpost1.in", kind: "flow" },
+    { id: "m-hpre2-f", from: "hpre2.out", to: "slot-ffn.in", kind: "flow" },
+    { id: "m-f-hpost2", from: "slot-ffn.out", to: "hpost2.in", kind: "flow" },
     // mechanism chains (inside their groups)
     { id: "e-kda1", from: "kda-qkv", to: "kda-core", kind: "flow" },
     { id: "e-kda2", from: "kda-core", to: "kda-gate", kind: "flow" },
@@ -210,27 +266,32 @@ const scene: DiagramScene = {
     { id: "e-moe2", from: "moe-router", to: "moe-shared", kind: "flow" },
     { id: "e-moe3", from: "moe-experts", to: "moe-merge", kind: "flow" },
     { id: "e-moe4", from: "moe-shared", to: "moe-merge", kind: "flow" },
-    // residual streams: read → decoder stage chain → write; the two boundary
-    // crossings per stream are residual, the intra-unit hops are flow through
-    // the tagged operator ports
+    // residual stream rails = the skip spine with H-res mixing; every residual
+    // edge is a consecutive pair of a stream declaration below
     ...SID.flatMap((i) => [
       { id: `r-read${i}`, from: `read.s${i}`, to: `g-dec.in${i}`, kind: "residual" as const, rail: "left" as const, label: `S${i}` },
-      { id: `t-sa${i}`, from: `g-dec.in${i}`, to: `slot-attn.e${i}`, kind: "flow" as const },
-      { id: `r-sf${i}`, from: `slot-attn.x${i}`, to: `slot-ffn.e${i}`, kind: "flow" as const },
-      { id: `u-sf${i}`, from: `slot-ffn.x${i}`, to: `g-dec.out${i}`, kind: "flow" as const },
+      { id: `r-in${i}`, from: `g-dec.in${i}`, to: `sp0-${i}.in`, kind: "flow" as const, rail: "left" as const },
+      { id: `r-sk1${i}`, from: `sp0-${i}.b`, to: `hres1.in${i}`, kind: "flow" as const, rail: "left" as const },
+      { id: `r-sk1b${i}`, from: `hres1.out${i}`, to: `sum1-${i}.skip`, kind: "flow" as const, rail: "left" as const },
+      { id: `r-mid${i}`, from: `sum1-${i}.out`, to: `sp1-${i}.in`, kind: "flow" as const, rail: "left" as const },
+      { id: `r-sk2${i}`, from: `sp1-${i}.b`, to: `hres2.in${i}`, kind: "flow" as const, rail: "left" as const },
+      { id: `r-sk2b${i}`, from: `hres2.out${i}`, to: `sum2-${i}.skip`, kind: "flow" as const, rail: "left" as const },
+      { id: `r-out${i}`, from: `sum2-${i}.out`, to: `g-dec.out${i}`, kind: "flow" as const, rail: "left" as const },
       { id: `r-write${i}`, from: `g-dec.out${i}`, to: `write.w${i}`, kind: "residual" as const, rail: "left" as const },
     ]),
   ],
   groups: [
     {
       id: "g-dec", label: "decoder repeat unit", kind: "frame",
-      members: ["slot-attn", "slot-ffn"], repeat: { count: F.layers, label: `${F.layers} ×` },
+      members: [
+        ...SID.flatMap((i) => [`sp0-${i}`, `sp1-${i}`, `sum1-${i}`, `sum2-${i}`]),
+        "hpre1", "hpost1", "hpre2", "hpost2", "hres1", "hres2", "slot-attn", "slot-ffn",
+      ],
+      repeat: { count: F.layers, label: `${F.layers} ×` },
       claimPath: "facts.num_hidden_layers",
       ports: [
-        { id: "enter", side: "top", inner: "slot-attn" },
-        { id: "exit", side: "bottom", inner: "slot-ffn" },
-        ...SID.map((i) => ({ id: `in${i}`, side: "left" as const, inner: `slot-attn.e${i}`, stream: `s${i}`, role: "ingress" as const })),
-        ...SID.map((i) => ({ id: `out${i}`, side: "right" as const, inner: `slot-ffn.x${i}`, stream: `s${i}`, role: "egress" as const })),
+        ...SID.map((i) => ({ id: `in${i}`, side: "left" as const, inner: `sp0-${i}.in`, stream: `s${i}`, role: "ingress" as const })),
+        ...SID.map((i) => ({ id: `out${i}`, side: "right" as const, inner: `sum2-${i}.out`, stream: `s${i}`, role: "egress" as const })),
       ],
     },
     {
@@ -249,14 +310,26 @@ const scene: DiagramScene = {
       claimPath: "topology.ffn_groups[1]",
     },
   ] as SemanticGroup[],
+  // stream = residual rail: read → split → H-res mix → ⊕ → … → write.
+  // The aggregated sublayer pass (H-pre → F → H-post) feeds the ⊕ nodes via
+  // flow edges; the rails are what the model calls the 4 residual streams.
   streams: SID.map((i) => ({
     id: `s${i}`,
     path: [
-      `read.s${i}`, `g-dec.in${i}`, `slot-attn.e${i}`, `slot-attn.x${i}`,
-      `slot-ffn.e${i}`, `slot-ffn.x${i}`, `g-dec.out${i}`, `write.w${i}`,
+      `read.s${i}`, `g-dec.in${i}`, `sp0-${i}.in`, `sp0-${i}.b`, `hres1.in${i}`, `hres1.out${i}`,
+      `sum1-${i}.skip`, `sum1-${i}.out`, `sp1-${i}.in`, `sp1-${i}.b`, `hres2.in${i}`, `hres2.out${i}`,
+      `sum2-${i}.skip`, `sum2-${i}.out`, `g-dec.out${i}`, `write.w${i}`,
     ],
   })),
   annotations: [
+    { claimPath: "facts.num_hidden_layers", target: "slot-attn", status: "reported" },
+    { claimPath: "facts.num_attention_heads", target: "slot-attn", status: "reported" },
+    { claimPath: "facts.context_tokens", target: "slot-attn", status: "reported" },
+    { claimPath: "topology.attention_groups[0]", target: "kda-core", status: "reported" },
+    { claimPath: "topology.attention_groups[1]", target: "dsa-sel", status: "reported" },
+    { claimPath: "topology.ffn_groups[0]", target: "slot-ffn", status: "reported" },
+    { claimPath: "topology.ffn_groups[1]", target: "slot-ffn", status: "reported" },
+    { claimPath: "topology.residual.streams", target: "read", status: "reported" },
     { claimPath: "topology.residual.scheme", target: "read", status: "reported" },
     { claimPath: "topology.mtp.predict_layers", target: "head", status: "reported" },
   ],
@@ -264,6 +337,44 @@ const scene: DiagramScene = {
 };
 const sceneErrors = validateScene(scene);
 if (sceneErrors.length > 0) throw new Error(`Diagram IR invalid:\n${sceneErrors.join("\n")}`);
+
+// mHC Eq.(3) structural assertions: the IR must keep carrying the paper
+// topology — mutating any of these edges/degrees stops emit (round-3 P1).
+const hasEdge = (from: string, to: string): boolean => scene.edges.some((e) => e.from === from && e.to === to);
+const degree = (id: string): [number, number] => [
+  scene.edges.filter((e) => e.to === id || e.to.startsWith(`${id}.`)).length,
+  scene.edges.filter((e) => e.from === id || e.from.startsWith(`${id}.`)).length,
+];
+for (const [pre, post, f, res] of [["hpre1", "hpost1", "slot-attn", "hres1"], ["hpre2", "hpost2", "slot-ffn", "hres2"]] as const) {
+  eq(degree(f), [1, 1], `${f} must be a SINGLE sublayer pass (one in, one out)`);
+  eq(degree(pre)[0], streams, `${pre} aggregates n streams`);
+  eq(degree(post)[1], streams, `${post} writes back to n streams`);
+  for (const i of SID) {
+    ok(hasEdge(`${post}.out${i}`, `sum1-${i}.f`) || hasEdge(`${post}.out${i}`, `sum2-${i}.f`), `${post}.out${i} feeds a ⊕ sum`);
+    ok(hasEdge(`${res}.out${i}`, `sum1-${i}.skip`) || hasEdge(`${res}.out${i}`, `sum2-${i}.skip`), `${res}.out${i} feeds a ⊕ sum (Eq 3 residual term)`);
+  }
+}
+for (const i of SID) {
+  eq(degree(`sum1-${i}`), [2, 1], `sum1-${i} = Hres term + Hpost term, one out`);
+  eq(degree(`sum2-${i}`), [2, 1], `sum2-${i} = Hres term + Hpost term, one out`);
+}
+
+const marginText = (path: string): string => {
+  switch (path) {
+    case "facts.num_hidden_layers": return `schedule K,K,K,D ×${UNITS} + K — ${F.layers} layers`;
+    case "facts.num_attention_heads": return `${F.heads} heads`;
+    case "facts.context_tokens": return `context ${ctxLabel} tokens`;
+    case "topology.attention_groups[0]": return `${KDA_LAYERS.length} KDA layers`;
+    case "topology.attention_groups[1]": return `${MLA_LAYERS.length} MLA/DSA layers`;
+    case "topology.ffn_groups[0]": return `first ${DENSE_COUNT} dense`;
+    case "topology.ffn_groups[1]": return `then ${MOE_COUNT} MoE · ${routed} routed top-${activeRouted} + ${shared} shared`;
+    case "topology.residual.streams": return `${streams} residual streams`;
+    default: return "";
+  }
+};
+/** margin facts every composition must draw, derived from scene annotations */
+const MARGIN: string[] = [...new Set(scene.annotations.map((a) => marginText(a.claimPath)).filter((t) => t !== ""))];
+const EQ3 = `mHC Eq.(3): x' = Hres·x + Hpostᵀ·F(Hpre·x)`;
 
 const N = (id: string): SemanticNode => scene.nodes.find((n) => n.id === id)!;
 const G = (id: string): SemanticGroup => scene.groups.find((g) => g.id === id)!;
@@ -317,7 +428,11 @@ class Svg {
     this.out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
   }
   text(x: number, y: number, t: string, o: { size?: number; fill?: string; weight?: number; anchor?: string; font?: string } = {}): void {
-    this.out.push(`<text x="${x}" y="${y}" font-size="${o.size ?? 13}" fill="${o.fill ?? this.s.ink}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? "start"}"${o.font ? ` font-family="${o.font}"` : ""}>${this.esc(t)}</text>`);
+    // round-3 font acceptance: 12px is a hard emit-time floor, so a shrunk or
+    // undersized label fails the render instead of shipping small type
+    const size = o.size ?? 13;
+    if (size < 12) throw new Error(`font floor violated: ${size}px < 12px for "${t}"`);
+    this.out.push(`<text x="${x}" y="${y}" font-size="${size}" fill="${o.fill ?? this.s.ink}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? "start"}"${o.font ? ` font-family="${o.font}"` : ""}>${this.esc(t)}</text>`);
   }
   line(x1: number, y1: number, x2: number, y2: number, stroke: string, sw = 1.5, dash = "", arrow = false, teal = false): void {
     this.out.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}${arrow ? ` marker-end="url(#${teal ? "art" : "ar"})"` : ""}/>`);
@@ -441,38 +556,40 @@ function drawGroup(s: Svg, gid: string, r: R, dir: "lr" | "tb", opts: { mechFill
   return rects;
 }
 
-/** mHC card from the scene's stream declarations: n streams aggregate into one
- *  sublayer pass and write back; H-res mixes the skip path (Fig 1c / Eq 3). */
+/** mHC card rendered FROM the scene: split dots, H-pre aggregate, ONE sublayer
+ *  pass F, H-post write-back, H-res skip bar and explicit ⊕ sum nodes
+ *  (Fig 1(c) / Eq.(3)). Every arrow below mirrors a scene edge. */
 function drawStreamCard(s: Svg, r: R): void {
-  const laneY = (i: number): number => r.y + 8 + (r.h - 34) * ((i + 0.5) / streams);
-  const midY = r.y + r.h / 2 - 8;
-  const lbX = r.x + 22;
-  const rbX = r.x + r.w - 22;
-  const trunkY = r.y + r.h - 8;
-  const zone = r.w - 76;
-  const zoff = lbX + 16 + Math.max(0, (zone - 304) / 2);
-  s.rect(lbX - 4, r.y + 4, 8, r.h - 20, s.s.stream, s.s.stream, 1);
-  s.rect(rbX - 4, r.y + 4, 8, r.h - 20, s.s.stream, s.s.stream, 1);
-  s.line(lbX, trunkY - 4, lbX, trunkY, s.s.stream, 1.4);
-  s.line(lbX, trunkY, rbX, trunkY, s.s.stream, 1.4, "", true, true);
-  s.line(rbX, trunkY, rbX, trunkY - 4, s.s.stream, 1.4);
-  s.text(lbX + 8, trunkY - 3, "H-res skip mix across streams", { size: 10.5, fill: s.s.stream });
-  const pre = { x: zoff, y: midY - 17, w: 88, h: 34 };
-  const sub = { x: zoff + 104, y: midY - 17, w: 96, h: 34 };
-  const post = { x: zoff + 216, y: midY - 17, w: 88, h: 34 };
-  s.node(pre.x, pre.y, pre.w, pre.h, "H-pre (n→1)", { fill: s.s.mech, stroke: s.s.mechStroke, size: 11.5 });
-  s.node(sub.x, sub.y, sub.w, sub.h, "sublayer F", { size: 11.5 });
-  s.node(post.x, post.y, post.w, post.h, "H-post (1→n)", { fill: s.s.mech, stroke: s.s.mechStroke, size: 11.5 });
-  s.line(pre.x + pre.w, midY, sub.x, midY, s.s.ink, 1.5, "", true);
-  s.line(sub.x + sub.w, midY, post.x, midY, s.s.ink, 1.5, "", true);
+  const laneY = (i: number): number => r.y + 10 + (r.h - 44) * ((i + 0.5) / streams);
+  const midY = r.y + r.h / 2 - 6;
+  const dotX = r.x + 26;
+  const barX = r.x + 62;
+  const hpre = { x: r.x + 84, y: midY - 17, w: 74, h: 34 };
+  const fbox = { x: r.x + 172, y: midY - 17, w: 74, h: 34 };
+  const hpost = { x: r.x + 260, y: midY - 17, w: 74, h: 34 };
+  const sumX = r.x + r.w - 40;
+  const tickX = r.x + r.w - 6;
+  s.rect(barX - 4, r.y + 6, 8, r.h - 30, s.s.stream, s.s.stream, 1);
+  s.text(barX + 6, r.y + r.h - 8, `${N("hres1").label} (skip, across streams)`, { size: 12, fill: s.s.stream });
+  s.node(hpre.x, hpre.y, hpre.w, hpre.h, "H-pre", { fill: s.s.mech, stroke: s.s.mechStroke, size: 12.5 });
+  s.node(fbox.x, fbox.y, fbox.w, fbox.h, "F", { size: 12.5 });
+  s.node(hpost.x, hpost.y, hpost.w, hpost.h, "H-post", { fill: s.s.mech, stroke: s.s.mechStroke, size: 12.5 });
+  s.line(hpre.x + hpre.w, midY, fbox.x, midY, s.s.ink, 1.5, "", true);
+  s.line(fbox.x + fbox.w, midY, hpost.x, midY, s.s.ink, 1.5, "", true);
   for (let i = 0; i < streams; i++) {
     const ly = laneY(i);
-    s.text(r.x + 4, ly - 6, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream });
-    s.line(r.x + 4, ly, lbX - 4, ly, s.s.stream, 1.3);
-    s.line(lbX + 4, ly, pre.x, pre.y + pre.h * ((i + 0.5) / streams), s.s.stream, 1.2, "", true, true);
-    s.line(post.x + post.w, post.y + post.h * ((i + 0.5) / streams), rbX - 4, ly, s.s.stream, 1.2, "", true, true);
-    s.line(rbX + 4, ly, r.x + r.w - 4, ly, s.s.stream, 1.3, "", true, true);
+    const sy = r.y + 10 + (r.h - 44) * ((i + 0.5) / streams);
+    s.text(r.x + 2, sy + 4, `S${i + 1}`, { size: 12, weight: 600, fill: s.s.stream });
+    s.line(r.x + 4, sy, dotX - 4, sy, s.s.stream, 1.3);
+    s.out.push(`<circle cx="${dotX}" cy="${sy}" r="3" fill="${s.s.stream}"/>`);
+    s.line(dotX + 4, sy, hpre.x, hpre.y + hpre.h * ((i + 0.5) / streams), s.s.stream, 1.2, "", true, true);
+    s.line(dotX + 4, sy, barX - 4, sy, s.s.stream, 1.2, "", true, true);
+    s.plus(sumX, sy);
+    s.line(barX + 4, sy, sumX - 10, sy, s.s.stream, 1.2, "", true, true);
+    s.line(hpost.x + hpost.w, hpost.y + hpost.h * ((i + 0.5) / streams), sumX - 8, sy - 4, s.s.stream, 1.2, "", true, true);
+    s.line(sumX + 10, sy, tickX, sy, s.s.stream, 1.3, "", true, true);
   }
+  void laneY;
 }
 
 // ---------------------------------------------------------------- shared chrome
@@ -517,9 +634,26 @@ function compositionA(): string {
   s.rect(dec.x, dec.y, dec.w, dec.h, "#c8cdd3", "#3b4046", 1.8, 10);
   s.rect(dec.x + 28, dec.y + 30, dec.w - 56, dec.h - 60, s.s.mech, s.s.mechStroke, 1.6, 8);
   s.text(dec.x - 8, dec.y + dec.h / 2, `${G("g-dec").repeat!.label}`, { size: 15, weight: 700, fill: s.s.accent, anchor: "end" });
-  s.irNode("slot-attn", sa.x, sa.y, sa.w, sa.h, { fill: "#ffffff", stroke: s.s.accent, tfill: "#101418", dfill: "#5b6470" });
-  s.irNode("slot-ffn", sf.x, sf.y, sf.w, sf.h, { fill: "#ffffff", stroke: s.s.accent, tfill: "#101418", dfill: "#5b6470" });
-  s.line(cx, sa.y + sa.h, cx, sf.y, s.s.ink, 1.5, "", true);
+  const chain: Array<[string, number, number]> = [
+    ["hpre1", 30, 0], ["slot-attn", 44, 1], ["hpost1", 30, 0],
+    ["hpre2", 30, 0], ["slot-ffn", 44, 1], ["hpost2", 30, 0],
+  ];
+  let chy = dec.y + 44;
+  const chainR: Record<string, R> = {};
+  for (const [id, hh, slot] of chain) {
+    chainR[id] = { x: cx - 100, y: chy, w: 200, h: hh };
+    if (slot) s.irNode(id, cx - 100, chy, 200, hh, { fill: "#ffffff", stroke: s.s.accent, tfill: "#101418", dfill: "#5b6470" });
+    else s.irNode(id, cx - 100, chy, 200, hh, { fill: "#ffffff", stroke: s.s.boxStroke, size: 12.5 });
+    chy += hh + 14;
+  }
+  for (const [a, b] of [["hpre1", "slot-attn"], ["slot-attn", "hpost1"], ["hpre2", "slot-ffn"], ["slot-ffn", "hpost2"]] as const) {
+    s.line(cx, chainR[a]!.y + chainR[a]!.h, cx, chainR[b]!.y, s.s.ink, 1.5, "", true);
+  }
+  for (const [a, b] of [["hpost1", "hpre2"], ["hpost2", "write"]] as const) {
+    const y1 = chainR[a]!.y + chainR[a]!.h;
+    const y2 = b === "write" ? dec.y + dec.h : chainR[b]!.y;
+    s.line(cx, y1, cx, y2, s.s.stream, 1.3, "", true, true);
+  }
   s.line(cx, dec.y + dec.h, cx, nrm.y, s.s.ink, 1.5, "", true);
   s.irNode("norm", nrm.x, nrm.y, nrm.w, nrm.h);
   s.line(cx, nrm.y + nrm.h, cx, hed.y, s.s.ink, 1.5, "", true);
@@ -530,7 +664,7 @@ function compositionA(): string {
     const [ix, iy] = groupAnchor(gd, dec, `in${i + 1}`, (x) => x);
     const [ox, oy] = groupAnchor(gd, dec, `out${i + 1}`, (x) => x);
     s.line(ix - 24, iy, ix - 6, iy, s.s.stream, 1.3, "", true, true);
-    s.text(ix - 30, iy + 4, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream, anchor: "end" });
+    s.text(ix - 30, iy + 4, `S${i + 1}`, { size: 12, weight: 600, fill: s.s.stream, anchor: "end" });
     s.line(ox + 6, oy, ox + 24, oy, s.s.stream, 1.3, "", true, true);
     s.line(ix - 6, iy, ix - 6, dec.y + dec.h - 40, s.s.stream, 1.1);
     s.line(ox + 6, oy, ox + 6, dec.y + dec.h - 40, s.s.stream, 1.1);
@@ -556,26 +690,16 @@ function compositionA(): string {
   const mhcMid = cyv + 109;
   s.poly([[cx + 150, 531], [cxx - 12, 531], [cxx - 12, mhcMid], [cxx, mhcMid]], s.s.muted, 1.3, s.s.dash);
   // margin leaders
-  const leaders: Array<[string, number]> = [
-    [`vocab ${commas(F.vocab)}`, 112],
-    [`hidden ${commas(F.hidden)}`, 176],
-    [`${KDA_LAYERS.length} KDA · ${MLA_LAYERS.length} MLA/DSA`, dec.y + 90],
-    [`${F.heads} heads`, dec.y + 130],
-    [`context ${ctxLabel} tokens`, dec.y + 170],
-    [`first ${DENSE_COUNT} dense, then ${MOE_COUNT} MoE`, dec.y + 260],
-  ];
-  for (const [t, ty] of leaders) {
+  const short = MARGIN.filter((t) => t.length <= 24);
+  const long = MARGIN.filter((t) => t.length > 24);
+  const leaderYs = [326, 366, 406, 446, 486];
+  short.forEach((t, i) => {
+    const ty = leaderYs[i]!;
     s.text(24, ty, t, { size: 12.5, weight: 600 });
-    s.line(24 + t.length * 6.4, ty - 4, dec.x - 2, ty - 4, s.s.muted, 1.2, s.s.dash);
-  }
+    s.line(24 + t.length * 6.4, ty - 4, dec.x - 44, ty - 4, s.s.muted, 1.2, s.s.dash);
+  });
   s.text(24, 880, "READING NOTES", { size: 12, weight: 700, font: s.s.mono, fill: s.s.muted });
-  const notes = [
-    SCHEDULE,
-    `DSA in ${MLA_LAYERS.length} of ${F.layers} layers (1 per ${D_PERIOD})`,
-    `MoE layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}: ${routed} routed top-${activeRouted}, ${shared} shared`,
-    `mHC: ${streams} streams aggregate into one sublayer pass (Fig 1c Eq 3)`,
-  ];
-  notes.forEach((t, i) => s.text(24, 906 + i * 24, t, { size: 12.5 }));
+  [...long, EQ3, OMISSION].forEach((t, i) => s.text(24, 906 + i * 24, t, { size: 12.5 }));
   legend(s, 24, 1184);
   s.text(1056, 1188, "A · paper-editorial", { size: 12, fill: s.s.muted, anchor: "end", font: s.s.mono });
   return s.end();
@@ -587,13 +711,15 @@ function compositionB(): string {
   s.text(28, 40, `GLM-5.3-Flash (${billions(F.total)}-A${billions(F.active)}) — ENGINEERING SHEET`, { size: 22, weight: 700, font: s.s.mono });
   s.text(28, 62, OMISSION, { size: 12.5, fill: s.s.muted });
   const sy = 96;
+  // slot boxes need >=192px width or the shrink-to-fit pass drops the 27-char
+  // IR slot label below the 12px floor — dec/slots/norm/head sized for that
   const tok: R = { x: 40, y: sy, w: 180, h: 40 };
-  const emb: R = { x: 250, y: sy, w: 190, h: 40 };
-  const dec: R = { x: 470, y: sy - 18, w: 400, h: 76 };
-  const sa: R = { x: 530, y: sy + 8, w: 130, h: 34 };
-  const sf: R = { x: 690, y: sy + 8, w: 130, h: 34 };
-  const nrm: R = { x: 900, y: sy, w: 180, h: 40 };
-  const hed: R = { x: 1130, y: sy, w: 210, h: 40 };
+  const emb: R = { x: 240, y: sy, w: 210, h: 40 };
+  const dec: R = { x: 470, y: sy - 18, w: 460, h: 76 };
+  const sa: R = { x: 490, y: sy + 8, w: 200, h: 34 };
+  const sf: R = { x: 710, y: sy + 8, w: 200, h: 34 };
+  const nrm: R = { x: 960, y: sy, w: 170, h: 40 };
+  const hed: R = { x: 1160, y: sy, w: 210, h: 40 };
   s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
   s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
   s.line(tok.x + tok.w, sy + 20, emb.x, sy + 20, s.s.ink, 1.6, "", true);
@@ -607,8 +733,11 @@ function compositionB(): string {
   s.irNode("norm", nrm.x, nrm.y, nrm.w, nrm.h);
   s.line(nrm.x + nrm.w, sy + 20, hed.x, sy + 20, s.s.ink, 1.6, "", true);
   s.irNode("head", hed.x, hed.y, hed.w, hed.h);
-  s.line(dec.x + 200, dec.y + dec.h, dec.x + 200, dec.y + dec.h + 30, s.s.accent, 1.3);
-  s.text(dec.x + 208, dec.y + dec.h + 24, `${F.layers} layers (K,K,K,D ×${UNITS} + K) · ${streams} streams · ${F.heads} heads`, { size: 12, fill: s.s.accent, font: s.s.mono });
+  // orange callout: the tick drops at x=730, clear of the write stubs
+  // (x 520/620/720/820) and right of the fact columns (end x≈715); the text
+  // sits below the stub arrowheads and left of the title block (x 1210)
+  s.line(dec.x + 260, dec.y + dec.h, dec.x + 260, 218, s.s.accent, 1.3);
+  s.text(dec.x + 270, 222, `${F.layers} layers (K,K,K,D ×${UNITS} + K) · ${streams} streams · ${F.heads} heads`, { size: 12, fill: s.s.accent, font: s.s.mono });
   // stream stubs: read above the decoder box, write below (rotated sides)
   const gd = G("g-dec");
   const rot = (x: Side): Side => (x === "top" ? "left" : x === "bottom" ? "right" : x === "left" ? "top" : "bottom");
@@ -616,14 +745,22 @@ function compositionB(): string {
     const [ix, iy] = groupAnchor(gd, dec, `in${i + 1}`, rot);
     const [ox, oy] = groupAnchor(gd, dec, `out${i + 1}`, rot);
     s.line(ix, iy - 16, ix, iy - 3, s.s.stream, 1.3, "", true, true);
-    s.text(ix - 4, iy - 20, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream, anchor: "end" });
+    s.text(ix - 4, iy - 20, `S${i + 1}`, { size: 12, weight: 600, fill: s.s.stream, anchor: "end" });
     s.line(ox, oy + 3, ox, oy + 16, s.s.stream, 1.3, "", true, true);
   }
+  // fact block sits BELOW the write-stub arrowheads (tips reach y≈175), so no
+  // stub pierces a text row; EQ3 follows, panels start under it
+  MARGIN.forEach((t, i) => {
+    const col = i < 4 ? 40 : 420;
+    const yy = 190 + (i % 4) * 18;
+    s.text(col, yy, t, { size: 12, font: s.s.mono, fill: s.s.muted });
+  });
+  s.text(40, 258, EQ3, { size: 12, font: s.s.mono, fill: s.s.muted });
   const panels: Array<[string, "lr" | "tb"]> = [["g-kda", "lr"], ["g-dsa", "lr"], ["g-moe", "tb"], ["stream", "tb"]];
   const pw = 730;
   const ph = 310;
   const px = [40, 800];
-  const py = [250, 584];
+  const py = [268, 598];
   panels.forEach(([gid, dir], i) => {
     const x = px[i % 2]!;
     const y = py[Math.floor(i / 2)]!;
@@ -668,9 +805,29 @@ function compositionC(): string {
   const moe: R = { x: cx - 110, y: dec.y + 620, w: 440, h: 240 };
   const mhc: R = { x: cx - 110, y: dec.y + 880, w: 440, h: 240 };
   s.line(sx, dec.y, sx, sa.y, s.s.ink, 1.5, "", true);
-  s.irNode("slot-attn", sa.x, sa.y, sa.w, sa.h, { fill: s.s.mech, stroke: s.s.mechStroke });
-  s.irNode("slot-ffn", sf.x, sf.y, sf.w, sf.h, { fill: s.s.mech, stroke: s.s.mechStroke });
-  s.line(sx, sa.y + sa.h, sx, sf.y, s.s.ink, 1.5, "", true);
+  const cchain: Array<[string, R]> = [
+    ["hpre1", { x: sa.x, y: sa.y, w: sa.w, h: 30 }],
+    ["slot-attn", { x: sa.x, y: sa.y + 40, w: sa.w, h: 44 }],
+    ["hpost1", { x: sa.x, y: sa.y + 94, w: sa.w, h: 30 }],
+    ["hpre2", { x: sf.x, y: sf.y, w: sf.w, h: 30 }],
+    ["slot-ffn", { x: sf.x, y: sf.y + 40, w: sf.w, h: 44 }],
+    ["hpost2", { x: sf.x, y: sf.y + 94, w: sf.w, h: 30 }],
+  ];
+  for (const [id, rc] of cchain) {
+    if (id.startsWith("slot")) s.irNode(id, rc.x, rc.y, rc.w, rc.h, { fill: s.s.mech, stroke: s.s.mechStroke });
+    else s.irNode(id, rc.x, rc.y, rc.w, rc.h, { size: 12.5 });
+  }
+  for (const [a, b] of [["hpre1", "slot-attn"], ["slot-attn", "hpost1"], ["hpre2", "slot-ffn"], ["slot-ffn", "hpost2"]] as const) {
+    const ra = cchain.find((c) => c[0] === a)![1];
+    const rb = cchain.find((c) => c[0] === b)![1];
+    s.line(sx, ra.y + ra.h, sx, rb.y, s.s.ink, 1.5, "", true);
+  }
+  const r1 = cchain.find((c) => c[0] === "hpost1")![1];
+  const r2 = cchain.find((c) => c[0] === "hpre2")![1];
+  s.line(sx, r1.y + r1.h, sx, r2.y, s.s.stream, 1.3, "", true, true);
+  const sa2 = cchain.find((c) => c[0] === "slot-attn")![1];
+  const sf2 = cchain.find((c) => c[0] === "slot-ffn")![1];
+  sa.y = sa2.y; sf.y = sf2.y;
   s.panel(kda.x, kda.y, kda.w, kda.h, G("g-kda").label);
   drawGroup(s, "g-kda", { x: kda.x + 30, y: kda.y + 40, w: kda.w - 60, h: kda.h - 60 }, "tb");
   s.panel(dsa.x, dsa.y, dsa.w, dsa.h, G("g-dsa").label);
@@ -679,13 +836,12 @@ function compositionC(): string {
   drawGroup(s, "g-moe", { x: moe.x + 50, y: moe.y + 40, w: moe.w - 100, h: moe.h - 60 }, "tb");
   s.panel(mhc.x, mhc.y, mhc.w, mhc.h, `mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`);
   drawStreamCard(s, { x: mhc.x + 20, y: mhc.y + 36, w: mhc.w - 40, h: mhc.h - 60 });
-  // realization links: slot → the mechanisms that fill it (partition, dashed)
+  // realization links: slot → the mechanisms that fill it (partition, dashed).
+  // No text on the links: the counts live in the panel titles and margin
+  // notes, and any label here lands on the elbow or a panel border.
   s.line(sa.x + sa.w, sa.y + sa.h / 2, kda.x, sa.y + sa.h / 2, s.s.muted, 1.2, s.s.dash);
-  s.text(sa.x + sa.w + 6, sa.y + sa.h / 2 + 14, `${KDA_LAYERS.length} of ${F.layers} layers`, { size: 11.5, fill: s.s.muted });
   s.poly([[sa.x + sa.w, sa.y + sa.h / 2 + 8], [cx - 120, sa.y + sa.h / 2 + 8], [cx - 120, dsa.y + 50], [dsa.x, dsa.y + 50]], s.s.muted, 1.2, s.s.dash);
-  s.text(cx - 126, dsa.y + 54, `${MLA_LAYERS.length} layers, 1 per ${D_PERIOD}`, { size: 11.5, fill: s.s.muted, anchor: "end" });
   s.line(sf.x + sf.w, sf.y + sf.h / 2, moe.x, sf.y + sf.h / 2, s.s.muted, 1.2, s.s.dash);
-  s.text(sf.x + sf.w + 6, sf.y + sf.h / 2 + 14, `layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}`, { size: 11.5, fill: s.s.muted });
   s.line(sx, sf.y + sf.h, sx, dec.y + dec.h, s.s.ink, 1.5, "", true);
   // residual rails: ticks outside, bundle inside the container edges
   const gd = G("g-dec");
@@ -697,7 +853,7 @@ function compositionC(): string {
     iys.push(iy);
     oys.push(oy);
     s.line(dec.x - 26, iy, dec.x - 4, iy, s.s.stream, 1.3, "", true, true);
-    s.text(dec.x - 32, iy + 4, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream, anchor: "end" });
+    s.text(dec.x - 32, iy + 4, `S${i + 1}`, { size: 12, weight: 600, fill: s.s.stream, anchor: "end" });
     s.line(dec.x + dec.w + 4, oy, dec.x + dec.w + 26, oy, s.s.stream, 1.3, "", true, true);
   }
   s.line(dec.x + 10, iys[0]!, dec.x + 10, iys[streams - 1]!, s.s.stream, 1.1);
@@ -706,26 +862,33 @@ function compositionC(): string {
   s.irNode("norm", sx - 110, dec.y + dec.h + 30, 220, 34);
   s.line(sx, dec.y + dec.h + 64, sx, dec.y + dec.h + 90, s.s.ink, 1.5, "", true);
   s.irNode("head", sx - 120, dec.y + dec.h + 90, 240, 44);
-  // margin notes both sides
-  const notes: Array<[string, number, "l" | "r"]> = [
-    [`${KDA_LAYERS.length} KDA layers`, kda.y + 60, "l"],
-    [`${F.heads} heads`, dsa.y + 100, "l"],
-    [`first ${DENSE_COUNT} dense`, moe.y - 20, "l"],
-    [`${routed} routed · top-${activeRouted}`, moe.y + 40, "l"],
-    [`${streams} residual streams`, mhc.y + 120, "l"],
-    [`${MLA_LAYERS.length} MLA/DSA layers`, dsa.y + 60, "r"],
-    [`context ${ctxLabel} tokens`, dsa.y + 140, "r"],
-    [`then ${MOE_COUNT} MoE`, moe.y + 100, "r"],
+  // margin notes both sides — same rule as A: leaders only carry SHORT facts,
+  // long facts move to the reading-notes block. Leader ys sit between the
+  // residual rail ticks (iy/oy = 385/675/965/1255) and clear of the spine
+  // column, so no dashed line crosses a box or a rail arrow.
+  const short = MARGIN.filter((t) => t.length <= 24);
+  const long = MARGIN.filter((t) => t.length > 24);
+  const pick = (frag: string): string => short.find((t) => t.includes(frag))!;
+  const leftNotes: Array<[string, number]> = [
+    [pick("KDA"), kda.y + 60],
+    [pick("MLA/DSA"), dsa.y + 100],
+    [pick("dense"), moe.y - 20],
   ];
-  for (const [t, ty, side] of notes) {
-    if (side === "l") {
-      s.text(24, ty, t, { size: 11.5, weight: 600 });
-      s.line(24 + t.length * 6.0 + 6, ty - 4, dec.x - 40, ty - 4, s.s.muted, 1.2, s.s.dash);
-    } else {
-      s.text(1036, ty, t, { size: 11.5, weight: 600, anchor: "end" });
-      s.line(dec.x + dec.w + 40, ty - 4, 1036 - t.length * 6.0 - 6, ty - 4, s.s.muted, 1.2, s.s.dash);
-    }
+  const rightNotes: Array<[string, number]> = [
+    [pick("heads"), dsa.y + 60],
+    [pick("context"), moe.y + 60],
+    [pick("residual"), mhc.y + 210],
+  ];
+  for (const [t, ty] of leftNotes) {
+    s.text(24, ty, t, { size: 12, weight: 600 });
+    s.line(24 + t.length * 6.0 + 6, ty - 4, dec.x - 40, ty - 4, s.s.muted, 1.2, s.s.dash);
   }
+  for (const [t, ty] of rightNotes) {
+    s.text(1036, ty, t, { size: 12, weight: 600, anchor: "end" });
+    s.line(dec.x + dec.w + 40, ty - 4, 1036 - t.length * 6.0 - 6, ty - 4, s.s.muted, 1.2, s.s.dash);
+  }
+  s.text(460, 1450, "READING NOTES", { size: 12, weight: 700, font: s.s.mono, fill: s.s.muted });
+  [...long, EQ3].forEach((t, i) => s.text(460, 1476 + i * 24, t, { size: 12.5 }));
   legend(s, 24, 1560);
   s.text(1036, 1564, "C · nested-containment", { size: 12, fill: s.s.muted, anchor: "end", font: s.s.mono });
   return s.end();

@@ -15,8 +15,9 @@ candidates differ in composition (geometry), not only in skin:
   callouts, margin leaders, reading-notes block.
 - **B · engineering-blueprint** — landscape sheet 1560×950: horizontal spine,
   2×2 mechanism panels, drawing-office title block, grid background.
-- **C · nested-containment** — narrow portrait 960×1900: mechanism blocks
-  nested inside the decoder repeat-unit container, margin leaders both sides.
+- **C · nested-containment** — portrait 1060×1620: mechanism blocks nested
+  inside the decoder repeat-unit container, spine column left and mechanism
+  panels right, margin leaders both sides, reading-notes block bottom right.
 
 Outputs: `candidate-{a,b,c}.svg|png` and `comparison-board.svg|png` (all three
 at a common scale with the totals below). Status: prototype / review material.
@@ -30,6 +31,17 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
   listed under each criterion; where a check is measurable it is measured from
   the emitted SVG (aspect, type sizes at the 1150px embed width, overflow),
   where it is editorial it is judged from the rendered PNG at full size.
+- Measurement method (round-3 recompute): aspect = viewBox w/h of the emitted
+  SVG (A 1080×1220 = 0.89:1, B 1560×950 = 1.64:1, C 1060×1620 = 0.65:1; the
+  #35 aspect target is ≤1.8:1). Effective type = smallest drawn font-size in
+  the emitted SVG — after the shrink-to-fit pass, so a shrunk label counts at
+  its post-shrink size — multiplied by 1150/canvas width. Measured this round:
+  A smallest 12px (legend, rail ticks, notes header; the shrink-to-fit pass
+  bottoms out at 12.56px on the slot labels, above the 12px floor) → 12.8px
+  effective; B smallest 12px → 8.8px effective; C smallest 12px (stream tick
+  labels, margin notes, legend, H-res caption) → 13.0px effective. Scores that
+  depend on these numbers were reassigned from the measurement, not carried
+  over from earlier rounds.
 - Elimination rule: a candidate scoring <3 on criterion 1 (structural fidelity)
   is eliminated outright. No candidate triggers it at this round.
 - Consistency rule: the verdict order must equal the total-score order, and any
@@ -49,6 +61,9 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
   byte-identical SVGs (checked by sha256). PNGs are playwright screenshots of
   those SVGs: pixel-stable in a fixed environment, but their byte hashes vary
   with Chromium/font versions, so byte-determinism is claimed for SVGs only.
+  The comparison board nests all three candidates at 0.62 for side-by-side
+  layout judging only — the font target applies to the candidate sheets at
+  their 1150px embed, not to the board's thumbnails.
 - Evidence binding: every drawn number goes through `claim()` first
   (publishable status enforced), then cross-checks the pinned config or the
   Architecture IR with `eq()`; prose schedule/partition claims are pinned by
@@ -63,16 +78,21 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
 | 1 | Structural fidelity vs brief (×2) | 5 — every fact, the exact schedule, ⊕ merge, mHC aggregate→one pass→write-back with H-res skip mixing; semantics correct (slots, not serial mechanisms) | 5 — same content, slots correct | 5 — round-3 redraw from the shared Diagram IR: realization is containment plus partition-labelled dashed links, no serial KDA→DSA→MoE edges remain |
 | 2 | Reading hierarchy (×2) | 5 — filled gray 45× container + filled blue unit block make the repeat unit immediate; gutter cards read as detail, not spine | 3 — spine + four same-depth panels; nesting only via dashed panel borders | 5 — true containment: mechanisms visibly live inside the repeat unit |
 | 3 | Line/role discrimination (×2) | 4 — solid flow / dotted callout / teal stream; flow and callout share a dark ink, separated by dash only | 5 — cyan flow, amber dashed callout, teal stream: hue-separated, the best line grammar of the three | 4 — ink flow / gray dashed callout / teal stream |
-| 4 | Layout quality (×2) | 5 — strongest figure/ground; no text overflow (shrink-to-fit floor 10px, nothing hits it); gutter and margin leaders orthogonal | 4 — panels keep ~55px dead padding around 180px boxes; grid adds noise behind 12–13px type | 4 — clean but 0.51:1 means one long scroll; mechanisms compared by scrolling, not side by side |
-| 5 | Legibility at size / responsive potential (×2) | 4 — at the 1150px embed the smallest type is 12px→12.8px effective (passes the ≥12px target); splits into spine state + card state at 390px, callout bus needs a reflow rule | 3 — at 1150px embed scale 0.74 puts 12px type at 8.8px effective (fails the target); dark-only reading, grid pointless at 390px | 4 — embed scale 1.20 keeps all type ≥14px effective; single column stacks trivially, but length hurts overview |
+| 4 | Layout quality (×2) | 5 — strongest figure/ground; no text overflow (the 12px font floor is enforced at emit time; smallest post-shrink label is 12.57px); gutter and margin leaders orthogonal | 4 — panels keep ~55px dead padding around 180px boxes; grid adds noise behind 12–13px type | 4 — clean two-column nest after the round-3 fixes (no leader/rail/stub collisions left); 0.65:1 still means a 1620px scroll and the top-right margin stays empty |
+| 5 | Legibility at size / responsive potential (×2) | 4 — at the 1150px embed the smallest type is 12px→12.8px effective (passes the ≥12px target); splits into spine state + card state at 390px, callout bus needs a reflow rule | 3 — at 1150px embed scale 0.74 puts 12px type at 8.8px effective (fails the target); dark-only reading, grid pointless at 390px | 4 — embed scale 1.08 puts the smallest type 12px→13.0px effective (passes the target); single column stacks trivially, but length hurts overview |
 | 6 | Fit to atlas token family (×1) | 3 — new editorial palette, site tokens would need to move toward it | 2 — dark blueprint only, no light variant | 5 — uses the site's existing pastel/ink family as-is |
 | | **Total /55** | **49** | **42** | **49** |
 
 ## Verdict
 
-Totals: **A 49 · C 49 · B 42**. A and C tie; the tiebreak (criterion 4, layout
-quality) goes to A (5 vs 4: C's two-column nest reads cleanly but its 1.08:1
-embed scale and tall canvas cost density). Order after tiebreak:
+Totals: **A 49 · C 49 · B 42**. Round-3 recompute: after the font-floor fix
+(every drawn label ≥12px, enforced at emit time) and measuring effective type
+and aspect from the emitted SVGs (A 12.8px at 0.89:1, B 8.8px at 1.64:1,
+C 13.0px at 0.65:1, all aspects inside the ≤1.8:1 target), the per-criterion
+scores above were reassigned from those measurements; the totals recompute to
+the same 49/42/49. A and C tie; the tiebreak (criterion 4, layout quality)
+goes to A (5 vs 4: C's two-column nest reads cleanly but its 1620px-tall
+canvas costs density against A's 1220px). Order after tiebreak:
 **A recommended · C alternate · B third**.
 
 - **Recommended: A.** Strongest reading hierarchy and figure/ground, correct
