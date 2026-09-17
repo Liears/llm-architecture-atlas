@@ -13,6 +13,8 @@
     "status": "pending",
     "reviewer": null,
     "date": null,
-    "note": "A reviewer flips status to \"reviewed\" (or \"rejected\" with reasons) in a committed change; CI re-uploads shots every run, this manifest records whether a human looked at them."
+    "head": null,
+    "shots_sha256": null,
+    "note": "State machine (round 4): status is one of pending/reviewed/rejected/skipped. A reviewer flips status to \"reviewed\" in a committed change AND fills reviewer, date, head (the 40-hex sha the six shots were reviewed at) and shots_sha256 (sha256 of the six shots, from the generated manifest.json of the reviewed run). The e2e contact test validates the enum and the required fields, and auto-reverts an inherited \"reviewed\" to pending when the current head or any shot hash differs from the signature, so an old signature can never vouch for new artifacts. \"rejected\" and \"skipped\" are visible but never satisfy the review: the contact test fails on them after uploading the evidence. Unsigned or drifted states stay \"pending\"."
   }
 }
