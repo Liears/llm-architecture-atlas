@@ -16,21 +16,22 @@ import { assertGlmStructure } from "./structural-assertions.js";
 export interface BaselineFinding extends GateFinding {
   /** issue that owns turning this red green */
   owner: string;
+  /** why this owner, when not obvious (round 2) */
+  note?: string;
 }
 
-const OWNER: Record<string, string> = {
-  aspect: "#34",
-  font: "#34",
-  "edge-node": "#34",
-  "edge-reserved": "#34",
-  "edge-overlap": "#34",
-  "text-overflow": "#34",
-  "mhc-streams": "#34",
-  "moe-fanout": "#34",
-  "moe-fanin": "#34",
-  "dsa-selected-kv": "#34",
-  schedule: "#34",
-};
+/**
+ * Round-2 review: owners must be the issues that will ACTUALLY clear each
+ * red, per model — not one blanket issue. GLM composition/topology debt is
+ * cleared by the #34 redraw; Kimi by the #39 golden; the remaining catalog
+ * models have no per-model migration issue yet, so the roadmap #32 owns
+ * their debt until such issues are opened (stated in the note).
+ */
+function ownerFor(modelId: string): { owner: string; note?: string } {
+  if (modelId === "zai-org/glm-5.3-flash") return { owner: "#34" };
+  if (modelId === "moonshotai/kimi-linear-48b-a3b-instruct") return { owner: "#39" };
+  return { owner: "#32", note: "per-model migration issue not opened yet; roadmap #32 owns this debt until then" };
+}
 
 export function hardFindings(positioned: PositionedScene): GateFinding[] {
   return runSceneGates(positioned).filter((f) => HARD_GATES.has(f.gate));
@@ -48,5 +49,6 @@ export function composeBaselineFindings(
   if (arch && arch.model.id === "zai-org/glm-5.3-flash") {
     debt.push(...assertGlmStructure(scene, arch));
   }
-  return debt.map((f) => ({ ...f, owner: OWNER[f.gate] ?? "#35" }));
+  const { owner, note } = ownerFor(arch?.model.id ?? "unknown");
+  return debt.map((f) => ({ ...f, owner, ...(note ? { note } : {}) }));
 }
