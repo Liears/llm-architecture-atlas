@@ -1,151 +1,162 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 1360" font-family="Helvetica, Arial, sans-serif">
-<defs><marker id="ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16181c"/></marker></defs>
-<rect x="0" y="0" width="1040" height="1360" rx="0" fill="#e8f1fb" stroke="none" stroke-width="0"/>
-<text x="24" y="42" font-family="Helvetica, Arial, sans-serif" font-size="30" fill="#1a73e8" font-weight="700" text-anchor="start">GLM-5.3-Flash (320B-A18B)</text>
-<text x="24" y="72" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#415062" font-weight="400" text-anchor="start">Text decoder shown; vision encoder and MTP prediction layer omitted</text>
-<text x="455" y="1270" font-family="monospace" font-size="13" fill="#415062" font-weight="400" text-anchor="middle">Sample input text</text>
-<line x1="455" y1="1256" x2="455" y2="1214" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<rect x="375" y="1170" width="160" height="36" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="1194" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="400" text-anchor="middle">Tokenized text</text>
-<line x1="455" y1="1170" x2="455" y2="1134" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<rect x="350" y="1090" width="210" height="44" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="1117" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="400" text-anchor="middle">Token embedding layer</text>
-<rect x="288" y="250" width="334" height="800" rx="14" fill="#c8cdd3" stroke="#3b4046" stroke-width="1.8"/>
-<rect x="316" y="304" width="278" height="707" rx="10" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.6"/>
-<text x="278" y="650" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#1a73e8" font-weight="700" text-anchor="end">45 ×</text>
-<polyline points="284,290 292,640 284,1010" fill="none" stroke="#1a73e8" stroke-width="1.6"/>
-<rect x="342" y="855" width="226" height="38" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="879" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="600" text-anchor="middle">RMSNorm 1</text>
-<rect x="342" y="800" width="226" height="30" rx="6" fill="#ffffff" stroke="#1a73e8" stroke-width="1.6"/>
-<text x="455" y="820" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
-<rect x="342" y="675" width="226" height="108" rx="6" fill="#4b4f55" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="734" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#ffffff" font-weight="600" text-anchor="middle"></text>
-<text x="455" y="701" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#ffffff" font-weight="600" text-anchor="middle">Multi-head Latent Attention (MLA)</text>
-<text x="455" y="720" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#ffffff" font-weight="400" text-anchor="middle">w/ DeepSeek Sparse Attention (DSA)</text>
-<text x="455" y="739" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#ffffff" font-weight="400" text-anchor="middle">or Kimi Delta Attention (KDA)</text>
-<text x="455" y="761" font-family="monospace" font-size="12" fill="#ffffff" font-weight="400" text-anchor="middle">schedule K,K,K,D ×11 + K</text>
-<circle cx="455" cy="640" r="11" fill="#ffffff" stroke="#16181c" stroke-width="1.6"/><line x1="449" y1="640" x2="461" y2="640" stroke="#16181c" stroke-width="1.6"/><line x1="455" y1="634" x2="455" y2="646" stroke="#16181c" stroke-width="1.6"/>
-<rect x="342" y="575" width="226" height="38" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="599" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="600" text-anchor="middle">RMSNorm 2</text>
-<rect x="342" y="520" width="226" height="30" rx="6" fill="#ffffff" stroke="#1a73e8" stroke-width="1.6"/>
-<text x="455" y="540" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
-<rect x="342" y="420" width="226" height="74" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="462" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="600" text-anchor="middle"></text>
-<text x="455" y="450" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="600" text-anchor="middle">MoE / dense FFN</text>
-<text x="455" y="470" font-family="monospace" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">first 3 dense, then 42 MoE</text>
-<rect x="342" y="350" width="226" height="30" rx="6" fill="#ffffff" stroke="#1a73e8" stroke-width="1.6"/>
-<text x="455" y="370" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
-<line x1="455" y1="1090" x2="455" y2="893" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="855" x2="455" y2="830" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="800" x2="455" y2="783" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="675" x2="455" y2="651" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="629" x2="455" y2="613" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="575" x2="455" y2="550" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="520" x2="455" y2="494" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="420" x2="455" y2="380" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="455" y1="350" x2="455" y2="304" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="326" y1="365" x2="326" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="326" y1="815" x2="342" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="326" y1="365" x2="342" y2="365" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="331" y1="365" x2="331" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="331" y1="815" x2="342" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="331" y1="365" x2="342" y2="365" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="336" y1="365" x2="336" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="336" y1="815" x2="342" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="336" y1="365" x2="342" y2="365" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="341" y1="365" x2="341" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="341" y1="815" x2="342" y2="815" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="341" y1="365" x2="342" y2="365" stroke="#1a73e8" stroke-width="1.4"/>
-<line x1="455" y1="250" x2="455" y2="234" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<rect x="365" y="190" width="180" height="44" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="217" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="400" text-anchor="middle">Final RMSNorm</text>
-<line x1="455" y1="190" x2="455" y2="154" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<rect x="360" y="110" width="190" height="44" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.6"/>
-<text x="455" y="137" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#16181c" font-weight="400" text-anchor="middle">Linear output layer</text>
-<text x="24" y="136" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#16181c" font-weight="600" text-anchor="start">Vocabulary size of 154,880</text>
-<line x1="206.20000000000002" y1="131" x2="356" y2="131" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<text x="24" y="705" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#16181c" font-weight="600" text-anchor="start">34 KDA layers</text>
-<text x="24" y="722" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#16181c" font-weight="600" text-anchor="start">11 MLA+DSA layers</text>
-<line x1="145.9" y1="700" x2="338" y2="700" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<text x="24" y="753" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#16181c" font-weight="600" text-anchor="start">64 attention heads</text>
-<line x1="152.60000000000002" y1="748" x2="338" y2="748" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<text x="24" y="1106" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#16181c" font-weight="600" text-anchor="start">Embedding dimension of 4,096</text>
-<line x1="219.6" y1="1101" x2="346" y2="1101" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<text x="24" y="1156" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#16181c" font-weight="600" text-anchor="start">Supported context 1M tokens</text>
-<line x1="212.9" y1="1151" x2="346" y2="1151" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<text x="24" y="454" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#415062" font-weight="400" text-anchor="start">First 3 blocks use dense</text>
-<text x="24" y="471" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#415062" font-weight="400" text-anchor="start">SwiGLU FFNs instead of MoEs</text>
-<line x1="192" y1="466" x2="312" y2="466" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<rect x="640" y="110" width="372" height="300" rx="8" fill="#ffffff" stroke="#22262b" stroke-dasharray="2 4" stroke-width="1.6"/>
-<text x="656" y="136" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#16181c" font-weight="700" text-anchor="start">MoE layer (sparse blocks 3–44)</text>
-<circle cx="826" cy="184" r="11" fill="#ffffff" stroke="#16181c" stroke-width="1.6"/><line x1="820" y1="184" x2="832" y2="184" stroke="#16181c" stroke-width="1.6"/><line x1="826" y1="178" x2="826" y2="190" stroke="#16181c" stroke-width="1.6"/>
-<rect x="670" y="240" width="140" height="36" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.3"/>
-<text x="740" y="262.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Feed forward</text>
-<rect x="842" y="240" width="140" height="36" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.3"/>
-<text x="912" y="262.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Feed forward</text>
-<text x="826" y="262" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#415062" font-weight="400" text-anchor="middle">…</text>
-<rect x="768" y="206" width="24" height="18" rx="3" fill="#16181c" stroke="#16181c" stroke-width="0"/>
-<text x="780" y="219" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#e8f1fb" font-weight="700" text-anchor="middle">1</text>
-<rect x="860" y="206" width="34" height="18" rx="3" fill="#1a73e8" stroke="#1a73e8" stroke-width="0"/>
-<text x="877" y="219" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#ffffff" font-weight="700" text-anchor="middle">288</text>
-<rect x="771" y="326" width="110" height="36" rx="6" fill="#ffffff" stroke="#1a73e8" stroke-width="1.3"/>
-<text x="826" y="348.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#1a73e8" font-weight="600" text-anchor="middle">Router</text>
-<polyline points="826,326 740,276" fill="none" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<polyline points="826,326 912,276" fill="none" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<polyline points="740,240 818,192" fill="none" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<polyline points="912,240 834,192" fill="none" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="826" y1="173" x2="826" y2="150" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<text x="656" y="392" font-family="monospace" font-size="12" fill="#415062" font-weight="400" text-anchor="start">1 shared expert always on · top-8 of 288 routed</text>
-<polyline points="568,456 626,456 626,260 640,260" fill="none" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<rect x="640" y="440" width="372" height="210" rx="8" fill="#ffffff" stroke="#22262b" stroke-dasharray="2 4" stroke-width="1.6"/>
-<text x="656" y="466" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#16181c" font-weight="700" text-anchor="start">DSA (1 of 4 layers)</text>
-<rect x="664" y="500" width="108" height="40" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.3"/>
-<text x="718" y="524.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Lightning indexer</text>
-<rect x="786" y="500" width="92" height="40" rx="6" fill="#ffffff" stroke="#22262b" stroke-width="1.3"/>
-<text x="832" y="524.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Top-k 2048</text>
-<rect x="892" y="500" width="100" height="40" rx="6" fill="#4b4f55" stroke="#22262b" stroke-width="1.3"/>
-<text x="942" y="524.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#ffffff" font-weight="600" text-anchor="middle">MLA core</text>
-<line x1="772" y1="520" x2="786" y2="520" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<line x1="878" y1="520" x2="892" y2="520" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<text x="664" y="568" font-family="monospace" font-size="12" fill="#415062" font-weight="400" text-anchor="start">indexer 32 heads · top-k 2048</text>
-<text x="664" y="590" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#415062" font-weight="400" text-anchor="start">selected KV → latent attention</text>
-<text x="664" y="626" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#415062" font-weight="400" text-anchor="start">scores all positions, routes sparse KV</text>
-<polyline points="568,725 626,725 626,520 640,520" fill="none" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<rect x="640" y="680" width="372" height="190" rx="8" fill="#ffffff" stroke="#22262b" stroke-dasharray="2 4" stroke-width="1.6"/>
-<text x="656" y="706" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#16181c" font-weight="700" text-anchor="start">mHC (manifold-constrained hyper-connections)</text>
-<line x1="660" y1="746" x2="702" y2="746" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="808" y1="746" x2="850" y2="746" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="660" y1="762" x2="702" y2="762" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="808" y1="762" x2="850" y2="762" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="660" y1="778" x2="702" y2="778" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="808" y1="778" x2="850" y2="778" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="660" y1="794" x2="702" y2="794" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<line x1="808" y1="794" x2="850" y2="794" stroke="#1a73e8" stroke-width="1.5" marker-end="url(#ar-a)"/>
-<rect x="702" y="736" width="106" height="76" rx="6" fill="#ffffff" stroke="#1a73e8" stroke-width="1.3"/>
-<text x="755" y="778.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle"></text>
-<text x="755" y="768" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
-<text x="755" y="786" font-family="Helvetica, Arial, sans-serif" font-size="10.5" fill="#415062" font-weight="400" text-anchor="middle">(constrained mixing)</text>
-<rect x="850" y="746" width="96" height="56" rx="6" fill="#c8cdd3" stroke="#3b4046" stroke-width="1.3"/>
-<text x="898" y="778.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle"></text>
-<text x="898" y="770" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#16181c" font-weight="600" text-anchor="middle">Sublayer</text>
-<text x="898" y="786" font-family="Helvetica, Arial, sans-serif" font-size="10.5" fill="#415062" font-weight="400" text-anchor="middle">(attention or MoE)</text>
-<rect x="956" y="736" width="44" height="76" rx="6" fill="#ffffff" stroke="#1a73e8" stroke-width="1.3"/>
-<text x="978" y="778.5" font-family="Helvetica, Arial, sans-serif" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle"></text>
-<text x="978" y="770" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#16181c" font-weight="600" text-anchor="middle">mHC</text>
-<text x="978" y="784" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#16181c" font-weight="600" text-anchor="middle">mixer</text>
-<text x="660" y="844" font-family="monospace" font-size="12" fill="#415062" font-weight="400" text-anchor="start">with 4 parallel residual streams (replaces plain x + F(x))</text>
-<polyline points="568,535 626,535 626,774 640,774" fill="none" stroke="#22262b" stroke-width="1.3" stroke-dasharray="2 4"/>
-<text x="640" y="916" font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#1a73e8" font-weight="700" text-anchor="start">Resource savings:</text>
-<text x="648" y="942" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#16181c" font-weight="400" text-anchor="start">• model size 320B total</text>
-<text x="648" y="966" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#16181c" font-weight="400" text-anchor="start">• only 1 shared + 8 experts active per token</text>
-<text x="648" y="990" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#16181c" font-weight="400" text-anchor="start">• 18B active (5.6%)</text>
-<text x="640" y="1030" font-family="monospace" font-size="11.5" fill="#415062" font-weight="400" text-anchor="start">Evidence: pinned config f93128cf (exact) +</text>
-<text x="640" y="1048" font-family="monospace" font-size="11.5" fill="#415062" font-weight="400" text-anchor="start">mHC/DSA/KDA papers (mechanism-only)</text>
-<line x1="24" y1="1316" x2="70" y2="1316" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar-a)"/>
-<text x="78" y="1320" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#415062" font-weight="400" text-anchor="start">data flow</text>
-<line x1="174" y1="1316" x2="220" y2="1316" stroke="#22262b" stroke-width="1.6" stroke-dasharray="2 4"/>
-<text x="228" y="1320" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#415062" font-weight="400" text-anchor="start">zoom callout</text>
-<line x1="344" y1="1316" x2="390" y2="1316" stroke="#1a73e8" stroke-width="1.5"/>
-<text x="398" y="1320" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#415062" font-weight="400" text-anchor="start">residual stream ×4</text>
-<text x="1016" y="1320" font-family="monospace" font-size="12" fill="#415062" font-weight="400" text-anchor="end">A · paper-editorial</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1220" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#16181c"/></marker></defs>
+<rect x="0" y="0" width="1080" height="1220" rx="8" fill="#eef4fb" stroke="none" stroke-width="0"/>
+<text x="24" y="40" font-size="26" fill="#1a73e8" font-weight="700" text-anchor="start">GLM-5.3-Flash (320B-A18B)</text>
+<text x="24" y="62" font-size="12.5" fill="#415062" font-weight="400" text-anchor="start">Text decoder shown; vision encoder and MTP head omitted</text>
+<rect x="220" y="96" width="220" height="34" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="330" y="117.5" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">Tokenized text</text>
+<rect x="210" y="156" width="240" height="46" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="330" y="177" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">Token embedding</text>
+<text x="330" y="192" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">hidden 4,096 · vocab 154,880</text>
+<line x1="330" y1="130" x2="330" y2="156" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="180" y="236" width="300" height="470" rx="10" fill="#c8cdd3" stroke="#3b4046" stroke-width="1.8"/>
+<rect x="208" y="266" width="244" height="410" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.6"/>
+<text x="172" y="471" font-size="15" fill="#1a73e8" font-weight="700" text-anchor="end">45 ×</text>
+<rect x="230" y="280" width="200" height="30" rx="8" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+<text x="330" y="299.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
+<line x1="330" y1="310" x2="330" y2="332" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="230" y="332" width="200" height="44" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="330" y="352" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">attention slot</text>
+<text x="330" y="367" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">K,K,K,D per 4 layers</text>
+<line x1="330" y1="376" x2="330" y2="398" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="230" y="398" width="200" height="30" rx="8" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+<text x="330" y="417.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
+<line x1="330" y1="428" x2="330" y2="450" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="230" y="450" width="200" height="44" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="330" y="470" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">FFN slot</text>
+<text x="330" y="485" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">3 dense → 42 MoE</text>
+<line x1="330" y1="494" x2="330" y2="516" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="230" y="516" width="200" height="30" rx="8" fill="#ffffff" stroke="#1a73e8" stroke-width="1.5"/>
+<text x="330" y="535.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">mHC mixer</text>
+<line x1="192" y1="276" x2="192" y2="666" stroke="#00796b" stroke-width="1.3"/>
+<line x1="198" y1="276" x2="198" y2="666" stroke="#00796b" stroke-width="1.3"/>
+<line x1="204" y1="276" x2="204" y2="666" stroke="#00796b" stroke-width="1.3"/>
+<line x1="210" y1="276" x2="210" y2="666" stroke="#00796b" stroke-width="1.3"/>
+<line x1="330" y1="706" x2="330" y2="732" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="230" y="732" width="200" height="34" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="330" y="753.5" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">Final RMSNorm</text>
+<line x1="330" y1="766" x2="330" y2="792" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="210" y="792" width="240" height="44" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="330" y="812" font-size="13" fill="#16181c" font-weight="600" text-anchor="middle">Linear output</text>
+<text x="330" y="827" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">vocab 154,880</text>
+<rect x="640" y="96" width="416" height="258" rx="8" fill="#ffffff" stroke="#3b4046" stroke-width="1.6" stroke-dasharray="2 4"/>
+<text x="652" y="116" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">KDA — 34 layers (Kimi Linear §4 Fig 3)</text>
+<rect x="654" y="136" width="388" height="52" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="166.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Q/K/V ShortConv</text>
+<rect x="654" y="214" width="388" height="52" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.5"/>
+<text x="848" y="238" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">KDA core</text>
+<text x="848" y="253" font-size="12" fill="#eaf3fb" font-weight="400" text-anchor="middle">decay + recurrent state</text>
+<rect x="654" y="292" width="388" height="52" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="322.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">output gate</text>
+<line x1="848" y1="188" x2="848" y2="214" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="848" y1="266" x2="848" y2="292" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<polyline points="480,342 628,342 628,225 640,225" fill="none" stroke="#415062" stroke-width="1.3" stroke-dasharray="2 4"/>
+<rect x="640" y="376" width="416" height="336" rx="8" fill="#ffffff" stroke="#3b4046" stroke-width="1.6" stroke-dasharray="2 4"/>
+<text x="652" y="396" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">DSA — 11 layers, 1 per 4 (V3.2 §2.1 Fig 2)</text>
+<rect x="654" y="416" width="388" height="55" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="441.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Lightning indexer</text>
+<text x="848" y="456.5" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">32 heads</text>
+<rect x="654" y="493" width="388" height="55" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="518.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Top-k</text>
+<text x="848" y="533.5" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">k=2048</text>
+<rect x="654" y="570" width="388" height="55" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.5"/>
+<text x="848" y="602" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">selected KV</text>
+<rect x="654" y="647" width="388" height="55" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="672.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">MLA core</text>
+<text x="848" y="687.5" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">latent KV</text>
+<line x1="848" y1="471" x2="848" y2="493" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="848" y1="548" x2="848" y2="570" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="848" y1="625" x2="848" y2="647" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<polyline points="480,366 628,366 628,544 640,544" fill="none" stroke="#415062" stroke-width="1.3" stroke-dasharray="2 4"/>
+<rect x="640" y="734" width="416" height="204" rx="8" fill="#ffffff" stroke="#3b4046" stroke-width="1.6" stroke-dasharray="2 4"/>
+<text x="652" y="754" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">MoE — layers 3–44</text>
+<rect x="788" y="776" width="120" height="34" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="797.5" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Router</text>
+<rect x="654" y="838" width="182" height="46" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="745" y="859" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Routed experts</text>
+<text x="745" y="874" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">288 · top-8</text>
+<rect x="860" y="838" width="182" height="46" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="951" y="859" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="middle">Shared expert</text>
+<text x="951" y="874" font-size="12" fill="#415062" font-weight="400" text-anchor="middle">1 always on</text>
+<circle cx="848" cy="922" r="10" fill="#ffffff" stroke="#16181c" stroke-width="1.5"/>
+<line x1="843" y1="922" x2="853" y2="922" stroke="#16181c" stroke-width="1.5"/>
+<line x1="848" y1="917" x2="848" y2="927" stroke="#16181c" stroke-width="1.5"/>
+<line x1="848" y1="810" x2="745" y2="838" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="848" y1="810" x2="951" y2="838" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="745" y1="884" x2="844" y2="916" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="951" y1="884" x2="852" y2="916" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<polyline points="480,472 628,472 628,836 640,836" fill="none" stroke="#415062" stroke-width="1.3" stroke-dasharray="2 4"/>
+<rect x="640" y="960" width="416" height="184" rx="8" fill="#ffffff" stroke="#3b4046" stroke-width="1.6" stroke-dasharray="2 4"/>
+<text x="652" y="980" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">mHC — 4 parallel streams (mHC Fig 1c)</text>
+<text x="654" y="1020.75" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S1</text>
+<line x1="678" y1="1016.75" x2="723.77" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="723.77" y="1004.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="757.17" y="1020.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
+<line x1="790.5699999999999" y1="1016.75" x2="823.6" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="823.6" y="1004.75" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
+<text x="857" y="1020.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
+<line x1="890.4" y1="1016.75" x2="925.1" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="925.1" y="1004.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="958.5" y="1020.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
+<line x1="991.9" y1="1016.75" x2="1020" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<text x="654" y="1054.25" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S2</text>
+<line x1="678" y1="1050.25" x2="723.77" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="723.77" y="1038.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="757.17" y="1054.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
+<line x1="790.5699999999999" y1="1050.25" x2="823.6" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="823.6" y="1038.25" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
+<text x="857" y="1054.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
+<line x1="890.4" y1="1050.25" x2="925.1" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="925.1" y="1038.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="958.5" y="1054.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
+<line x1="991.9" y1="1050.25" x2="1020" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<text x="654" y="1087.75" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S3</text>
+<line x1="678" y1="1083.75" x2="723.77" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="723.77" y="1071.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="757.17" y="1087.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
+<line x1="790.5699999999999" y1="1083.75" x2="823.6" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="823.6" y="1071.75" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
+<text x="857" y="1087.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
+<line x1="890.4" y1="1083.75" x2="925.1" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="925.1" y="1071.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="958.5" y="1087.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
+<line x1="991.9" y1="1083.75" x2="1020" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<text x="654" y="1121.25" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S4</text>
+<line x1="678" y1="1117.25" x2="723.77" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="723.77" y="1105.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="757.17" y="1121.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
+<line x1="790.5699999999999" y1="1117.25" x2="823.6" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="823.6" y="1105.25" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
+<text x="857" y="1121.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
+<line x1="890.4" y1="1117.25" x2="925.1" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="925.1" y="1105.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
+<text x="958.5" y="1121.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
+<line x1="991.9" y1="1117.25" x2="1020" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="1024" y="1002" width="10" height="130" rx="8" fill="#00796b" stroke="#00796b" stroke-width="1.2"/>
+<text x="1018" y="994" font-size="12" fill="#415062" font-weight="400" text-anchor="end">write merge</text>
+<polyline points="480,531 628,531 628,1052 640,1052" fill="none" stroke="#415062" stroke-width="1.3" stroke-dasharray="2 4"/>
+<text x="24" y="112" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">vocab 154,880</text>
+<line x1="107.2" y1="108" x2="178" y2="108" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
+<text x="24" y="176" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">hidden 4,096</text>
+<line x1="100.80000000000001" y1="172" x2="178" y2="172" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
+<text x="24" y="326" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">34 KDA · 11 MLA/DSA</text>
+<line x1="145.60000000000002" y1="322" x2="178" y2="322" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
+<text x="24" y="366" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">64 heads</text>
+<line x1="75.2" y1="362" x2="178" y2="362" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
+<text x="24" y="406" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">context 1M tokens</text>
+<line x1="132.8" y1="402" x2="178" y2="402" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
+<text x="24" y="496" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">first 3 dense, then 42 MoE</text>
+<line x1="190.4" y1="492" x2="178" y2="492" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
+<text x="24" y="880" font-size="12" fill="#415062" font-weight="700" text-anchor="start" font-family="monospace">READING NOTES</text>
+<text x="24" y="906" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">schedule K,K,K,D ×11 + K — 45 layers</text>
+<text x="24" y="930" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">DSA in 11 of 45 layers (1 per 4)</text>
+<text x="24" y="954" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">MoE layers 3–44: 288 routed top-8, 1 shared</text>
+<text x="24" y="978" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">mHC: 4 residual streams through every sublayer</text>
+<line x1="24" y1="1184" x2="58" y2="1184" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="64" y="1188" font-size="12" fill="#415062" font-weight="400" text-anchor="start">data flow</text>
+<line x1="154" y1="1184" x2="188" y2="1184" stroke="#415062" stroke-width="1.4" stroke-dasharray="2 4"/>
+<text x="194" y="1188" font-size="12" fill="#415062" font-weight="400" text-anchor="start">callout</text>
+<line x1="274" y1="1184" x2="308" y2="1184" stroke="#00796b" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="314" y="1188" font-size="12" fill="#415062" font-weight="400" text-anchor="start">residual stream ×4</text>
+<text x="1056" y="1188" font-size="12" fill="#415062" font-weight="400" text-anchor="end" font-family="monospace">A · paper-editorial</text>
 </svg>
