@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -73,9 +73,10 @@ test("key-region occupied ratio: figure holds the desktop first screen", async (
   expect(ratio).toBeGreaterThanOrEqual(0.2);
 });
 
-test("contact sheet: GLM page full-page and figure at the three review viewports", async ({ page }) => {
+test("contact sheet: composed before-review board + manifest with visual_review state", async ({ page }) => {
   const outDir = resolve(dirname(fileURLToPath(import.meta.url)), "contact");
   mkdirSync(outDir, { recursive: true });
+  const shots: string[] = [];
   for (const [width, height] of VIEWPORTS) {
     await page.setViewportSize({ width, height });
     await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/");
@@ -83,5 +84,52 @@ test("contact sheet: GLM page full-page and figure at the three review viewports
     await expect(figure).toBeVisible();
     await page.screenshot({ path: `${outDir}/glm-full-${width}x${height}.png`, fullPage: true });
     await figure.screenshot({ path: `${outDir}/glm-figure-${width}x${height}.png` });
+    shots.push(`glm-full-${width}x${height}.png`, `glm-figure-${width}x${height}.png`);
   }
+  // composed single board so a reviewer sees all six states at once
+  const cell = (f: string, w: number) =>
+    `<td style="vertical-align:top;padding:4px"><div style="font:600 12px sans-serif">${f}</div><img src="${f}" style="width:${w}px;display:block;border:1px solid #ccc"/></td>`;
+  const rows = VIEWPORTS.map(([w]) =>
+    `<tr><td style="font:700 13px sans-serif">${w}px</td>${cell(`glm-full-${w}x${VIEWPORTS.find((v) => v[0] === w)![1]}.png`, 420)}${cell(`glm-figure-${w}x${VIEWPORTS.find((v) => v[0] === w)![1]}.png`, 420)}</tr>`,
+  ).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:13px sans-serif;margin:12px;background:#fff}</style></head><body>
+<h3>GLM-5.3-Flash review board — full page | figure, at 1440/820/390 (visual_review: pending)</h3>
+<table><tr><th></th><th>full page</th><th>figure</th></tr>${rows}</table>
+</body></html>`;
+  const { createServer } = await import("node:http");
+  const { readFileSync } = await import("node:fs");
+  const srv = createServer((req, res) => {
+    const url = (req.url ?? "/").split("?")[0];
+    if (url === "/" || url === "") {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(html);
+      return;
+    }
+    try {
+      res.setHeader("content-type", "image/png");
+      res.end(readFileSync(`${outDir}${url}`));
+    } catch {
+      res.statusCode = 404;
+      res.end("nf");
+    }
+  });
+  await new Promise((r) => srv.listen(8947, "127.0.0.1", () => r(null)));
+  await page.setViewportSize({ width: 1000, height: 1400 });
+  await page.goto("http://127.0.0.1:8947/");
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${outDir}/contact-sheet.png`, fullPage: true });
+  srv.close();
+  writeFileSync(
+    `${outDir}/manifest.json`,
+    JSON.stringify(
+      {
+        generatedBy: "apps/web/e2e/gates.spec.ts",
+        shots,
+        composed: "contact-sheet.png",
+        visual_review: { status: "pending", reviewer: null, date: null },
+      },
+      null,
+      2,
+    ) + "\n",
+  );
 });

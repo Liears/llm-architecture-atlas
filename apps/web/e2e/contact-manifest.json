@@ -1,0 +1,18 @@
+{
+  "purpose": "Review state for the #35 contact sheet artifacts uploaded by CI (review-artifacts).",
+  "shots": [
+    "glm-full-1440x900.png",
+    "glm-figure-1440x900.png",
+    "glm-full-820x1180.png",
+    "glm-figure-820x1180.png",
+    "glm-full-390x844.png",
+    "glm-figure-390x844.png",
+    "contact-sheet.png"
+  ],
+  "visual_review": {
+    "status": "pending",
+    "reviewer": null,
+    "date": null,
+    "note": "A reviewer flips status to \"reviewed\" (or \"rejected\" with reasons) in a committed change; CI re-uploads shots every run, this manifest records whether a human looked at them."
+  }
+}
