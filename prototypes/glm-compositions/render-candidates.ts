@@ -1,36 +1,37 @@
 /**
- * GLM-5.3-Flash composition candidates, round 2 (issue #34 pre-work, plan §3.4).
+ * GLM-5.3-Flash composition candidates, round 3 (issue #34 pre-work, plan §3.4).
  *
- * Round-1 review rejected the first attempt: one geometry with three skins,
- * missing KDA inset, incomplete mHC paths, selected-KV as prose, weak frozen
- * assertions, sub-12px type, clipped captions. This rewrite provides:
+ * Round-2 review: mHC topology was wrong in all three candidates (P0), and the
+ * candidates hardcoded their semantic edges per composition instead of sharing
+ * one reviewed Diagram IR (P1). This rewrite therefore:
  *
- * - THREE GENUINE COMPOSITIONS (different canvases, spine directions, card
- *   placements and annotation grammars), not skins:
- *     A paper-editorial: portrait poster, vertical spine, right zoom column;
- *     B engineering-blueprint: landscape sheet, horizontal spine, 2×2 panel
- *       grid below, dimension lines and a drawing title block;
- *     C nested-containment: narrow portrait, mechanism cards nested INSIDE
- *       the decoder container, stream rails on the container's inner edge.
- * - COMPLETE mechanisms in every candidate: KDA (Q/K/V ShortConv → decay/
- *   state core → output gate), DSA (indexer → top-k → selected-KV → MLA
- *   core), MoE (router → fan-out → routed + shared → merge), mHC (4 streams:
- *   read split → pre-mixer → sublayer → post-mixer → write merge, rails
- *   crossing the sublayers).
- * - EVERY drawn number resolved through the evidence harness: publishable
- *   claims via claim(), config values via fact(), plus membership assertions
- *   for the K,K,K,D ×11 + K schedule and the dense/MoE partition. Literals
- *   like "first 3" or "1 of 4" are derived from the IR, never typed.
- * - Type floor: no key text below 12px; captions wrap inside their cards.
+ * - builds ONE DiagramScene (compound IR from merged #33: groups with parents
+ *   and boundary ports, per-stream port tags/roles, scene-level stream
+ *   declarations) and runs validateScene() on it before emitting anything —
+ *   a candidate cannot draw content the IR does not carry;
+ * - renders three compositions from that scene: only placement, canvas and
+ *   skin differ. Labels, details, group titles, flow edges and stream rails
+ *   all come from the scene;
+ * - draws mHC per Fig 1(c)/Eq.(3): n streams aggregate (H-pre) into ONE
+ *   sublayer pass, H-post writes back to n streams, H-res mixes the skip path;
+ * - keeps the evidence harness: every drawn number binds to a publishable
+ *   claim first and cross-checks the pinned config / IR.
  *
  * Run: npx tsx prototypes/glm-compositions/render-candidates.ts [--png]
- * Emits candidate-{a,b,c}.svg and, with --png, candidate-{a,b,c}.png.
- * These are prototype/review material, never the canonical artifact.
+ * Emits candidate-{a,b,c}.svg + comparison-board.svg (and .png with --png).
+ * Prototype/review material, never the canonical artifact.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateScene } from "../../packages/diagram-engine/src/validate.js";
+import {
+  DIAGRAM_ENGINE_VERSION,
+  type DiagramScene,
+  type SemanticGroup,
+  type SemanticNode,
+} from "../../packages/diagram-engine/src/types.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const modelDir = `${root}/models/zai-org/glm-5-3-flash/main`;
@@ -141,43 +142,160 @@ const commas = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g,
 const billions = (n: number): string => `${Math.round((n / 1e9) * 10) / 10}B`;
 const ctxLabel = `${Math.round(F.context / 1048576)}M`;
 
+// ---------------------------------------------------------------- the scene
+/** One reviewed Diagram IR for all candidates. Composition varies placement
+ *  and skin only; every label/edge/stream below is shared. */
+const SID = [1, 2, 3, 4];
+eq(SID.length, streams, "stream lane count");
+const streamNodePorts = (prefix: string, role: "ingress" | "egress") =>
+  SID.map((i) => ({ name: `${prefix}${i}`, side: "left" as const, stream: `s${i}`, role }));
+const operatorPorts = () => [
+  ...SID.map((i) => ({ name: `e${i}`, side: "left" as const, stream: `s${i}`, role: "ingress" as const })),
+  ...SID.map((i) => ({ name: `x${i}`, side: "right" as const, stream: `s${i}`, role: "egress" as const })),
+];
+
+const scene: DiagramScene = {
+  irVersion: DIAGRAM_ENGINE_VERSION,
+  view: "overview",
+  modelId: "zai-org/glm-5.3-flash",
+  nodes: [
+    { id: "tok", kind: "io", label: "Tokenized text" },
+    {
+      id: "embed", kind: "embedding", label: "Token embedding",
+      detail: `hidden ${commas(F.hidden)} · vocab ${commas(F.vocab)}`,
+      claims: [
+        { claimPath: "facts.hidden_size", label: `hidden ${commas(F.hidden)}` },
+        { claimPath: "facts.vocab_size", label: `vocab ${commas(F.vocab)}` },
+      ],
+    },
+    { id: "read", kind: "split", label: "stream read", ports: streamNodePorts("s", "egress") },
+    {
+      id: "slot-attn", kind: "attention", label: "attention slot",
+      detail: `K,K,K,D per ${D_PERIOD} layers`, ports: operatorPorts(),
+    },
+    {
+      id: "slot-ffn", kind: "ffn", label: "FFN slot",
+      detail: `${DENSE_COUNT} dense → ${MOE_COUNT} MoE`, ports: operatorPorts(),
+    },
+    { id: "write", kind: "merge", label: "stream write", ports: streamNodePorts("w", "ingress") },
+    { id: "norm", kind: "norm", label: "Final RMSNorm" },
+    { id: "head", kind: "output", label: "Linear output", detail: `vocab ${commas(F.vocab)}` },
+    { id: "kda-qkv", kind: "attention", label: "Q/K/V ShortConv", detail: `kernel ${convKernel}`, claimPath: "topology.attention.kda_short_conv_kernel" },
+    { id: "kda-core", kind: "attention", label: "KDA core", detail: "decay + recurrent state" },
+    { id: "kda-gate", kind: "attention", label: "output gate" },
+    { id: "dsa-idx", kind: "attention", label: "Lightning indexer", detail: `${indexerHeads} heads`, claimPath: "topology.attention.dsa_indexer_heads" },
+    { id: "dsa-topk", kind: "attention", label: "Top-k", detail: `k=${topk}`, claimPath: "topology.attention.dsa_topk" },
+    { id: "dsa-sel", kind: "attention", label: "selected KV" },
+    { id: "dsa-mla", kind: "attention", label: "MLA core", detail: "latent KV" },
+    { id: "moe-router", kind: "moe", label: "Router" },
+    { id: "moe-experts", kind: "moe", label: "Routed experts", detail: `${routed} · top-${activeRouted}`, claimPath: "topology.experts.routed_total" },
+    { id: "moe-shared", kind: "moe", label: "Shared expert", detail: `${shared} always on`, claimPath: "topology.experts.shared" },
+    { id: "moe-merge", kind: "merge", label: "sum merge (⊕)" },
+  ] as SemanticNode[],
+  edges: [
+    { id: "e-tok", from: "tok", to: "embed", kind: "flow" },
+    { id: "e-emb", from: "embed", to: "g-dec.enter", kind: "flow" },
+    { id: "e-sa", from: "g-dec.enter", to: "slot-attn", kind: "flow" },
+    { id: "e-attn-ffn", from: "slot-attn", to: "slot-ffn", kind: "flow" },
+    { id: "e-sf", from: "slot-ffn", to: "g-dec.exit", kind: "flow" },
+    { id: "e-norm", from: "g-dec.exit", to: "norm", kind: "flow" },
+    { id: "e-head", from: "norm", to: "head", kind: "flow" },
+    // mechanism chains (inside their groups)
+    { id: "e-kda1", from: "kda-qkv", to: "kda-core", kind: "flow" },
+    { id: "e-kda2", from: "kda-core", to: "kda-gate", kind: "flow" },
+    { id: "e-dsa1", from: "dsa-idx", to: "dsa-topk", kind: "flow" },
+    { id: "e-dsa2", from: "dsa-topk", to: "dsa-sel", kind: "flow" },
+    { id: "e-dsa3", from: "dsa-sel", to: "dsa-mla", kind: "flow" },
+    { id: "e-moe1", from: "moe-router", to: "moe-experts", kind: "flow" },
+    { id: "e-moe2", from: "moe-router", to: "moe-shared", kind: "flow" },
+    { id: "e-moe3", from: "moe-experts", to: "moe-merge", kind: "flow" },
+    { id: "e-moe4", from: "moe-shared", to: "moe-merge", kind: "flow" },
+    // residual streams: read → decoder stage chain → write; the two boundary
+    // crossings per stream are residual, the intra-unit hops are flow through
+    // the tagged operator ports
+    ...SID.flatMap((i) => [
+      { id: `r-read${i}`, from: `read.s${i}`, to: `g-dec.in${i}`, kind: "residual" as const, rail: "left" as const, label: `S${i}` },
+      { id: `t-sa${i}`, from: `g-dec.in${i}`, to: `slot-attn.e${i}`, kind: "flow" as const },
+      { id: `r-sf${i}`, from: `slot-attn.x${i}`, to: `slot-ffn.e${i}`, kind: "flow" as const },
+      { id: `u-sf${i}`, from: `slot-ffn.x${i}`, to: `g-dec.out${i}`, kind: "flow" as const },
+      { id: `r-write${i}`, from: `g-dec.out${i}`, to: `write.w${i}`, kind: "residual" as const, rail: "left" as const },
+    ]),
+  ],
+  groups: [
+    {
+      id: "g-dec", label: "decoder repeat unit", kind: "frame",
+      members: ["slot-attn", "slot-ffn"], repeat: { count: F.layers, label: `${F.layers} ×` },
+      claimPath: "facts.num_hidden_layers",
+      ports: [
+        { id: "enter", side: "top", inner: "slot-attn" },
+        { id: "exit", side: "bottom", inner: "slot-ffn" },
+        ...SID.map((i) => ({ id: `in${i}`, side: "left" as const, inner: `slot-attn.e${i}`, stream: `s${i}`, role: "ingress" as const })),
+        ...SID.map((i) => ({ id: `out${i}`, side: "right" as const, inner: `slot-ffn.x${i}`, stream: `s${i}`, role: "egress" as const })),
+      ],
+    },
+    {
+      id: "g-kda", label: `KDA — ${KDA_LAYERS.length} layers (Kimi Linear §4 Fig 3)`,
+      kind: "inset", members: ["kda-qkv", "kda-core", "kda-gate"], parent: "g-dec",
+      claimPath: "topology.attention_groups[0]",
+    },
+    {
+      id: "g-dsa", label: `DSA — ${MLA_LAYERS.length} layers, 1 per ${D_PERIOD} (V3.2 §2.1 Fig 2)`,
+      kind: "inset", members: ["dsa-idx", "dsa-topk", "dsa-sel", "dsa-mla"], parent: "g-dec",
+      claimPath: "topology.attention_groups[1]",
+    },
+    {
+      id: "g-moe", label: `MoE — layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}`,
+      kind: "inset", members: ["moe-router", "moe-experts", "moe-shared", "moe-merge"], parent: "g-dec",
+      claimPath: "topology.ffn_groups[1]",
+    },
+  ] as SemanticGroup[],
+  streams: SID.map((i) => ({
+    id: `s${i}`,
+    path: [
+      `read.s${i}`, `g-dec.in${i}`, `slot-attn.e${i}`, `slot-attn.x${i}`,
+      `slot-ffn.e${i}`, `slot-ffn.x${i}`, `g-dec.out${i}`, `write.w${i}`,
+    ],
+  })),
+  annotations: [
+    { claimPath: "topology.residual.scheme", target: "read", status: "reported" },
+    { claimPath: "topology.mtp.predict_layers", target: "head", status: "reported" },
+  ],
+  constraints: [{ type: "direction", value: "top-to-bottom" }],
+};
+const sceneErrors = validateScene(scene);
+if (sceneErrors.length > 0) throw new Error(`Diagram IR invalid:\n${sceneErrors.join("\n")}`);
+
+const N = (id: string): SemanticNode => scene.nodes.find((n) => n.id === id)!;
+const G = (id: string): SemanticGroup => scene.groups.find((g) => g.id === id)!;
+const groupEdges = (gid: string) => {
+  const members = new Set(G(gid).members);
+  return scene.edges.filter((e) => members.has(e.from) && members.has(e.to));
+};
+
 // ---------------------------------------------------------------- svg kit
 interface Skin {
-  bg: string;
-  grid?: string;
-  panel: string;
-  panelStroke: string;
-  box: string;
-  boxStroke: string;
-  mech: string;
-  mechStroke: string;
-  ink: string;
-  muted: string;
-  accent: string;
-  stream: string;
-  font: string;
-  mono: string;
-  rx: number;
-  dash: string;
+  bg: string; grid?: string; ink: string; muted: string; accent: string;
+  mech: string; mechStroke: string; stream: string; box: string; boxStroke: string;
+  panel: string; panelStroke: string; rx: number; dash: string; font: string; mono: string;
 }
-const SKINS: Record<"a" | "b" | "c", Skin> = {
+const SKINS: Record<string, Skin> = {
   a: {
-    bg: "#eef4fb", panel: "#ffffff", panelStroke: "#3b4046", box: "#ffffff", boxStroke: "#22262b",
-    mech: "#3f97e0", mechStroke: "#1d5e99", ink: "#16181c", muted: "#415062",
-    accent: "#1a73e8", stream: "#00796b", font: "Helvetica, Arial, sans-serif",
-    mono: "monospace", rx: 8, dash: "2 4",
+    bg: "#eef4fb", ink: "#101418", muted: "#5b6470", accent: "#1a73e8",
+    mech: "#3d94e6", mechStroke: "#1c5fa8", stream: "#0f8a80", box: "#ffffff", boxStroke: "#22262b",
+    panel: "#ffffff", panelStroke: "#3b4046", rx: 8, dash: "2 4",
+    font: "Helvetica, Arial, sans-serif", mono: "ui-monospace, monospace",
   },
   b: {
-    bg: "#0d1a2b", grid: "#15273c", panel: "#0d1a2b", panelStroke: "#67b7e8", box: "#0f2136", boxStroke: "#9fd4f5",
-    mech: "#123047", mechStroke: "#ffb454", ink: "#dceeff", muted: "#8fb4d4",
-    accent: "#ffb454", stream: "#7ee0c3", font: "Helvetica, Arial, sans-serif",
-    mono: "ui-monospace, Menlo, monospace", rx: 0, dash: "6 4",
+    bg: "#0d1a2b", grid: "#15273c", ink: "#e8f1fa", muted: "#8fa6bd", accent: "#f2a33c",
+    mech: "#12364a", mechStroke: "#e08c2f", stream: "#63d8b8", box: "#0f2136", boxStroke: "#9fd4f5",
+    panel: "#0d1a2b", panelStroke: "#67b7e8", rx: 2, dash: "5 4",
+    font: "Helvetica, Arial, sans-serif", mono: "ui-monospace, monospace",
   },
   c: {
-    bg: "#f5f7fa", panel: "#ffffff", panelStroke: "#b9c2d2", box: "#ffffff", boxStroke: "#172033",
-    mech: "#eaf3fd", mechStroke: "#1769e0", ink: "#172033", muted: "#5d6778",
-    accent: "#1769e0", stream: "#007a7a", font: "Helvetica, Arial, sans-serif",
-    mono: "ui-monospace, Menlo, monospace", rx: 12, dash: "5 4",
+    bg: "#f5f7fa", ink: "#172033", muted: "#66707f", accent: "#2563eb",
+    mech: "#dbeafe", mechStroke: "#2563eb", stream: "#0f766e", box: "#ffffff", boxStroke: "#172033",
+    panel: "#ffffff", panelStroke: "#b9c2d2", rx: 10, dash: "4 4",
+    font: "Helvetica, Arial, sans-serif", mono: "ui-monospace, monospace",
   },
 };
 
@@ -185,7 +303,7 @@ class Svg {
   out: string[] = [];
   constructor(readonly w: number, readonly h: number, readonly s: Skin) {
     this.out.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" font-family="${s.font}">`);
-    this.out.push(`<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${s.ink}"/></marker></defs>`);
+    this.out.push(`<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M,0 L10,5 L0,10 z" fill="${s.ink}"/></marker><marker id="art" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${s.stream}"/></marker></defs>`);
     this.rect(0, 0, w, h, s.bg, "none", 0);
     if (s.grid) {
       for (let x = 0; x <= w; x += 26) this.line(x, 0, x, h, s.grid, 0.6);
@@ -201,8 +319,8 @@ class Svg {
   text(x: number, y: number, t: string, o: { size?: number; fill?: string; weight?: number; anchor?: string; font?: string } = {}): void {
     this.out.push(`<text x="${x}" y="${y}" font-size="${o.size ?? 13}" fill="${o.fill ?? this.s.ink}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? "start"}"${o.font ? ` font-family="${o.font}"` : ""}>${this.esc(t)}</text>`);
   }
-  line(x1: number, y1: number, x2: number, y2: number, stroke: string, sw = 1.5, dash = "", arrow = false): void {
-    this.out.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}${arrow ? ` marker-end="url(#ar)"` : ""}/>`);
+  line(x1: number, y1: number, x2: number, y2: number, stroke: string, sw = 1.5, dash = "", arrow = false, teal = false): void {
+    this.out.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}${arrow ? ` marker-end="url(#${teal ? "art" : "ar"})"` : ""}/>`);
   }
   poly(pts: Array<[number, number]>, stroke: string, sw = 1.5, dash = ""): void {
     this.out.push(`<polyline points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${stroke}" stroke-width="${sw}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`);
@@ -214,6 +332,11 @@ class Svg {
     const ls = fit(label, o.size ?? 13);
     this.text(x + w / 2, y + (o.detail ? h / 2 - 2 : h / 2 + 4.5), label, { size: ls, weight: 600, anchor: "middle", fill: o.tfill });
     if (o.detail) this.text(x + w / 2, y + h / 2 + 13, o.detail, { size: fit(o.detail, 12), anchor: "middle", fill: o.dfill ?? this.s.muted });
+  }
+  /** scene node drawn as a box, labels/details straight from the IR */
+  irNode(id: string, x: number, y: number, w: number, h: number, o: { fill?: string; stroke?: string; size?: number; tfill?: string; dfill?: string } = {}): void {
+    const n = N(id);
+    this.node(x, y, w, h, n.label, { ...o, detail: n.detail });
   }
   plus(x: number, y: number): void {
     this.out.push(`<circle cx="${x}" cy="${y}" r="10" fill="${this.s.box}" stroke="${this.s.ink}" stroke-width="1.5"/>`);
@@ -230,116 +353,108 @@ class Svg {
   }
 }
 
-// ---------------------------------------------------------------- mechanisms
-type Dir = "lr" | "tb";
-interface MechCtx {
-  svg: Svg;
-  dir: Dir;
-  /** lr slot height cap override (default 96) */
-  cap?: number;
+// ---------------------------------------------------------------- geometry
+interface R { x: number; y: number; w: number; h: number }
+type Side = "left" | "right" | "top" | "bottom";
+function anchor(r: R, side: Side, t = 0.5): [number, number] {
+  if (side === "left") return [r.x, r.y + r.h * t];
+  if (side === "right") return [r.x + r.w, r.y + r.h * t];
+  if (side === "top") return [r.x + r.w * t, r.y];
+  return [r.x + r.w * t, r.y + r.h];
 }
-interface R {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+function facing(a: R, b: R): [Side, Side] {
+  const dx = b.x + b.w / 2 - (a.x + a.w / 2);
+  const dy = b.y + b.h / 2 - (a.y + a.h / 2);
+  if (Math.abs(dy) > Math.abs(dx)) return dy > 0 ? ["bottom", "top"] : ["top", "bottom"];
+  return dx > 0 ? ["right", "left"] : ["left", "right"];
 }
-function slots(ctx: MechCtx, x: number, y: number, w: number, h: number, n: number, gap = 26): R[] {
-  const out: R[] = [];
-  if (ctx.dir === "lr") {
-    const hh = Math.min(h, ctx.cap ?? 96);
-    const oy = y + (h - hh) / 2;
-    const sw = (w - gap * (n - 1)) / n;
-    for (let i = 0; i < n; i++) out.push({ x: x + i * (sw + gap), y: oy, w: sw, h: hh });
+/** port anchor on a group rect: ports distributed along their declared side */
+function groupAnchor(g: SemanticGroup, gr: R, portId: string, map: (s: Side) => Side): [number, number] {
+  const p = g.ports!.find((x) => x.id === portId)!;
+  const side = map(p.side);
+  const same = g.ports!.filter((x) => map(x.side) === side);
+  const t = (same.findIndex((x) => x.id === portId) + 0.5) / same.length;
+  return anchor(gr, side, t);
+}
+function nodeAnchor(nr: R, other: [number, number]): [number, number] {
+  const c: [number, number] = [nr.x + nr.w / 2, nr.y + nr.h / 2];
+  const dx = other[0] - c[0];
+  const dy = other[1] - c[1];
+  if (Math.abs(dy) > Math.abs(dx)) return anchor(nr, dy > 0 ? "bottom" : "top");
+  return anchor(nr, dx > 0 ? "right" : "left");
+}
+
+/** draw one mechanism group's members + its IR edges inside rect r */
+function drawGroup(s: Svg, gid: string, r: R, dir: "lr" | "tb", opts: { mechFill?: (id: string) => boolean } = {}): Record<string, R> {
+  const g = G(gid);
+  const rects: Record<string, R> = {};
+  const mech = opts.mechFill ?? ((id: string) => ["kda-core", "dsa-sel"].includes(id));
+  if (gid === "g-moe") {
+    const rw = r.w * 0.34;
+    rects["moe-router"] = { x: r.x + r.w / 2 - rw / 2, y: r.y + 4, w: rw, h: 34 };
+    const ew = r.w / 2 - 12;
+    rects["moe-experts"] = { x: r.x, y: r.y + 62, w: ew, h: 46 };
+    rects["moe-shared"] = { x: r.x + r.w / 2 + 12, y: r.y + 62, w: ew, h: 46 };
+    rects["moe-merge"] = { x: r.x + r.w / 2 - 11, y: r.y + 132, w: 22, h: 22 };
   } else {
-    const sh = Math.max(52, (h - gap * (n - 1)) / n);
-    for (let i = 0; i < n; i++) out.push({ x, y: y + i * (sh + gap), w, h: sh });
+    const order = g.members;
+    const n = order.length;
+    if (dir === "lr") {
+      const gap = 26;
+      const hh = Math.min(r.h, 180);
+      const oy = r.y + (r.h - hh) / 2;
+      const sw = (r.w - gap * (n - 1)) / n;
+      order.forEach((id, i) => { rects[id] = { x: r.x + i * (sw + gap), y: oy, w: sw, h: hh }; });
+    } else {
+      const gap = 26;
+      const sh = Math.max(48, (r.h - gap * (n - 1)) / n);
+      order.forEach((id, i) => { rects[id] = { x: r.x, y: r.y + i * (sh + gap), w: r.w, h: sh }; });
+    }
   }
-  return out;
-}
-function connect(ctx: MechCtx, a: R, b: R, label?: string): void {
-  const s = ctx.svg;
-  if (ctx.dir === "lr") {
-    s.line(a.x + a.w, a.y + a.h / 2, b.x, b.y + b.h / 2, s.s.ink, 1.5, "", true);
-    if (label) s.text((a.x + a.w + b.x) / 2, a.y + a.h / 2 - 6, label, { size: 12, anchor: "middle", fill: s.s.muted });
-  } else {
-    s.line(a.x + a.w / 2, a.y + a.h, b.x + b.w / 2, b.y, s.s.ink, 1.5, "", true);
-    if (label) s.text(a.x + a.w / 2 + 6, (a.y + a.h + b.y) / 2, label, { size: 12, fill: s.s.muted });
+  for (const id of g.members) {
+    const rc = rects[id]!;
+    if (id === "moe-merge") {
+      s.plus(rc.x + 11, rc.y + 11);
+    } else {
+      s.irNode(id, rc.x, rc.y, rc.w, rc.h, {
+        fill: mech(id) ? s.s.mech : s.s.box,
+        stroke: mech(id) ? s.s.mechStroke : s.s.boxStroke,
+        tfill: mech(id) && s.s.mech === "#3d94e6" ? "#ffffff" : undefined,
+        dfill: mech(id) && s.s.mech === "#3d94e6" ? "#eaf3fb" : undefined,
+        size: 12.5,
+      });
+    }
   }
-}
-
-function drawKda(ctx: MechCtx, x: number, y: number, w: number, h: number): void {
-  const s = ctx.svg;
-  const [qkv, core, gate] = slots(ctx, x, y, w, h, 3);
-  s.node(qkv.x, qkv.y, qkv.w, qkv.h, "Q/K/V ShortConv", { size: 12.5, detail: `kernel ${convKernel}` });
-  s.node(core.x, core.y, core.w, core.h, "KDA core", { fill: s.s.mech, stroke: s.s.mechStroke, detail: "decay + recurrent state", size: 12.5, dfill: "#eaf3fb" });
-  s.node(gate.x, gate.y, gate.w, gate.h, "output gate", { size: 12.5 });
-  connect(ctx, qkv, core);
-  connect(ctx, core, gate);
-}
-
-function drawDsa(ctx: MechCtx, x: number, y: number, w: number, h: number): void {
-  const s = ctx.svg;
-  const [idx, tk, sel, core] = slots(ctx, x, y, w, h, 4, 22);
-  s.node(idx.x, idx.y, idx.w, idx.h, "Lightning indexer", { detail: `${indexerHeads} heads`, size: 12.5 });
-  s.node(tk.x, tk.y, tk.w, tk.h, "Top-k", { detail: `k=${topk}`, size: 12.5 });
-  s.node(sel.x, sel.y, sel.w, sel.h, "selected KV", { size: 12.5, fill: s.s.mech, stroke: s.s.mechStroke, dfill: "#eaf3fb" });
-  s.node(core.x, core.y, core.w, core.h, "MLA core", { detail: "latent KV", size: 12.5 });
-  connect(ctx, idx, tk);
-  connect(ctx, tk, sel);
-  connect(ctx, sel, core);
-}
-
-function drawMoe(ctx: MechCtx, x: number, y: number, w: number, h: number): void {
-  const s = ctx.svg;
-  if (ctx.dir === "lr") {
-    const rw = w * 0.2;
-    const ew = w * 0.28;
-    const router = { x, y: y + h / 2 - 20, w: rw, h: 40 };
-    const experts = { x: x + rw + 44, y, w: ew, h: h / 2 - 8 };
-    const sharedB = { x: x + rw + 44, y: y + h / 2 + 8, w: ew, h: h / 2 - 8 };
-    const mx = x + rw + ew + 88;
-    s.node(router.x, router.y, router.w, router.h, "Router", { size: 12.5 });
-    s.node(experts.x, experts.y, experts.w, experts.h, "Routed experts", { detail: `${routed} · top-${activeRouted}`, size: 12.5 });
-    s.node(sharedB.x, sharedB.y, sharedB.w, sharedB.h, "Shared expert", { detail: `${shared} always on`, size: 12.5 });
-    s.plus(mx + 10, y + h / 2);
-    s.line(router.x + router.w, router.y + router.h / 2, experts.x, experts.y + experts.h / 2, s.s.ink, 1.5, "", true);
-    s.line(router.x + router.w, router.y + router.h / 2, sharedB.x, sharedB.y + sharedB.h / 2, s.s.ink, 1.5, "", true);
-    s.line(experts.x + experts.w, experts.y + experts.h / 2, mx + 2, y + h / 2 - 4, s.s.ink, 1.5, "", true);
-    s.line(sharedB.x + sharedB.w, sharedB.y + sharedB.h / 2, mx + 2, y + h / 2 + 4, s.s.ink, 1.5, "", true);
-  } else {
-    const y0 = y + Math.max(0, (h - 150) / 2);
-    const router = { x: x + w / 2 - 60, y: y0, w: 120, h: 34 };
-    const experts = { x, y: y0 + 62, w: w / 2 - 12, h: 46 };
-    const sharedB = { x: x + w / 2 + 12, y: y0 + 62, w: w / 2 - 12, h: 46 };
-    const my = y0 + 136;
-    s.node(router.x, router.y, router.w, router.h, "Router", { size: 12.5 });
-    s.node(experts.x, experts.y, experts.w, experts.h, "Routed experts", { detail: `${routed} · top-${activeRouted}`, size: 12.5 });
-    s.node(sharedB.x, sharedB.y, sharedB.w, sharedB.h, "Shared expert", { detail: `${shared} always on`, size: 12.5 });
-    s.plus(x + w / 2, my + 10);
-    s.line(router.x + router.w / 2, router.y + router.h, experts.x + experts.w / 2, experts.y, s.s.ink, 1.5, "", true);
-    s.line(router.x + router.w / 2, router.y + router.h, sharedB.x + sharedB.w / 2, sharedB.y, s.s.ink, 1.5, "", true);
-    s.line(experts.x + experts.w / 2, experts.y + experts.h, x + w / 2 - 4, my + 4, s.s.ink, 1.5, "", true);
-    s.line(sharedB.x + sharedB.w / 2, sharedB.y + sharedB.h, x + w / 2 + 4, my + 4, s.s.ink, 1.5, "", true);
+  for (const e of groupEdges(gid)) {
+    const a = rects[e.from]!;
+    const b = rects[e.to]!;
+    if (gid === "g-moe") {
+      // fixed fan anchors: router drops down, experts/shared drop into merge
+      const [fx, fy] = anchor(a, "bottom");
+      const [tx, ty] = anchor(b, "top");
+      s.line(fx, fy, tx, ty, s.s.ink, 1.4, "", true);
+    } else {
+      const [sa, sb] = facing(a, b);
+      s.line(...anchor(a, sa), ...anchor(b, sb), s.s.ink, 1.5, "", true);
+    }
   }
+  return rects;
 }
 
-/** mHC per Fig 1(c) / Eq.(3): the n residual streams aggregate (H-pre) into ONE
- *  sublayer pass F; H-post writes that single output back to n streams; the
- *  skip path mixes across streams through H-res (teal bars + trunk). */
-function drawMhc(ctx: MechCtx, x: number, y: number, w: number, h: number): void {
-  const s = ctx.svg;
-  const laneY = (i: number): number => y + 8 + (h - 34) * ((i + 0.5) / streams);
-  const midY = y + h / 2 - 8;
-  const lbX = x + 22;   // H-res bar, input side
-  const rbX = x + w - 22; // H-res bar, output side
-  const trunkY = y + h - 8;
-  const zone = w - 76;
+/** mHC card from the scene's stream declarations: n streams aggregate into one
+ *  sublayer pass and write back; H-res mixes the skip path (Fig 1c / Eq 3). */
+function drawStreamCard(s: Svg, r: R): void {
+  const laneY = (i: number): number => r.y + 8 + (r.h - 34) * ((i + 0.5) / streams);
+  const midY = r.y + r.h / 2 - 8;
+  const lbX = r.x + 22;
+  const rbX = r.x + r.w - 22;
+  const trunkY = r.y + r.h - 8;
+  const zone = r.w - 76;
   const zoff = lbX + 16 + Math.max(0, (zone - 304) / 2);
-  s.rect(lbX - 4, y + 4, 8, h - 20, s.s.stream, s.s.stream, 1);
-  s.rect(rbX - 4, y + 4, 8, h - 20, s.s.stream, s.s.stream, 1);
+  s.rect(lbX - 4, r.y + 4, 8, r.h - 20, s.s.stream, s.s.stream, 1);
+  s.rect(rbX - 4, r.y + 4, 8, r.h - 20, s.s.stream, s.s.stream, 1);
   s.line(lbX, trunkY - 4, lbX, trunkY, s.s.stream, 1.4);
-  s.line(lbX, trunkY, rbX, trunkY, s.s.stream, 1.4, "", true);
+  s.line(lbX, trunkY, rbX, trunkY, s.s.stream, 1.4, "", true, true);
   s.line(rbX, trunkY, rbX, trunkY - 4, s.s.stream, 1.4);
   s.text(lbX + 8, trunkY - 3, "H-res skip mix across streams", { size: 10.5, fill: s.s.stream });
   const pre = { x: zoff, y: midY - 17, w: 88, h: 34 };
@@ -352,11 +467,11 @@ function drawMhc(ctx: MechCtx, x: number, y: number, w: number, h: number): void
   s.line(sub.x + sub.w, midY, post.x, midY, s.s.ink, 1.5, "", true);
   for (let i = 0; i < streams; i++) {
     const ly = laneY(i);
-    s.text(x + 4, ly - 6, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream });
-    s.line(x + 4, ly, lbX - 4, ly, s.s.stream, 1.3);
-    s.line(lbX + 4, ly, pre.x, pre.y + pre.h * ((i + 0.5) / streams), s.s.stream, 1.2, "", true);
-    s.line(post.x + post.w, post.y + post.h * ((i + 0.5) / streams), rbX - 4, ly, s.s.stream, 1.2, "", true);
-    s.line(rbX + 4, ly, x + w - 4, ly, s.s.stream, 1.3, "", true);
+    s.text(r.x + 4, ly - 6, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream });
+    s.line(r.x + 4, ly, lbX - 4, ly, s.s.stream, 1.3);
+    s.line(lbX + 4, ly, pre.x, pre.y + pre.h * ((i + 0.5) / streams), s.s.stream, 1.2, "", true, true);
+    s.line(post.x + post.w, post.y + post.h * ((i + 0.5) / streams), rbX - 4, ly, s.s.stream, 1.2, "", true, true);
+    s.line(rbX + 4, ly, r.x + r.w - 4, ly, s.s.stream, 1.3, "", true, true);
   }
 }
 
@@ -374,85 +489,88 @@ function legend(s: Svg, x: number, y: number): void {
   s.text(x + 40, y + 4, "data flow", { size: 12, fill: s.s.muted });
   s.line(x + 130, y, x + 164, y, s.s.muted, 1.4, s.s.dash);
   s.text(x + 170, y + 4, "callout", { size: 12, fill: s.s.muted });
-  s.line(x + 250, y, x + 284, y, s.s.stream, 1.6, "", true);
+  s.line(x + 250, y, x + 284, y, s.s.stream, 1.6, "", true, true);
   s.text(x + 290, y + 4, `residual stream ×${streams}`, { size: 12, fill: s.s.muted });
 }
 
+const OMISSION = "Text decoder shown; vision encoder and MTP head omitted";
+const SCHEDULE = `schedule K,K,K,D ×${UNITS} + K — ${F.layers} layers`;
+
 // ---------------------------------------------------------------- compositions
-/** A: portrait poster, vertical spine left-center, right zoom column */
+/** A: portrait poster, vertical spine, right zoom column */
 function compositionA(): string {
   const s = new Svg(1080, 1220, SKINS.a);
   s.text(24, 40, `GLM-5.3-Flash (${billions(F.total)}-A${billions(F.active)})`, { size: 26, weight: 700, fill: s.s.accent });
-  s.text(24, 62, "Text decoder shown; vision encoder and MTP head omitted", { size: 12.5, fill: s.s.muted });
+  s.text(24, 62, OMISSION, { size: 12.5, fill: s.s.muted });
   const cx = 330;
-  s.node(cx - 110, 96, 220, 34, "Tokenized text", {});
-  s.node(cx - 120, 156, 240, 46, "Token embedding", { detail: `hidden ${commas(F.hidden)} · vocab ${commas(F.vocab)}` });
-  s.line(cx, 130, cx, 156, s.s.ink, 1.5, "", true);
-  const contY = 236;
-  const contH = 470;
-  s.rect(cx - 150, contY, 300, contH, "#c8cdd3", "#3b4046", 1.8, 10);
-  s.rect(cx - 122, contY + 30, 244, contH - 60, s.s.mech, s.s.mechStroke, 1.6, 8);
-  s.text(cx - 158, contY + contH / 2, `${F.layers} ×`, { size: 15, weight: 700, fill: s.s.accent, anchor: "end" });
-  let by = contY + 44;
-  const inner = [
-    { label: "mHC mixer", mech: true, detail: "" },
-    { label: "attention slot", mech: false, detail: `K,K,K,D per ${D_PERIOD} layers` },
-    { label: "mHC mixer", mech: true, detail: "" },
-    { label: "FFN slot", mech: false, detail: `${DENSE_COUNT} dense → ${MOE_COUNT} MoE` },
-    { label: "mHC mixer", mech: true, detail: "" },
-  ];
-  inner.forEach((b, i) => {
-    s.node(cx - 100, by, 200, b.detail ? 44 : 30, b.label, {
-      fill: b.mech ? "#ffffff" : s.s.box,
-      stroke: b.mech ? s.s.accent : s.s.boxStroke,
-      detail: b.detail || undefined,
-      size: 12.5,
-    });
-    const hh = b.detail ? 44 : 30;
-    if (i < inner.length - 1) s.line(cx, by + hh, cx, by + hh + 22, s.s.ink, 1.5, "", true);
-    by += hh + 22;
-  });
+  const tok: R = { x: cx - 110, y: 96, w: 220, h: 34 };
+  const emb: R = { x: cx - 120, y: 156, w: 240, h: 46 };
+  const dec: R = { x: cx - 150, y: 236, w: 300, h: 470 };
+  const sa: R = { x: cx - 100, y: 332, w: 200, h: 44 };
+  const sf: R = { x: cx - 100, y: 450, w: 200, h: 44 };
+  const nrm: R = { x: cx - 100, y: 732, w: 200, h: 34 };
+  const hed: R = { x: cx - 120, y: 792, w: 240, h: 44 };
+  s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
+  s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
+  s.line(cx, tok.y + tok.h, cx, emb.y, s.s.ink, 1.5, "", true);
+  s.line(cx, emb.y + emb.h, cx, dec.y, s.s.ink, 1.5, "", true);
+  s.rect(dec.x, dec.y, dec.w, dec.h, "#c8cdd3", "#3b4046", 1.8, 10);
+  s.rect(dec.x + 28, dec.y + 30, dec.w - 56, dec.h - 60, s.s.mech, s.s.mechStroke, 1.6, 8);
+  s.text(dec.x - 8, dec.y + dec.h / 2, `${G("g-dec").repeat!.label}`, { size: 15, weight: 700, fill: s.s.accent, anchor: "end" });
+  s.irNode("slot-attn", sa.x, sa.y, sa.w, sa.h, { fill: "#ffffff", stroke: s.s.accent, tfill: "#101418", dfill: "#5b6470" });
+  s.irNode("slot-ffn", sf.x, sf.y, sf.w, sf.h, { fill: "#ffffff", stroke: s.s.accent, tfill: "#101418", dfill: "#5b6470" });
+  s.line(cx, sa.y + sa.h, cx, sf.y, s.s.ink, 1.5, "", true);
+  s.line(cx, dec.y + dec.h, cx, nrm.y, s.s.ink, 1.5, "", true);
+  s.irNode("norm", nrm.x, nrm.y, nrm.w, nrm.h);
+  s.line(cx, nrm.y + nrm.h, cx, hed.y, s.s.ink, 1.5, "", true);
+  s.irNode("head", hed.x, hed.y, hed.w, hed.h);
+  // residual rails from the stream declarations: read ticks left, write right
+  const gd = G("g-dec");
   for (let i = 0; i < streams; i++) {
-    const rx = cx - 138 + i * 6;
-    s.line(rx, contY + 40, rx, contY + contH - 40, s.s.stream, 1.3);
+    const [ix, iy] = groupAnchor(gd, dec, `in${i + 1}`, (x) => x);
+    const [ox, oy] = groupAnchor(gd, dec, `out${i + 1}`, (x) => x);
+    s.line(ix - 24, iy, ix - 6, iy, s.s.stream, 1.3, "", true, true);
+    s.text(ix - 30, iy + 4, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream, anchor: "end" });
+    s.line(ox + 6, oy, ox + 24, oy, s.s.stream, 1.3, "", true, true);
+    s.line(ix - 6, iy, ix - 6, dec.y + dec.h - 40, s.s.stream, 1.1);
+    s.line(ox + 6, oy, ox + 6, dec.y + dec.h - 40, s.s.stream, 1.1);
   }
-  let y = contY + contH + 26;
-  s.line(cx, contY + contH, cx, y, s.s.ink, 1.5, "", true);
-  s.node(cx - 100, y, 200, 34, "Final RMSNorm", {});
-  y += 60;
-  s.line(cx, y - 26, cx, y, s.s.ink, 1.5, "", true);
-  s.node(cx - 120, y, 240, 44, "Linear output", { detail: `vocab ${commas(F.vocab)}` });
-  const cards: Array<[string, (ctx: MechCtx, x: number, y: number, w: number, h: number) => void, Dir, number, number]> = [
-    [`KDA — ${KDA_LAYERS.length} layers (Kimi Linear §4 Fig 3)`, drawKda, "tb", 224, 342],
-    [`DSA — ${MLA_LAYERS.length} layers, 1 per ${D_PERIOD} (V3.2 §2.1 Fig 2)`, drawDsa, "tb", 302, 366],
-    [`MoE — layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}`, drawMoe, "tb", 170, 472],
-    [`mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`, drawMhc, "lr", 150, 531],
+  // zoom cards: one per mechanism group + the stream card
+  const cards: Array<[string, number, number]> = [
+    ["g-kda", 224, 342], ["g-dsa", 302, 366], ["g-moe", 170, 472],
   ];
   let cyv = 96;
   const cxx = 640;
   const cw = 416;
-  for (const [title, draw, dir, ch, anchorY] of cards) {
-    s.panel(cxx, cyv, cw, ch + 34, title);
-    draw({ svg: s, dir }, cxx + 14, cyv + 40, cw - 28, ch - 16);
+  const mids: number[] = [];
+  for (const [gid, ch, anchorY] of cards) {
+    s.panel(cxx, cyv, cw, ch + 34, G(gid).label);
+    drawGroup(s, gid, { x: cxx + 14, y: cyv + 40, w: cw - 28, h: ch - 16 }, gid === "g-moe" ? "tb" : "tb");
     const mid = cyv + (ch + 34) / 2;
+    mids.push(mid);
     s.poly([[cx + 150, anchorY], [cxx - 12, anchorY], [cxx - 12, mid], [cxx, mid]], s.s.muted, 1.3, s.s.dash);
     cyv += ch + 34 + 22;
   }
+  s.panel(cxx, cyv, cw, 184, `mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`);
+  drawStreamCard(s, { x: cxx + 14, y: cyv + 40, w: cw - 28, h: 134 });
+  const mhcMid = cyv + 109;
+  s.poly([[cx + 150, 531], [cxx - 12, 531], [cxx - 12, mhcMid], [cxx, mhcMid]], s.s.muted, 1.3, s.s.dash);
+  // margin leaders
   const leaders: Array<[string, number]> = [
     [`vocab ${commas(F.vocab)}`, 112],
     [`hidden ${commas(F.hidden)}`, 176],
-    [`${KDA_LAYERS.length} KDA · ${MLA_LAYERS.length} MLA/DSA`, contY + 90],
-    [`${F.heads} heads`, contY + 130],
-    [`context ${ctxLabel} tokens`, contY + 170],
-    [`first ${DENSE_COUNT} dense, then ${MOE_COUNT} MoE`, contY + 260],
+    [`${KDA_LAYERS.length} KDA · ${MLA_LAYERS.length} MLA/DSA`, dec.y + 90],
+    [`${F.heads} heads`, dec.y + 130],
+    [`context ${ctxLabel} tokens`, dec.y + 170],
+    [`first ${DENSE_COUNT} dense, then ${MOE_COUNT} MoE`, dec.y + 260],
   ];
   for (const [t, ty] of leaders) {
     s.text(24, ty, t, { size: 12.5, weight: 600 });
-    s.line(24 + t.length * 6.4, ty - 4, cx - 152, ty - 4, s.s.muted, 1.2, s.s.dash);
+    s.line(24 + t.length * 6.4, ty - 4, dec.x - 2, ty - 4, s.s.muted, 1.2, s.s.dash);
   }
   s.text(24, 880, "READING NOTES", { size: 12, weight: 700, font: s.s.mono, fill: s.s.muted });
   const notes = [
-    `schedule K,K,K,D ×${UNITS} + K — ${F.layers} layers`,
+    SCHEDULE,
     `DSA in ${MLA_LAYERS.length} of ${F.layers} layers (1 per ${D_PERIOD})`,
     `MoE layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}: ${routed} routed top-${activeRouted}, ${shared} shared`,
     `mHC: ${streams} streams aggregate into one sublayer pass (Fig 1c Eq 3)`,
@@ -463,40 +581,61 @@ function compositionA(): string {
   return s.end();
 }
 
-/** B: landscape sheet, horizontal spine on top, 2×2 mechanism panels below */
+/** B: landscape sheet, horizontal spine, 2×2 panels, title block */
 function compositionB(): string {
   const s = new Svg(1560, 950, SKINS.b);
   s.text(28, 40, `GLM-5.3-Flash (${billions(F.total)}-A${billions(F.active)}) — ENGINEERING SHEET`, { size: 22, weight: 700, font: s.s.mono });
-  s.text(28, 62, "Text decoder shown; vision encoder and MTP head omitted", { size: 12.5, fill: s.s.muted });
+  s.text(28, 62, OMISSION, { size: 12.5, fill: s.s.muted });
   const sy = 96;
-  const spineX = [40, 250, 470, 900, 1130];
-  s.node(spineX[0], sy, 180, 40, "Tokenized text", {});
-  s.node(spineX[1], sy, 190, 40, "Token embedding", { detail: `hidden ${commas(F.hidden)}` });
-  s.rect(spineX[2], sy - 18, 400, 76, "none", s.s.panelStroke, 1.8, 0);
-  s.text(spineX[2] + 10, sy - 4, `DECODER ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 12.5, weight: 700, font: s.s.mono });
-  s.node(spineX[2] + 60, sy + 8, 130, 34, "attn slot", { size: 12.5 });
-  s.node(spineX[2] + 220, sy + 8, 130, 34, "FFN slot", { size: 12.5 });
-  s.line(spineX[2] + 190, sy + 25, spineX[2] + 220, sy + 25, s.s.ink, 1.5, "", true);
-  s.node(spineX[3], sy, 180, 40, "Final RMSNorm", {});
-  s.node(spineX[4], sy, 210, 40, "Linear output", { detail: `vocab ${commas(F.vocab)}` });
-  for (let i = 0; i < 4; i++) s.line(spineX[i] + (i === 1 ? 190 : i === 2 ? 400 : 180), sy + 20, spineX[i + 1], sy + 20, s.s.ink, 1.6, "", true);
-  s.line(spineX[2] + 200, sy + 66, spineX[2] + 200, sy + 96, s.s.accent, 1.3);
-  s.text(spineX[2] + 208, sy + 90, `${F.layers} layers (K,K,K,D ×${UNITS} + K) · ${streams} streams · ${F.heads} heads`, { size: 12, fill: s.s.accent, font: s.s.mono });
-  const panels: Array<[string, (ctx: MechCtx, x: number, y: number, w: number, h: number) => void, Dir]> = [
-    [`KDA — ${KDA_LAYERS.length} layers (Kimi Linear §4, Fig 3)`, drawKda, "lr"],
-    [`DSA — ${MLA_LAYERS.length} layers, 1 per ${D_PERIOD} (DeepSeek-V3.2 §2.1, Fig 2)`, drawDsa, "lr"],
-    [`MoE — ${routed} routed, top-${activeRouted}, ${shared} shared`, drawMoe, "tb"],
-    [`mHC — ${streams} streams, shared pass (Fig 1c Eq 3)`, drawMhc, "tb"],
-  ];
+  const tok: R = { x: 40, y: sy, w: 180, h: 40 };
+  const emb: R = { x: 250, y: sy, w: 190, h: 40 };
+  const dec: R = { x: 470, y: sy - 18, w: 400, h: 76 };
+  const sa: R = { x: 530, y: sy + 8, w: 130, h: 34 };
+  const sf: R = { x: 690, y: sy + 8, w: 130, h: 34 };
+  const nrm: R = { x: 900, y: sy, w: 180, h: 40 };
+  const hed: R = { x: 1130, y: sy, w: 210, h: 40 };
+  s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
+  s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
+  s.line(tok.x + tok.w, sy + 20, emb.x, sy + 20, s.s.ink, 1.6, "", true);
+  s.line(emb.x + emb.w, sy + 20, dec.x, sy + 20, s.s.ink, 1.6, "", true);
+  s.rect(dec.x, dec.y, dec.w, dec.h, "none", s.s.panelStroke, 1.8, 0);
+  s.text(dec.x + 10, dec.y + 14, `DECODER ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 12.5, weight: 700, font: s.s.mono });
+  s.irNode("slot-attn", sa.x, sa.y, sa.w, sa.h, { size: 12.5 });
+  s.irNode("slot-ffn", sf.x, sf.y, sf.w, sf.h, { size: 12.5 });
+  s.line(sa.x + sa.w, sy + 25, sf.x, sy + 25, s.s.ink, 1.5, "", true);
+  s.line(dec.x + dec.w, sy + 20, nrm.x, sy + 20, s.s.ink, 1.6, "", true);
+  s.irNode("norm", nrm.x, nrm.y, nrm.w, nrm.h);
+  s.line(nrm.x + nrm.w, sy + 20, hed.x, sy + 20, s.s.ink, 1.6, "", true);
+  s.irNode("head", hed.x, hed.y, hed.w, hed.h);
+  s.line(dec.x + 200, dec.y + dec.h, dec.x + 200, dec.y + dec.h + 30, s.s.accent, 1.3);
+  s.text(dec.x + 208, dec.y + dec.h + 24, `${F.layers} layers (K,K,K,D ×${UNITS} + K) · ${streams} streams · ${F.heads} heads`, { size: 12, fill: s.s.accent, font: s.s.mono });
+  // stream stubs: read above the decoder box, write below (rotated sides)
+  const gd = G("g-dec");
+  const rot = (x: Side): Side => (x === "top" ? "left" : x === "bottom" ? "right" : x === "left" ? "top" : "bottom");
+  for (let i = 0; i < streams; i++) {
+    const [ix, iy] = groupAnchor(gd, dec, `in${i + 1}`, rot);
+    const [ox, oy] = groupAnchor(gd, dec, `out${i + 1}`, rot);
+    s.line(ix, iy - 16, ix, iy - 3, s.s.stream, 1.3, "", true, true);
+    s.text(ix - 4, iy - 20, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream, anchor: "end" });
+    s.line(ox, oy + 3, ox, oy + 16, s.s.stream, 1.3, "", true, true);
+  }
+  const panels: Array<[string, "lr" | "tb"]> = [["g-kda", "lr"], ["g-dsa", "lr"], ["g-moe", "tb"], ["stream", "tb"]];
   const pw = 730;
   const ph = 310;
   const px = [40, 800];
   const py = [250, 584];
-  panels.forEach(([title, draw, dir], i) => {
+  panels.forEach(([gid, dir], i) => {
     const x = px[i % 2]!;
     const y = py[Math.floor(i / 2)]!;
-    s.panel(x, y, pw, ph, title);
-    draw({ svg: s, dir, cap: 180 }, x + 20, y + 44, pw - 40, ph - 76);
+    if (gid === "stream") {
+      s.panel(x, y, pw, ph, `mHC — ${streams} streams, shared pass (Fig 1c Eq 3)`);
+      drawStreamCard(s, { x: x + 20, y: y + 44, w: pw - 40, h: ph - 76 });
+    } else {
+      s.panel(x, y, pw, ph, G(gid).label);
+      drawGroup(s, gid, { x: x + 20, y: y + 44, w: pw - 40, h: ph - 76 }, dir, {
+        mechFill: (id) => ["kda-core", "dsa-sel"].includes(id),
+      });
+    }
   });
   titleBlock(s, 1210, 150, "B blueprint");
   legend(s, 40, 916);
@@ -504,77 +643,95 @@ function compositionB(): string {
   return s.end();
 }
 
-/** C: narrow portrait, mechanism cards nested inside the decoder container */
+/** C: narrow portrait, mechanism panels nested inside the decoder container,
+ *  slots in a left column, mechanisms in a right column */
 function compositionC(): string {
-  const s = new Svg(960, 1900, SKINS.c);
+  const s = new Svg(1060, 1620, SKINS.c);
   s.text(24, 40, `GLM-5.3-Flash (${billions(F.total)}-A${billions(F.active)})`, { size: 24, weight: 700 });
   s.text(24, 62, "nested-containment reading: mechanisms live inside the repeat unit", { size: 12.5, fill: s.s.muted });
-  s.text(24, 80, "Text decoder shown; vision encoder and MTP head omitted", { size: 12.5, fill: s.s.muted });
-  const cx = 480;
-  s.node(cx - 110, 92, 220, 34, "Tokenized text", {});
-  s.node(cx - 120, 152, 240, 44, "Token embedding", { detail: `hidden ${commas(F.hidden)} · vocab ${commas(F.vocab)}` });
-  s.line(cx, 126, cx, 152, s.s.ink, 1.5, "", true);
-  const contY = 230;
-  const contH = 1400;
-  s.rect(cx - 300, contY, 600, contH, "#ffffff", s.s.panelStroke, 1.8, 14);
-  s.text(cx - 288, contY + 22, `DECODER REPEAT UNIT ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 13.5, weight: 700 });
-  let y = contY + 40;
-  s.node(cx - 100, y, 200, 30, "mHC mixer (pre)", { fill: "#d5f0f0", stroke: s.s.stream, size: 12.5 });
-  s.line(cx, y + 30, cx, y + 52, s.s.ink, 1.5, "", true);
-  y += 52;
-  const kdaH = 250;
-  s.panel(cx - 270, y, 540, kdaH, `KDA block — ${KDA_LAYERS.length} layers`);
-  drawKda({ svg: s, dir: "tb" }, cx - 90, y + 34, 180, kdaH - 56);
-  s.line(cx, y + kdaH, cx, y + kdaH + 20, s.s.ink, 1.5, "", true);
-  y += kdaH + 20;
-  const dsaH = 320;
-  s.panel(cx - 270, y, 540, dsaH, `DSA block — ${MLA_LAYERS.length} layers, 1 per ${D_PERIOD}`);
-  drawDsa({ svg: s, dir: "tb" }, cx - 90, y + 34, 180, dsaH - 56);
-  s.line(cx, y + dsaH, cx, y + dsaH + 20, s.s.ink, 1.5, "", true);
-  y += dsaH + 20;
-  s.node(cx - 100, y, 200, 30, "mHC mixer (mid)", { fill: "#d5f0f0", stroke: s.s.stream, size: 12.5 });
-  s.line(cx, y + 30, cx, y + 52, s.s.ink, 1.5, "", true);
-  y += 52;
-  const moeH = 250;
-  s.panel(cx - 270, y, 540, moeH, `MoE block — layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}`);
-  drawMoe({ svg: s, dir: "tb" }, cx - 200, y + 36, 400, moeH - 64);
-  s.line(cx, y + moeH, cx, y + moeH + 20, s.s.ink, 1.5, "", true);
-  y += moeH + 20;
-  const mhcH = 260;
-  s.panel(cx - 270, y, 540, mhcH, `mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`);
-  drawMhc({ svg: s, dir: "tb" }, cx - 250, y + 36, 500, mhcH - 64);
-  s.line(cx, y + mhcH, cx, y + mhcH + 20, s.s.ink, 1.5, "", true);
-  y += mhcH + 20;
-  s.node(cx - 100, y, 200, 30, "mHC mixer (post)", { fill: "#d5f0f0", stroke: s.s.stream, size: 12.5 });
-  s.line(cx, 196, cx, contY, s.s.ink, 1.5, "", true);
-  s.line(cx, contY + contH, cx, contY + contH + 30, s.s.ink, 1.5, "", true);
-  s.node(cx - 110, contY + contH + 30, 220, 34, "Final RMSNorm", {});
-  s.line(cx, contY + contH + 64, cx, contY + contH + 90, s.s.ink, 1.5, "", true);
-  s.node(cx - 120, contY + contH + 90, 240, 44, "Linear output", { detail: `vocab ${commas(F.vocab)}` });
+  s.text(24, 80, OMISSION, { size: 12.5, fill: s.s.muted });
+  const cx = 530;
+  const sx = cx - 230; // spine column (slots + entry/exit)
+  const tok: R = { x: sx - 110, y: 100, w: 220, h: 34 };
+  const emb: R = { x: sx - 120, y: 160, w: 240, h: 44 };
+  const dec: R = { x: cx - 350, y: 240, w: 700, h: 1160 };
+  s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
+  s.line(sx, tok.y + tok.h, sx, emb.y, s.s.ink, 1.5, "", true);
+  s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
+  s.line(sx, emb.y + emb.h, sx, dec.y, s.s.ink, 1.5, "", true);
+  s.rect(dec.x, dec.y, dec.w, dec.h, "#ffffff", s.s.panelStroke, 1.8, 14);
+  s.text(dec.x + 12, dec.y + 22, `DECODER REPEAT UNIT ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 13.5, weight: 700 });
+  const sa: R = { x: cx - 330, y: dec.y + 50, w: 200, h: 44 };
+  const sf: R = { x: cx - 330, y: dec.y + 700, w: 200, h: 44 };
+  const kda: R = { x: cx - 110, y: dec.y + 40, w: 440, h: 240 };
+  const dsa: R = { x: cx - 110, y: dec.y + 300, w: 440, h: 300 };
+  const moe: R = { x: cx - 110, y: dec.y + 620, w: 440, h: 240 };
+  const mhc: R = { x: cx - 110, y: dec.y + 880, w: 440, h: 240 };
+  s.line(sx, dec.y, sx, sa.y, s.s.ink, 1.5, "", true);
+  s.irNode("slot-attn", sa.x, sa.y, sa.w, sa.h, { fill: s.s.mech, stroke: s.s.mechStroke });
+  s.irNode("slot-ffn", sf.x, sf.y, sf.w, sf.h, { fill: s.s.mech, stroke: s.s.mechStroke });
+  s.line(sx, sa.y + sa.h, sx, sf.y, s.s.ink, 1.5, "", true);
+  s.panel(kda.x, kda.y, kda.w, kda.h, G("g-kda").label);
+  drawGroup(s, "g-kda", { x: kda.x + 30, y: kda.y + 40, w: kda.w - 60, h: kda.h - 60 }, "tb");
+  s.panel(dsa.x, dsa.y, dsa.w, dsa.h, G("g-dsa").label);
+  drawGroup(s, "g-dsa", { x: dsa.x + 60, y: dsa.y + 40, w: dsa.w - 120, h: dsa.h - 60 }, "tb");
+  s.panel(moe.x, moe.y, moe.w, moe.h, G("g-moe").label);
+  drawGroup(s, "g-moe", { x: moe.x + 50, y: moe.y + 40, w: moe.w - 100, h: moe.h - 60 }, "tb");
+  s.panel(mhc.x, mhc.y, mhc.w, mhc.h, `mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`);
+  drawStreamCard(s, { x: mhc.x + 20, y: mhc.y + 36, w: mhc.w - 40, h: mhc.h - 60 });
+  // realization links: slot → the mechanisms that fill it (partition, dashed)
+  s.line(sa.x + sa.w, sa.y + sa.h / 2, kda.x, sa.y + sa.h / 2, s.s.muted, 1.2, s.s.dash);
+  s.text(sa.x + sa.w + 6, sa.y + sa.h / 2 + 14, `${KDA_LAYERS.length} of ${F.layers} layers`, { size: 11.5, fill: s.s.muted });
+  s.poly([[sa.x + sa.w, sa.y + sa.h / 2 + 8], [cx - 120, sa.y + sa.h / 2 + 8], [cx - 120, dsa.y + 50], [dsa.x, dsa.y + 50]], s.s.muted, 1.2, s.s.dash);
+  s.text(cx - 126, dsa.y + 54, `${MLA_LAYERS.length} layers, 1 per ${D_PERIOD}`, { size: 11.5, fill: s.s.muted, anchor: "end" });
+  s.line(sf.x + sf.w, sf.y + sf.h / 2, moe.x, sf.y + sf.h / 2, s.s.muted, 1.2, s.s.dash);
+  s.text(sf.x + sf.w + 6, sf.y + sf.h / 2 + 14, `layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}`, { size: 11.5, fill: s.s.muted });
+  s.line(sx, sf.y + sf.h, sx, dec.y + dec.h, s.s.ink, 1.5, "", true);
+  // residual rails: ticks outside, bundle inside the container edges
+  const gd = G("g-dec");
+  const iys: number[] = [];
+  const oys: number[] = [];
+  for (let i = 0; i < streams; i++) {
+    const [, iy] = groupAnchor(gd, dec, `in${i + 1}`, (x) => x);
+    const [, oy] = groupAnchor(gd, dec, `out${i + 1}`, (x) => x);
+    iys.push(iy);
+    oys.push(oy);
+    s.line(dec.x - 26, iy, dec.x - 4, iy, s.s.stream, 1.3, "", true, true);
+    s.text(dec.x - 32, iy + 4, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream, anchor: "end" });
+    s.line(dec.x + dec.w + 4, oy, dec.x + dec.w + 26, oy, s.s.stream, 1.3, "", true, true);
+  }
+  s.line(dec.x + 10, iys[0]!, dec.x + 10, iys[streams - 1]!, s.s.stream, 1.1);
+  s.line(dec.x + dec.w - 10, oys[0]!, dec.x + dec.w - 10, oys[streams - 1]!, s.s.stream, 1.1);
+  s.line(sx, dec.y + dec.h, sx, dec.y + dec.h + 30, s.s.ink, 1.5, "", true);
+  s.irNode("norm", sx - 110, dec.y + dec.h + 30, 220, 34);
+  s.line(sx, dec.y + dec.h + 64, sx, dec.y + dec.h + 90, s.s.ink, 1.5, "", true);
+  s.irNode("head", sx - 120, dec.y + dec.h + 90, 240, 44);
+  // margin notes both sides
   const notes: Array<[string, number, "l" | "r"]> = [
-    [`${KDA_LAYERS.length} KDA layers`, contY + 120, "l"],
-    [`${MLA_LAYERS.length} MLA/DSA layers`, contY + 420, "r"],
-    [`${F.heads} heads`, contY + 460, "l"],
-    [`context ${ctxLabel} tokens`, contY + 500, "r"],
-    [`first ${DENSE_COUNT} dense`, contY + 760, "l"],
-    [`then ${MOE_COUNT} MoE`, contY + 800, "r"],
-    [`${routed} routed · top-${activeRouted}`, contY + 840, "l"],
-    [`${streams} residual streams`, contY + 1180, "l"],
+    [`${KDA_LAYERS.length} KDA layers`, kda.y + 60, "l"],
+    [`${F.heads} heads`, dsa.y + 100, "l"],
+    [`first ${DENSE_COUNT} dense`, moe.y - 20, "l"],
+    [`${routed} routed · top-${activeRouted}`, moe.y + 40, "l"],
+    [`${streams} residual streams`, mhc.y + 120, "l"],
+    [`${MLA_LAYERS.length} MLA/DSA layers`, dsa.y + 60, "r"],
+    [`context ${ctxLabel} tokens`, dsa.y + 140, "r"],
+    [`then ${MOE_COUNT} MoE`, moe.y + 100, "r"],
   ];
   for (const [t, ty, side] of notes) {
     if (side === "l") {
-      s.text(24, ty, t, { size: 12.5, weight: 600 });
-      s.line(24 + t.length * 6.4, ty - 4, cx - 302, ty - 4, s.s.muted, 1.2, s.s.dash);
+      s.text(24, ty, t, { size: 11.5, weight: 600 });
+      s.line(24 + t.length * 6.0 + 6, ty - 4, dec.x - 40, ty - 4, s.s.muted, 1.2, s.s.dash);
     } else {
-      s.line(cx + 302, ty - 4, 786, ty - 4, s.s.muted, 1.2, s.s.dash);
-      s.text(790, ty, t, { size: 12.5, weight: 600 });
+      s.text(1036, ty, t, { size: 11.5, weight: 600, anchor: "end" });
+      s.line(dec.x + dec.w + 40, ty - 4, 1036 - t.length * 6.0 - 6, ty - 4, s.s.muted, 1.2, s.s.dash);
     }
   }
-  legend(s, 24, 1856);
-  s.text(936, 1860, "C · nested-containment", { size: 12, fill: s.s.muted, anchor: "end", font: s.s.mono });
+  legend(s, 24, 1560);
+  s.text(1036, 1564, "C · nested-containment", { size: 12, fill: s.s.muted, anchor: "end", font: s.s.mono });
   return s.end();
 }
 
+// ---------------------------------------------------------------- emit
 const outDir = dirname(fileURLToPath(import.meta.url));
 const svgs: Record<string, string> = { a: compositionA(), b: compositionB(), c: compositionC() };
 for (const [k, svg] of Object.entries(svgs)) {
@@ -582,9 +739,9 @@ for (const [k, svg] of Object.entries(svgs)) {
   console.log(`wrote candidate-${k}.svg`);
 }
 
-/** comparison board: the three candidates at a common scale with their rubric totals */
+/** comparison board: the three candidates at a common scale with rubric totals */
 function compositionBoard(): string {
-  const s = new Svg(1635, 1480, SKINS.c);
+  const s = new Svg(1700, 1480, SKINS.c);
   s.text(24, 34, "GLM-5.3-Flash — composition candidates (scoring: rubric.md)", { size: 16, weight: 700 });
   const nest = (k: string, x: number, y: number, w: number, h: number, vb: string): void => {
     const innerBody = svgs[k]!.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
@@ -592,14 +749,14 @@ function compositionBoard(): string {
     s.rect(x, y, w, h, "none", "#b9c2d2", 1);
   };
   const sc = 0.62;
-  const aw = 1080 * sc, ah = 1220 * sc, bw = 1560 * sc, bh = 950 * sc, cw = 960 * sc, ch = 1900 * sc;
+  const aw = 1080 * sc, ah = 1220 * sc, bw = 1560 * sc, bh = 950 * sc, cw = 1060 * sc, ch = 1620 * sc;
   nest("a", 24, 56, aw, ah, "0 0 1080 1220");
   s.text(24, 56 + ah + 16, "A · paper-editorial — 49/55 · recommended", { size: 12.5, weight: 700, font: s.s.mono });
   nest("b", 24, 56 + ah + 34, bw, bh, "0 0 1560 950");
   s.text(24, 56 + ah + 34 + bh + 16, "B · engineering-blueprint — 42/55", { size: 12.5, weight: 700, font: s.s.mono });
   const cx0 = 24 + bw + 24;
-  nest("c", cx0, 56, cw, ch, "0 0 960 1900");
-  s.text(cx0, 56 + ch + 16, "C · nested-containment — 43/55 · eliminated (fidelity < 3)", { size: 12.5, weight: 700, font: s.s.mono });
+  nest("c", cx0, 56, cw, ch, "0 0 1060 1620");
+  s.text(cx0, 56 + ch + 16, "C · nested-containment — 49/55 · tie, loses layout tiebreak", { size: 12.5, weight: 700, font: s.s.mono });
   return s.end();
 }
 const board = compositionBoard();
@@ -613,7 +770,7 @@ async function renderPngs(): Promise<void> {
   const browser = await chromium.launch();
   for (const [k, svg] of Object.entries({ ...svgs, board })) {
     const name = k === "board" ? "comparison-board" : `candidate-${k}`;
-    const vp = k === "board" ? { width: 1700, height: 1560 } : { width: 1600, height: 1900 };
+    const vp = k === "board" ? { width: 1760, height: 1560 } : k === "c" ? { width: 1200, height: 1700 } : { width: 1600, height: 1900 };
     const page = await browser.newPage({ viewport: vp });
     await page.setContent(`<body style="margin:0;background:#fff">${svg}</body>`);
     await page.locator("svg").first().screenshot({ path: `${outDir}/${name}.png` });

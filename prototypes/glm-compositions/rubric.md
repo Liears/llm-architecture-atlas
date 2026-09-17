@@ -33,9 +33,18 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
 - Elimination rule: a candidate scoring <3 on criterion 1 (structural fidelity)
   is eliminated outright. No candidate triggers it at this round.
 - Consistency rule: the verdict order must equal the total-score order, and any
-  candidate named as fallback carries an explicit fix list. The rubric
+  candidate named as fallback carries an explicit fix list. Ties in totals are
+  broken by criterion 4 (layout quality, the most measured criterion), then
+  criterion 5. The rubric
   recommends; per plan §3.4 the reviewer (or the user) selects. The implementer
   does not get to pick their own winner.
+- Shared IR (round 3): the generator first builds ONE DiagramScene in the
+  compound IR of merged #33 (groups with parents and boundary ports, per-stream
+  port tags/roles, scene-level stream declarations) and runs `validateScene()`
+  on it; any IR error stops emit before any candidate is drawn. The three
+  compositions vary placement, canvas and skin only — labels, details, group
+  titles, flow edges and stream rails are read from the scene, so content
+  cannot drift between candidates.
 - Reproducibility: the generator has no randomness or timestamps; two runs emit
   byte-identical SVGs (checked by sha256). PNGs are playwright screenshots of
   those SVGs: pixel-stable in a fixed environment, but their byte hashes vary
@@ -51,30 +60,32 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
 
 | # | Criterion (weight) | A · paper-editorial | B · engineering-blueprint | C · nested-containment |
 |---|---|---|---|---|
-| 1 | Structural fidelity vs brief (×2) | 5 — every fact, the exact schedule, ⊕ merge, mHC aggregate→one pass→write-back with H-res skip mixing; semantics correct (slots, not serial mechanisms) | 5 — same content, slots correct | 2 — ELIMINATED: serial arrows between KDA/DSA/MoE blocks imply a per-layer sequence that does not exist (they are per-layer alternatives); elimination rule is fidelity <3 |
+| 1 | Structural fidelity vs brief (×2) | 5 — every fact, the exact schedule, ⊕ merge, mHC aggregate→one pass→write-back with H-res skip mixing; semantics correct (slots, not serial mechanisms) | 5 — same content, slots correct | 5 — round-3 redraw from the shared Diagram IR: realization is containment plus partition-labelled dashed links, no serial KDA→DSA→MoE edges remain |
 | 2 | Reading hierarchy (×2) | 5 — filled gray 45× container + filled blue unit block make the repeat unit immediate; gutter cards read as detail, not spine | 3 — spine + four same-depth panels; nesting only via dashed panel borders | 5 — true containment: mechanisms visibly live inside the repeat unit |
 | 3 | Line/role discrimination (×2) | 4 — solid flow / dotted callout / teal stream; flow and callout share a dark ink, separated by dash only | 5 — cyan flow, amber dashed callout, teal stream: hue-separated, the best line grammar of the three | 4 — ink flow / gray dashed callout / teal stream |
 | 4 | Layout quality (×2) | 5 — strongest figure/ground; no text overflow (shrink-to-fit floor 10px, nothing hits it); gutter and margin leaders orthogonal | 4 — panels keep ~55px dead padding around 180px boxes; grid adds noise behind 12–13px type | 4 — clean but 0.51:1 means one long scroll; mechanisms compared by scrolling, not side by side |
 | 5 | Legibility at size / responsive potential (×2) | 4 — at the 1150px embed the smallest type is 12px→12.8px effective (passes the ≥12px target); splits into spine state + card state at 390px, callout bus needs a reflow rule | 3 — at 1150px embed scale 0.74 puts 12px type at 8.8px effective (fails the target); dark-only reading, grid pointless at 390px | 4 — embed scale 1.20 keeps all type ≥14px effective; single column stacks trivially, but length hurts overview |
 | 6 | Fit to atlas token family (×1) | 3 — new editorial palette, site tokens would need to move toward it | 2 — dark blueprint only, no light variant | 5 — uses the site's existing pastel/ink family as-is |
-| | **Total /55** | **49** | **42** | **43 — eliminated (criterion 1 < 3)** |
+| | **Total /55** | **49** | **42** | **49** |
 
 ## Verdict
 
-Order follows the totals and the elimination rule: **A (49) recommended ·
-B (42) third · C (43) eliminated at criterion 1**.
+Totals: **A 49 · C 49 · B 42**. A and C tie; the tiebreak (criterion 4, layout
+quality) goes to A (5 vs 4: C's two-column nest reads cleanly but its 1.08:1
+embed scale and tall canvas cost density). Order after tiebreak:
+**A recommended · C alternate · B third**.
 
 - **Recommended: A.** Strongest reading hierarchy and figure/ground, correct
   slot and mHC semantics, passes the aspect (0.89:1) and effective-type
   targets, and matches the paper-figure expectation the Raschka gallery sets
-  without copying any of its layouts. Recommendation is provisional until the
-  candidates are regenerated from one shared Diagram IR (round-2 P1); A's
-  composition is the one the reviewer named as worth continuing.
-- **Eliminated: C** at criterion 1 (serial arrows imply a false per-layer
-  KDA→DSA→MoE sequence). C may re-enter in a later round only as a redraw from
-  the shared Diagram IR, where partition semantics replace the serial edges;
-  its nesting idea is still the best expression of containment if that redraw
-  lands.
+  without copying any of its layouts.
+- **Alternate: C.** Round 2 eliminated it (serial arrows implied a false
+  per-layer sequence); the round-3 redraw from the shared Diagram IR removed
+  that defect — realization is now containment plus partition-labelled dashed
+  links — so C re-enters at fidelity 5 and ties A. If the reviewer prefers
+  continuity with the site's token family and explicit containment, C is a
+  clean choice; its nesting is the most literal expression of "mechanisms live
+  inside the repeat unit".
 - **Third: B**, not eliminated. If selected it needs a light-skin variant and
   an effective-type remediation (larger type or a wider embed) before it can
   pass the #35 font gate.
