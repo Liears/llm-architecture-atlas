@@ -62,6 +62,7 @@ jobs:
           path: |
             apps/web/e2e/contact/
             tests/gates/*.failure.md
+            tests/gates/*.failure.svg
           if-no-files-found: ignore
           retention-days: 14
 

@@ -12,6 +12,19 @@ import type { ModelDocument } from "@atlas/architecture-ir";
 import type { PositionedScene } from "./positioned.js";
 import { runSceneGates, fontGates, HARD_GATES, type GateFinding } from "./gates.js";
 import { assertGlmStructure } from "./structural-assertions.js";
+import { compileOverviewScene } from "./compile.js";
+import { compileGlmTopologyScene } from "./glm-topology.js";
+
+/**
+ * Round-3 review: the specialized-compiler choice lived in three places
+ * (baseline test, gates test, export pipeline). One entry point here so a new
+ * model-specific compiler cannot be added to only one of them.
+ */
+export function compileForModel(arch: ModelDocument, evidence: Parameters<typeof compileOverviewScene>[1]): DiagramScene {
+  return arch.model.id === "zai-org/glm-5.3-flash"
+    ? compileGlmTopologyScene(arch, evidence)
+    : compileOverviewScene(arch, evidence);
+}
 
 export interface BaselineFinding extends GateFinding {
   /** issue that owns turning this red green */

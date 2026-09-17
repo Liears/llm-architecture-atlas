@@ -73,7 +73,7 @@ test("key-region occupied ratio: figure holds the desktop first screen", async (
   expect(ratio).toBeGreaterThanOrEqual(0.2);
 });
 
-test("contact sheet: composed before-review board + manifest with visual_review state", async ({ page }) => {
+test("contact sheet: composed current-state board + manifest inheriting committed visual_review state", async ({ page }) => {
   const outDir = resolve(dirname(fileURLToPath(import.meta.url)), "contact");
   mkdirSync(outDir, { recursive: true });
   const shots: string[] = [];
@@ -86,14 +86,30 @@ test("contact sheet: composed before-review board + manifest with visual_review 
     await figure.screenshot({ path: `${outDir}/glm-figure-${width}x${height}.png` });
     shots.push(`glm-full-${width}x${height}.png`, `glm-figure-${width}x${height}.png`);
   }
-  // composed single board so a reviewer sees all six states at once
+  // round-3 standards P1: the COMMITTED contact-manifest.json is the single
+  // source of truth for review state; e2e inherits it so a signed review
+  // propagates into the uploaded artifact instead of resetting to pending.
+  const { readFileSync: readFs } = await import("node:fs");
+  let reviewState: { status: string; reviewer: string | null; date: string | null } = {
+    status: "pending", reviewer: null, date: null,
+  };
+  try {
+    const committed = JSON.parse(readFs(resolve(dirname(fileURLToPath(import.meta.url)), "contact-manifest.json"), "utf8"));
+    if (committed?.visual_review) reviewState = committed.visual_review;
+  } catch {
+    // no committed manifest yet: pending is correct
+  }
+  const reviewLabel = reviewState.reviewer
+    ? `${reviewState.status} by ${reviewState.reviewer} ${reviewState.date ?? ""}`.trim()
+    : reviewState.status;
+  // composed single board so a reviewer sees all six current states at once
   const cell = (f: string, w: number) =>
     `<td style="vertical-align:top;padding:4px"><div style="font:600 12px sans-serif">${f}</div><img src="${f}" style="width:${w}px;display:block;border:1px solid #ccc"/></td>`;
   const rows = VIEWPORTS.map(([w]) =>
     `<tr><td style="font:700 13px sans-serif">${w}px</td>${cell(`glm-full-${w}x${VIEWPORTS.find((v) => v[0] === w)![1]}.png`, 420)}${cell(`glm-figure-${w}x${VIEWPORTS.find((v) => v[0] === w)![1]}.png`, 420)}</tr>`,
   ).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:13px sans-serif;margin:12px;background:#fff}</style></head><body>
-<h3>GLM-5.3-Flash review board — full page | figure, at 1440/820/390 (visual_review: pending)</h3>
+<h3>GLM-5.3-Flash review board — current full page | current figure, at 1440/820/390 (visual_review: ${reviewLabel})</h3>
 <table><tr><th></th><th>full page</th><th>figure</th></tr>${rows}</table>
 </body></html>`;
   const { createServer } = await import("node:http");
@@ -126,7 +142,7 @@ test("contact sheet: composed before-review board + manifest with visual_review 
         generatedBy: "apps/web/e2e/gates.spec.ts",
         shots,
         composed: "contact-sheet.png",
-        visual_review: { status: "pending", reviewer: null, date: null },
+        visual_review: reviewState,
       },
       null,
       2,

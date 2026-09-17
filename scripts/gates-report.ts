@@ -7,8 +7,7 @@
 
 import type { EvidenceFile, ModelDocument } from "../packages/architecture-ir/src/types.ts";
 import {
-  compileOverviewScene,
-  compileGlmTopologyScene,
+  compileForModel,
   layoutWithCorrection,
   hardFindings,
   composeBaselineFindings,
@@ -27,11 +26,8 @@ export interface GatesReport {
   positioned: CorrectionResult["positioned"];
 }
 
-export function compileFor(arch: ModelDocument, evidence: EvidenceFile) {
-  return arch.model.id === "zai-org/glm-5.3-flash"
-    ? compileGlmTopologyScene(arch, evidence)
-    : compileOverviewScene(arch, evidence);
-}
+/** re-exported for pipeline scripts; the choice lives in diagram-engine */
+export const compileFor = compileForModel;
 
 export function computeGatesReport(arch: ModelDocument, evidence: EvidenceFile): GatesReport {
   const scene = compileFor(arch, evidence);

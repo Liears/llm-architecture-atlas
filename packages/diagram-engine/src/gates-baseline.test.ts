@@ -12,10 +12,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
-import { compileOverviewScene } from "./compile.js";
-import { compileGlmTopologyScene } from "./glm-topology.js";
 import { layoutWithCorrection } from "./gates.js";
-import { hardFindings, composeBaselineFindings } from "./gates-report.js";
+import { hardFindings, composeBaselineFindings, compileForModel } from "./gates-report.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const gatesDir = `${root}/tests/gates`;
@@ -34,9 +32,7 @@ function inputsFor(modelId: string): { arch: ModelDocument; evidence: EvidenceFi
 
 function reportFor(modelId: string) {
   const { arch, evidence } = inputsFor(modelId);
-  const scene = modelId === "zai-org/glm-5.3-flash"
-    ? compileGlmTopologyScene(arch, evidence)
-    : compileOverviewScene(arch, evidence);
+  const scene = compileForModel(arch, evidence);
   const positioned = layoutWithCorrection(scene).positioned;
   return { hard: hardFindings(positioned), findings: composeBaselineFindings(scene, positioned, arch) };
 }

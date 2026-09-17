@@ -11,9 +11,8 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
-import { compileOverviewScene } from "./compile.js";
-import { compileGlmTopologyScene } from "./glm-topology.js";
 import { layoutScene } from "./layout.js";
+import { compileForModel } from "./gates-report.js";
 import { runSceneGates, geometryGates, fontGates, effectiveFontPx, layoutWithCorrection, HARD_GATES, type GateFinding } from "./gates.js";
 import { renderSvg, scanSvgSafety } from "../../renderer-svg/src/render.js";
 import { mhcStreamsScene, insetsScene } from "./fixtures.js";
@@ -30,9 +29,7 @@ function pipelineFor(modelId: string): PositionedScene {
   if (!existsSync(`${modelDir}/architecture.json`)) throw new Error(`missing IR for ${modelId}`);
   const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
   const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
-  const scene = modelId === "zai-org/glm-5.3-flash"
-    ? compileGlmTopologyScene(arch, evidence)
-    : compileOverviewScene(arch, evidence);
+  const scene = compileForModel(arch, evidence);
   return layoutScene(scene, { fontSize: 16 });
 }
 

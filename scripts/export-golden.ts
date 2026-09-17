@@ -66,7 +66,10 @@ for (const org of readdirSync(modelsRoot)) {
       ].join("\n");
       const failSlug = report.modelId.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
       writeFileSync(`${gatesDir}/${failSlug}.failure.md`, failure + "\n");
-      console.error(`[${arch.model.id}] hard gate failures (report written to tests/gates/${failSlug}.failure.md):`);
+      // round-3 spec P1: a gate failure must ship the RENDERED artifact too,
+      // not only the text report — CI uploads tests/gates/*.failure.svg
+      writeFileSync(`${gatesDir}/${failSlug}.failure.svg`, report.svg);
+      console.error(`[${arch.model.id}] hard gate failures (report + rendered SVG written to tests/gates/${failSlug}.failure.*):`);
       for (const f of report.hard) console.error(`  [${f.gate}] ${f.target}: ${f.message}`);
       process.exit(1);
     }
