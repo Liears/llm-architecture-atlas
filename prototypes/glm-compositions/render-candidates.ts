@@ -324,52 +324,39 @@ function drawMoe(ctx: MechCtx, x: number, y: number, w: number, h: number): void
   }
 }
 
-/** 4 complete streams: split → pre-mixer → sublayer → post-mixer → merge */
+/** mHC per Fig 1(c) / Eq.(3): the n residual streams aggregate (H-pre) into ONE
+ *  sublayer pass F; H-post writes that single output back to n streams; the
+ *  skip path mixes across streams through H-res (teal bars + trunk). */
 function drawMhc(ctx: MechCtx, x: number, y: number, w: number, h: number): void {
   const s = ctx.svg;
-  const laneH = h / streams;
+  const laneY = (i: number): number => y + 8 + (h - 34) * ((i + 0.5) / streams);
+  const midY = y + h / 2 - 8;
+  const lbX = x + 22;   // H-res bar, input side
+  const rbX = x + w - 22; // H-res bar, output side
+  const trunkY = y + h - 8;
+  const zone = w - 76;
+  const zoff = lbX + 16 + Math.max(0, (zone - 304) / 2);
+  s.rect(lbX - 4, y + 4, 8, h - 20, s.s.stream, s.s.stream, 1);
+  s.rect(rbX - 4, y + 4, 8, h - 20, s.s.stream, s.s.stream, 1);
+  s.line(lbX, trunkY - 4, lbX, trunkY, s.s.stream, 1.4);
+  s.line(lbX, trunkY, rbX, trunkY, s.s.stream, 1.4, "", true);
+  s.line(rbX, trunkY, rbX, trunkY - 4, s.s.stream, 1.4);
+  s.text(lbX + 8, trunkY - 3, "H-res skip mix across streams", { size: 10.5, fill: s.s.stream });
+  const pre = { x: zoff, y: midY - 17, w: 88, h: 34 };
+  const sub = { x: zoff + 104, y: midY - 17, w: 96, h: 34 };
+  const post = { x: zoff + 216, y: midY - 17, w: 88, h: 34 };
+  s.node(pre.x, pre.y, pre.w, pre.h, "H-pre (n→1)", { fill: s.s.mech, stroke: s.s.mechStroke, size: 11.5 });
+  s.node(sub.x, sub.y, sub.w, sub.h, "sublayer F", { size: 11.5 });
+  s.node(post.x, post.y, post.w, post.h, "H-post (1→n)", { fill: s.s.mech, stroke: s.s.mechStroke, size: 11.5 });
+  s.line(pre.x + pre.w, midY, sub.x, midY, s.s.ink, 1.5, "", true);
+  s.line(sub.x + sub.w, midY, post.x, midY, s.s.ink, 1.5, "", true);
   for (let i = 0; i < streams; i++) {
-    const ly = y + i * laneH;
-    if (ctx.dir === "lr") {
-      const cw = (w - 3 * 18) / 4;
-      const split = { x, y: ly + laneH / 2 - 12, w: cw * 0.5, h: 24 };
-      const pre = { x: x + cw * 0.62 + 18, y: ly + laneH / 2 - 12, w: cw * 0.8, h: 24 };
-      const sub = { x: x + cw * 1.6 + 36, y: ly + laneH / 2 - 12, w: cw * 0.8, h: 24 };
-      const post = { x: x + cw * 2.6 + 54, y: ly + laneH / 2 - 12, w: cw * 0.8, h: 24 };
-      s.text(split.x, split.y + 16, `S${i + 1}`, { size: 12, weight: 600, fill: s.s.stream });
-      s.line(split.x + 24, split.y + 12, pre.x, pre.y + 12, s.s.stream, 1.4, "", true);
-      s.rect(pre.x, pre.y, pre.w, pre.h, s.s.mech, s.s.mechStroke, 1.2);
-      s.text(pre.x + pre.w / 2, pre.y + 16, "pre-mix", { size: 12, anchor: "middle" });
-      s.line(pre.x + pre.w, pre.y + 12, sub.x, sub.y + 12, s.s.stream, 1.4, "", true);
-      s.rect(sub.x, sub.y, sub.w, sub.h, s.s.box, s.s.boxStroke, 1.2);
-      s.text(sub.x + sub.w / 2, sub.y + 16, "sublayer", { size: 12, anchor: "middle" });
-      s.line(sub.x + sub.w, sub.y + 12, post.x, post.y + 12, s.s.stream, 1.4, "", true);
-      s.rect(post.x, post.y, post.w, post.h, s.s.mech, s.s.mechStroke, 1.2);
-      s.text(post.x + post.w / 2, post.y + 16, "post-mix", { size: 12, anchor: "middle" });
-      s.line(post.x + post.w, post.y + 12, x + w - 22, post.y + 12, s.s.stream, 1.4, "", true);
-    } else {
-      const rail = x + 10 + i * 8;
-      s.line(rail, ly + 4, rail, ly + laneH - 4, s.s.stream, 1.4);
-      const pre = { x: x + 52, y: ly + laneH / 2 - 11, w: 78, h: 22 };
-      const sub = { x: x + 142, y: ly + laneH / 2 - 11, w: 78, h: 22 };
-      const post = { x: x + 232, y: ly + laneH / 2 - 11, w: 78, h: 22 };
-      s.line(rail, ly + laneH / 2, pre.x, pre.y + 11, s.s.stream, 1.4, "", true);
-      s.rect(pre.x, pre.y, pre.w, pre.h, s.s.mech, s.s.mechStroke, 1.2);
-      s.text(pre.x + pre.w / 2, pre.y + 15, "pre-mix", { size: 12, anchor: "middle" });
-      s.line(pre.x + pre.w, pre.y + 11, sub.x, sub.y + 11, s.s.stream, 1.4, "", true);
-      s.rect(sub.x, sub.y, sub.w, sub.h, s.s.box, s.s.boxStroke, 1.2);
-      s.text(sub.x + sub.w / 2, sub.y + 15, "sublayer", { size: 12, anchor: "middle" });
-      s.line(sub.x + sub.w, sub.y + 11, post.x, post.y + 11, s.s.stream, 1.4, "", true);
-      s.rect(post.x, post.y, post.w, post.h, s.s.mech, s.s.mechStroke, 1.2);
-      s.text(post.x + post.w / 2, post.y + 15, "post-mix", { size: 12, anchor: "middle" });
-      s.line(post.x + post.w, post.y + 11, x + w - 22, post.y + 11, s.s.stream, 1.4, "", true);
-    }
-  }
-  if (ctx.dir === "lr") {
-    s.rect(x + w - 18, y + 2, 10, h - 4, s.s.stream, s.s.stream, 1.2);
-    s.text(x + w - 24, y - 6, "write merge", { size: 12, fill: s.s.muted, anchor: "end" });
-  } else {
-    s.rect(x + w - 18, y + 2, 10, h - 4, s.s.stream, s.s.stream, 1.2);
+    const ly = laneY(i);
+    s.text(x + 4, ly - 6, `S${i + 1}`, { size: 10.5, weight: 600, fill: s.s.stream });
+    s.line(x + 4, ly, lbX - 4, ly, s.s.stream, 1.3);
+    s.line(lbX + 4, ly, pre.x, pre.y + pre.h * ((i + 0.5) / streams), s.s.stream, 1.2, "", true);
+    s.line(post.x + post.w, post.y + post.h * ((i + 0.5) / streams), rbX - 4, ly, s.s.stream, 1.2, "", true);
+    s.line(rbX + 4, ly, x + w - 4, ly, s.s.stream, 1.3, "", true);
   }
 }
 
@@ -439,7 +426,7 @@ function compositionA(): string {
     [`KDA — ${KDA_LAYERS.length} layers (Kimi Linear §4 Fig 3)`, drawKda, "tb", 224, 342],
     [`DSA — ${MLA_LAYERS.length} layers, 1 per ${D_PERIOD} (V3.2 §2.1 Fig 2)`, drawDsa, "tb", 302, 366],
     [`MoE — layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}`, drawMoe, "tb", 170, 472],
-    [`mHC — ${streams} parallel streams (mHC Fig 1c)`, drawMhc, "lr", 150, 531],
+    [`mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`, drawMhc, "lr", 150, 531],
   ];
   let cyv = 96;
   const cxx = 640;
@@ -468,7 +455,7 @@ function compositionA(): string {
     `schedule K,K,K,D ×${UNITS} + K — ${F.layers} layers`,
     `DSA in ${MLA_LAYERS.length} of ${F.layers} layers (1 per ${D_PERIOD})`,
     `MoE layers ${moeLayers[0]}–${moeLayers[moeLayers.length - 1]}: ${routed} routed top-${activeRouted}, ${shared} shared`,
-    `mHC: ${streams} residual streams through every sublayer`,
+    `mHC: ${streams} streams aggregate into one sublayer pass (Fig 1c Eq 3)`,
   ];
   notes.forEach((t, i) => s.text(24, 906 + i * 24, t, { size: 12.5 }));
   legend(s, 24, 1184);
@@ -479,7 +466,8 @@ function compositionA(): string {
 /** B: landscape sheet, horizontal spine on top, 2×2 mechanism panels below */
 function compositionB(): string {
   const s = new Svg(1560, 950, SKINS.b);
-  s.text(28, 40, "GLM-5.3-Flash (320B-A18B) — ENGINEERING SHEET", { size: 22, weight: 700, font: s.s.mono });
+  s.text(28, 40, `GLM-5.3-Flash (${billions(F.total)}-A${billions(F.active)}) — ENGINEERING SHEET`, { size: 22, weight: 700, font: s.s.mono });
+  s.text(28, 62, "Text decoder shown; vision encoder and MTP head omitted", { size: 12.5, fill: s.s.muted });
   const sy = 96;
   const spineX = [40, 250, 470, 900, 1130];
   s.node(spineX[0], sy, 180, 40, "Tokenized text", {});
@@ -493,12 +481,12 @@ function compositionB(): string {
   s.node(spineX[4], sy, 210, 40, "Linear output", { detail: `vocab ${commas(F.vocab)}` });
   for (let i = 0; i < 4; i++) s.line(spineX[i] + (i === 1 ? 190 : i === 2 ? 400 : 180), sy + 20, spineX[i + 1], sy + 20, s.s.ink, 1.6, "", true);
   s.line(spineX[2] + 200, sy + 66, spineX[2] + 200, sy + 96, s.s.accent, 1.3);
-  s.text(spineX[2] + 208, sy + 90, `${F.layers} layers · ${streams} stream rails · ${F.heads} heads`, { size: 12, fill: s.s.accent, font: s.s.mono });
+  s.text(spineX[2] + 208, sy + 90, `${F.layers} layers (K,K,K,D ×${UNITS} + K) · ${streams} streams · ${F.heads} heads`, { size: 12, fill: s.s.accent, font: s.s.mono });
   const panels: Array<[string, (ctx: MechCtx, x: number, y: number, w: number, h: number) => void, Dir]> = [
     [`KDA — ${KDA_LAYERS.length} layers (Kimi Linear §4, Fig 3)`, drawKda, "lr"],
     [`DSA — ${MLA_LAYERS.length} layers, 1 per ${D_PERIOD} (DeepSeek-V3.2 §2.1, Fig 2)`, drawDsa, "lr"],
     [`MoE — ${routed} routed, top-${activeRouted}, ${shared} shared`, drawMoe, "tb"],
-    [`mHC — ${streams} streams (mHC Fig 1c)`, drawMhc, "tb"],
+    [`mHC — ${streams} streams, shared pass (Fig 1c Eq 3)`, drawMhc, "tb"],
   ];
   const pw = 730;
   const ph = 310;
@@ -519,8 +507,9 @@ function compositionB(): string {
 /** C: narrow portrait, mechanism cards nested inside the decoder container */
 function compositionC(): string {
   const s = new Svg(960, 1900, SKINS.c);
-  s.text(24, 40, "GLM-5.3-Flash (320B-A18B)", { size: 24, weight: 700 });
+  s.text(24, 40, `GLM-5.3-Flash (${billions(F.total)}-A${billions(F.active)})`, { size: 24, weight: 700 });
   s.text(24, 62, "nested-containment reading: mechanisms live inside the repeat unit", { size: 12.5, fill: s.s.muted });
+  s.text(24, 80, "Text decoder shown; vision encoder and MTP head omitted", { size: 12.5, fill: s.s.muted });
   const cx = 480;
   s.node(cx - 110, 92, 220, 34, "Tokenized text", {});
   s.node(cx - 120, 152, 240, 44, "Token embedding", { detail: `hidden ${commas(F.hidden)} · vocab ${commas(F.vocab)}` });
@@ -528,7 +517,7 @@ function compositionC(): string {
   const contY = 230;
   const contH = 1400;
   s.rect(cx - 300, contY, 600, contH, "#ffffff", s.s.panelStroke, 1.8, 14);
-  s.text(cx - 288, contY + 22, `DECODER REPEAT UNIT ×${F.layers}`, { size: 13.5, weight: 700 });
+  s.text(cx - 288, contY + 22, `DECODER REPEAT UNIT ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 13.5, weight: 700 });
   let y = contY + 40;
   s.node(cx - 100, y, 200, 30, "mHC mixer (pre)", { fill: "#d5f0f0", stroke: s.s.stream, size: 12.5 });
   s.line(cx, y + 30, cx, y + 52, s.s.ink, 1.5, "", true);
@@ -552,7 +541,7 @@ function compositionC(): string {
   s.line(cx, y + moeH, cx, y + moeH + 20, s.s.ink, 1.5, "", true);
   y += moeH + 20;
   const mhcH = 260;
-  s.panel(cx - 270, y, 540, mhcH, `mHC — ${streams} streams through every sublayer`);
+  s.panel(cx - 270, y, 540, mhcH, `mHC — ${streams} streams, one shared sublayer pass (Fig 1c)`);
   drawMhc({ svg: s, dir: "tb" }, cx - 250, y + 36, 500, mhcH - 64);
   s.line(cx, y + mhcH, cx, y + mhcH + 20, s.s.ink, 1.5, "", true);
   y += mhcH + 20;
@@ -610,7 +599,7 @@ function compositionBoard(): string {
   s.text(24, 56 + ah + 34 + bh + 16, "B · engineering-blueprint — 42/55", { size: 12.5, weight: 700, font: s.s.mono });
   const cx0 = 24 + bw + 24;
   nest("c", cx0, 56, cw, ch, "0 0 960 1900");
-  s.text(cx0, 56 + ch + 16, "C · nested-containment — 47/55 · fallback", { size: 12.5, weight: 700, font: s.s.mono });
+  s.text(cx0, 56 + ch + 16, "C · nested-containment — 43/55 · eliminated (fidelity < 3)", { size: 12.5, weight: 700, font: s.s.mono });
   return s.end();
 }
 const board = compositionBoard();

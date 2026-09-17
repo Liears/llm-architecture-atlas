@@ -88,53 +88,41 @@
 <line x1="951" y1="884" x2="852" y2="916" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
 <polyline points="480,472 628,472 628,836 640,836" fill="none" stroke="#415062" stroke-width="1.3" stroke-dasharray="2 4"/>
 <rect x="640" y="960" width="416" height="184" rx="8" fill="#ffffff" stroke="#3b4046" stroke-width="1.6" stroke-dasharray="2 4"/>
-<text x="652" y="980" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">mHC — 4 parallel streams (mHC Fig 1c)</text>
-<text x="654" y="1020.75" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S1</text>
-<line x1="678" y1="1016.75" x2="723.77" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="723.77" y="1004.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="757.17" y="1020.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="790.5699999999999" y1="1016.75" x2="823.6" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="823.6" y="1004.75" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
-<text x="857" y="1020.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="890.4" y1="1016.75" x2="925.1" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="925.1" y="1004.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="958.5" y="1020.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="991.9" y1="1016.75" x2="1020" y2="1016.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<text x="654" y="1054.25" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S2</text>
-<line x1="678" y1="1050.25" x2="723.77" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="723.77" y="1038.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="757.17" y="1054.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="790.5699999999999" y1="1050.25" x2="823.6" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="823.6" y="1038.25" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
-<text x="857" y="1054.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="890.4" y1="1050.25" x2="925.1" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="925.1" y="1038.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="958.5" y="1054.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="991.9" y1="1050.25" x2="1020" y2="1050.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<text x="654" y="1087.75" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S3</text>
-<line x1="678" y1="1083.75" x2="723.77" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="723.77" y="1071.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="757.17" y="1087.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="790.5699999999999" y1="1083.75" x2="823.6" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="823.6" y="1071.75" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
-<text x="857" y="1087.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="890.4" y1="1083.75" x2="925.1" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="925.1" y="1071.75" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="958.5" y="1087.75" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="991.9" y1="1083.75" x2="1020" y2="1083.75" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<text x="654" y="1121.25" font-size="12" fill="#00796b" font-weight="600" text-anchor="start">S4</text>
-<line x1="678" y1="1117.25" x2="723.77" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="723.77" y="1105.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="757.17" y="1121.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="790.5699999999999" y1="1117.25" x2="823.6" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="823.6" y="1105.25" width="66.8" height="24" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.2"/>
-<text x="857" y="1121.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="890.4" y1="1117.25" x2="925.1" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="925.1" y="1105.25" width="66.8" height="24" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.2"/>
-<text x="958.5" y="1121.25" font-size="12" fill="#16181c" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="991.9" y1="1117.25" x2="1020" y2="1117.25" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="1024" y="1002" width="10" height="130" rx="8" fill="#00796b" stroke="#00796b" stroke-width="1.2"/>
-<text x="1018" y="994" font-size="12" fill="#415062" font-weight="400" text-anchor="end">write merge</text>
+<text x="652" y="980" font-size="13.5" fill="#16181c" font-weight="700" text-anchor="start">mHC — 4 streams, one shared sublayer pass (Fig 1c)</text>
+<rect x="672" y="1004" width="8" height="114" rx="8" fill="#00796b" stroke="#00796b" stroke-width="1"/>
+<rect x="1016" y="1004" width="8" height="114" rx="8" fill="#00796b" stroke="#00796b" stroke-width="1"/>
+<line x1="676" y1="1122" x2="676" y2="1126" stroke="#00796b" stroke-width="1.4"/>
+<line x1="676" y1="1126" x2="1020" y2="1126" stroke="#00796b" stroke-width="1.4" marker-end="url(#ar)"/>
+<line x1="1020" y1="1126" x2="1020" y2="1122" stroke="#00796b" stroke-width="1.4"/>
+<text x="684" y="1123" font-size="10.5" fill="#00796b" font-weight="400" text-anchor="start">H-res skip mix across streams</text>
+<rect x="696" y="1042" width="88" height="34" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.5"/>
+<text x="740" y="1063.5" font-size="11.5" fill="#16181c" font-weight="600" text-anchor="middle">H-pre (n→1)</text>
+<rect x="800" y="1042" width="96" height="34" rx="8" fill="#ffffff" stroke="#22262b" stroke-width="1.5"/>
+<text x="848" y="1063.5" font-size="11.5" fill="#16181c" font-weight="600" text-anchor="middle">sublayer F</text>
+<rect x="912" y="1042" width="88" height="34" rx="8" fill="#3f97e0" stroke="#1d5e99" stroke-width="1.5"/>
+<text x="956" y="1063.5" font-size="11.5" fill="#16181c" font-weight="600" text-anchor="middle">H-post (1→n)</text>
+<line x1="784" y1="1059" x2="800" y2="1059" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="896" y1="1059" x2="912" y2="1059" stroke="#16181c" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="658" y="1014.5" font-size="10.5" fill="#00796b" font-weight="600" text-anchor="start">S1</text>
+<line x1="658" y1="1020.5" x2="672" y2="1020.5" stroke="#00796b" stroke-width="1.3"/>
+<line x1="680" y1="1020.5" x2="696" y2="1046.25" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1000" y1="1046.25" x2="1016" y2="1020.5" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1024" y1="1020.5" x2="1038" y2="1020.5" stroke="#00796b" stroke-width="1.3" marker-end="url(#ar)"/>
+<text x="658" y="1039.5" font-size="10.5" fill="#00796b" font-weight="600" text-anchor="start">S2</text>
+<line x1="658" y1="1045.5" x2="672" y2="1045.5" stroke="#00796b" stroke-width="1.3"/>
+<line x1="680" y1="1045.5" x2="696" y2="1054.75" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1000" y1="1054.75" x2="1016" y2="1045.5" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1024" y1="1045.5" x2="1038" y2="1045.5" stroke="#00796b" stroke-width="1.3" marker-end="url(#ar)"/>
+<text x="658" y="1064.5" font-size="10.5" fill="#00796b" font-weight="600" text-anchor="start">S3</text>
+<line x1="658" y1="1070.5" x2="672" y2="1070.5" stroke="#00796b" stroke-width="1.3"/>
+<line x1="680" y1="1070.5" x2="696" y2="1063.25" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1000" y1="1063.25" x2="1016" y2="1070.5" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1024" y1="1070.5" x2="1038" y2="1070.5" stroke="#00796b" stroke-width="1.3" marker-end="url(#ar)"/>
+<text x="658" y="1089.5" font-size="10.5" fill="#00796b" font-weight="600" text-anchor="start">S4</text>
+<line x1="658" y1="1095.5" x2="672" y2="1095.5" stroke="#00796b" stroke-width="1.3"/>
+<line x1="680" y1="1095.5" x2="696" y2="1071.75" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1000" y1="1071.75" x2="1016" y2="1095.5" stroke="#00796b" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="1024" y1="1095.5" x2="1038" y2="1095.5" stroke="#00796b" stroke-width="1.3" marker-end="url(#ar)"/>
 <polyline points="480,531 628,531 628,1052 640,1052" fill="none" stroke="#415062" stroke-width="1.3" stroke-dasharray="2 4"/>
 <text x="24" y="112" font-size="12.5" fill="#16181c" font-weight="600" text-anchor="start">vocab 154,880</text>
 <line x1="107.2" y1="108" x2="178" y2="108" stroke="#415062" stroke-width="1.2" stroke-dasharray="2 4"/>
@@ -152,7 +140,7 @@
 <text x="24" y="906" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">schedule K,K,K,D ×11 + K — 45 layers</text>
 <text x="24" y="930" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">DSA in 11 of 45 layers (1 per 4)</text>
 <text x="24" y="954" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">MoE layers 3–44: 288 routed top-8, 1 shared</text>
-<text x="24" y="978" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">mHC: 4 residual streams through every sublayer</text>
+<text x="24" y="978" font-size="12.5" fill="#16181c" font-weight="400" text-anchor="start">mHC: 4 streams aggregate into one sublayer pass (Fig 1c Eq 3)</text>
 <line x1="24" y1="1184" x2="58" y2="1184" stroke="#16181c" stroke-width="1.6" marker-end="url(#ar)"/>
 <text x="64" y="1188" font-size="12" fill="#415062" font-weight="400" text-anchor="start">data flow</text>
 <line x1="154" y1="1184" x2="188" y2="1184" stroke="#415062" stroke-width="1.4" stroke-dasharray="2 4"/>

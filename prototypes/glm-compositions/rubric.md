@@ -1,10 +1,13 @@
 # GLM-5.3-Flash composition candidates — rubric (plan §3.4)
 
 Input: the SAME frozen, reviewed source brief — `models/zai-org/glm-5-3-flash/main/`
-(architecture.json @ revision `f93128cf` + evidence.json). The generator
-(`render-candidates.ts`) binds every drawn number to a publishable evidence
-claim first and cross-checks it against the pinned config / IR before emitting
-anything; the three
+(architecture.json @ revision `f93128cf` + evidence.json + brief.json).
+`brief.json` carries the immutable provenance: the config URL pinned at HF
+revision `f93128cf7f31ca2b22e367cd63676c320c4164a7` with its sha256, and the
+four papers with mechanism-only role and section/figure/page locators. The
+generator (`render-candidates.ts`) binds every drawn number to a publishable
+evidence claim first and cross-checks it against the pinned config / IR before
+emitting anything; the three
 candidates differ in composition (geometry), not only in skin:
 
 - **A · paper-editorial** — portrait poster 1080×1220: vertical spine with a
@@ -35,7 +38,8 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
   does not get to pick their own winner.
 - Reproducibility: the generator has no randomness or timestamps; two runs emit
   byte-identical SVGs (checked by sha256). PNGs are playwright screenshots of
-  those SVGs, identical across runs.
+  those SVGs: pixel-stable in a fixed environment, but their byte hashes vary
+  with Chromium/font versions, so byte-determinism is claimed for SVGs only.
 - Evidence binding: every drawn number goes through `claim()` first
   (publishable status enforced), then cross-checks the pinned config or the
   Architecture IR with `eq()`; prose schedule/partition claims are pinned by
@@ -47,27 +51,30 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
 
 | # | Criterion (weight) | A · paper-editorial | B · engineering-blueprint | C · nested-containment |
 |---|---|---|---|---|
-| 1 | Structural fidelity vs brief (×2) | 5 — every fact, the exact schedule, ⊕ merge, 4 complete streams; semantics correct (slots, not serial mechanisms) | 5 — same content, slots correct | 4 — all content present, but serial arrows between KDA/DSA/MoE blocks imply a per-layer sequence that does not exist (they are per-layer alternatives; only the layer counts disambiguate) |
+| 1 | Structural fidelity vs brief (×2) | 5 — every fact, the exact schedule, ⊕ merge, mHC aggregate→one pass→write-back with H-res skip mixing; semantics correct (slots, not serial mechanisms) | 5 — same content, slots correct | 2 — ELIMINATED: serial arrows between KDA/DSA/MoE blocks imply a per-layer sequence that does not exist (they are per-layer alternatives); elimination rule is fidelity <3 |
 | 2 | Reading hierarchy (×2) | 5 — filled gray 45× container + filled blue unit block make the repeat unit immediate; gutter cards read as detail, not spine | 3 — spine + four same-depth panels; nesting only via dashed panel borders | 5 — true containment: mechanisms visibly live inside the repeat unit |
 | 3 | Line/role discrimination (×2) | 4 — solid flow / dotted callout / teal stream; flow and callout share a dark ink, separated by dash only | 5 — cyan flow, amber dashed callout, teal stream: hue-separated, the best line grammar of the three | 4 — ink flow / gray dashed callout / teal stream |
 | 4 | Layout quality (×2) | 5 — strongest figure/ground; no text overflow (shrink-to-fit floor 10px, nothing hits it); gutter and margin leaders orthogonal | 4 — panels keep ~55px dead padding around 180px boxes; grid adds noise behind 12–13px type | 4 — clean but 0.51:1 means one long scroll; mechanisms compared by scrolling, not side by side |
 | 5 | Legibility at size / responsive potential (×2) | 4 — at the 1150px embed the smallest type is 12px→12.8px effective (passes the ≥12px target); splits into spine state + card state at 390px, callout bus needs a reflow rule | 3 — at 1150px embed scale 0.74 puts 12px type at 8.8px effective (fails the target); dark-only reading, grid pointless at 390px | 4 — embed scale 1.20 keeps all type ≥14px effective; single column stacks trivially, but length hurts overview |
 | 6 | Fit to atlas token family (×1) | 3 — new editorial palette, site tokens would need to move toward it | 2 — dark blueprint only, no light variant | 5 — uses the site's existing pastel/ink family as-is |
-| | **Total /55** | **49** | **42** | **47** |
+| | **Total /55** | **49** | **42** | **43 — eliminated (criterion 1 < 3)** |
 
 ## Verdict
 
-Order follows the totals: **A (49) > C (47) > B (42)**.
+Order follows the totals and the elimination rule: **A (49) recommended ·
+B (42) third · C (43) eliminated at criterion 1**.
 
 - **Recommended: A.** Strongest reading hierarchy and figure/ground, correct
-  slot semantics, passes the aspect (0.89:1) and effective-type targets, and
-  matches the paper-figure expectation the Raschka gallery sets without copying
-  any of its layouts.
-- **Fallback: C**, only with this fix before adoption: replace the serial
-  arrows between KDA/DSA/MoE blocks with partition markers (brackets or
-  "either/or" glyphs plus the layer counts) so no per-layer sequence is
-  implied. Without the fix, C's criterion-1 defect ships into the canonical
-  figure.
+  slot and mHC semantics, passes the aspect (0.89:1) and effective-type
+  targets, and matches the paper-figure expectation the Raschka gallery sets
+  without copying any of its layouts. Recommendation is provisional until the
+  candidates are regenerated from one shared Diagram IR (round-2 P1); A's
+  composition is the one the reviewer named as worth continuing.
+- **Eliminated: C** at criterion 1 (serial arrows imply a false per-layer
+  KDA→DSA→MoE sequence). C may re-enter in a later round only as a redraw from
+  the shared Diagram IR, where partition semantics replace the serial edges;
+  its nesting idea is still the best expression of containment if that redraw
+  lands.
 - **Third: B**, not eliminated. If selected it needs a light-skin variant and
   an effective-type remediation (larger type or a wider embed) before it can
   pass the #35 font gate.
@@ -90,7 +97,7 @@ time and throws on drift.
 | DSA chain | Lightning indexer 32 heads → Top-k 2048 → selected KV → MLA core | DeepSeek-V3.2 §2.1, Fig 2 (pp.3–4); 32 and 2048 from evidence claims `topology.attention.dsa_indexer_heads`, `topology.attention.dsa_topk` (publishable status enforced) |
 | MoE | router → 288 routed top-8 + 1 shared; layers 3–44 | evidence claims `topology.experts.{routed_total,active_routed,shared}` cross-checked against config; `ffn_groups` moe partition (asserted) |
 | Dense/MoE split | first 3 dense, then 42 MoE | prose claims `topology.ffn_groups[0..1]` pinned by substring; dense partition asserted `[0,1,2]` |
-| mHC | 4 streams, pre-mix → sublayer → post-mix → write merge | mHC paper Fig 1(c), §3–§4; count from claim `topology.residual.streams` cross-checked against IR; scheme claim `mhc` |
+| mHC | 4 streams aggregate (H-pre) into ONE sublayer pass F; H-post writes back to 4 streams; H-res mixes the skip path | mHC paper Fig 1(c) p.1, Eq.(3), §3–§4; count from claim `topology.residual.streams` cross-checked against IR; scheme claim `mhc` |
 | KDA short conv | kernel 4 on Q/K/V | claim `topology.attention.kda_short_conv_kernel`; Kimi Linear §4 |
 | Scope note | vision encoder + MTP head omitted | model-card scope; pinned config carries the text decoder only |
 
@@ -105,8 +112,9 @@ time and throws on drift.
    a gutter — no diagonal or canvas-crossing line.
 4. Margin annotations with short horizontal leaders; numbers live in the
    margin, not inside box detail rows.
-5. ⊕ symbol for residual aggregation; mHC streams as four complete lanes
-   (split → pre-mix → sublayer → post-mix → write-merge bar).
+5. ⊕ symbol for residual aggregation; mHC as four streams aggregating into one
+   shared sublayer pass and writing back (H-pre / F / H-post + H-res skip mix),
+   per Fig 1(c)/Eq.(3).
 6. In-figure title, omission note, title/reading-notes block and legend.
 
 ## Reproduce

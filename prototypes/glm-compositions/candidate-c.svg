@@ -3,6 +3,7 @@
 <rect x="0" y="0" width="960" height="1900" rx="12" fill="#f5f7fa" stroke="none" stroke-width="0"/>
 <text x="24" y="40" font-size="24" fill="#172033" font-weight="700" text-anchor="start">GLM-5.3-Flash (320B-A18B)</text>
 <text x="24" y="62" font-size="12.5" fill="#5d6778" font-weight="400" text-anchor="start">nested-containment reading: mechanisms live inside the repeat unit</text>
+<text x="24" y="80" font-size="12.5" fill="#5d6778" font-weight="400" text-anchor="start">Text decoder shown; vision encoder and MTP head omitted</text>
 <rect x="370" y="92" width="220" height="34" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.5"/>
 <text x="480" y="113.5" font-size="13" fill="#172033" font-weight="600" text-anchor="middle">Tokenized text</text>
 <rect x="360" y="152" width="240" height="44" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.5"/>
@@ -10,7 +11,7 @@
 <text x="480" y="187" font-size="12" fill="#5d6778" font-weight="400" text-anchor="middle">hidden 4,096 · vocab 154,880</text>
 <line x1="480" y1="126" x2="480" y2="152" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
 <rect x="180" y="230" width="600" height="1400" rx="14" fill="#ffffff" stroke="#b9c2d2" stroke-width="1.8"/>
-<text x="192" y="252" font-size="13.5" fill="#172033" font-weight="700" text-anchor="start">DECODER REPEAT UNIT ×45</text>
+<text x="192" y="252" font-size="13.5" fill="#172033" font-weight="700" text-anchor="start">DECODER REPEAT UNIT ×45 (K,K,K,D ×11 + K)</text>
 <rect x="380" y="270" width="200" height="30" rx="12" fill="#d5f0f0" stroke="#007a7a" stroke-width="1.5"/>
 <text x="480" y="289.5" font-size="12.5" fill="#172033" font-weight="600" text-anchor="middle">mHC mixer (pre)</text>
 <line x1="480" y1="300" x2="480" y2="322" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
@@ -66,52 +67,41 @@
 <line x1="586" y1="1146" x2="484" y2="1178" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
 <line x1="480" y1="1234" x2="480" y2="1254" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
 <rect x="210" y="1254" width="540" height="260" rx="12" fill="#ffffff" stroke="#b9c2d2" stroke-width="1.6" stroke-dasharray="5 4"/>
-<text x="222" y="1274" font-size="13.5" fill="#172033" font-weight="700" text-anchor="start">mHC — 4 streams through every sublayer</text>
-<line x1="240" y1="1294" x2="240" y2="1335" stroke="#007a7a" stroke-width="1.4"/>
-<line x1="240" y1="1314.5" x2="282" y2="1314.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="282" y="1303.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="321" y="1318.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="360" y1="1314.5" x2="372" y2="1314.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="372" y="1303.5" width="78" height="22" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.2"/>
-<text x="411" y="1318.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="450" y1="1314.5" x2="462" y2="1314.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="462" y="1303.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="501" y="1318.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="540" y1="1314.5" x2="708" y2="1314.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<line x1="248" y1="1343" x2="248" y2="1384" stroke="#007a7a" stroke-width="1.4"/>
-<line x1="248" y1="1363.5" x2="282" y2="1363.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="282" y="1352.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="321" y="1367.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="360" y1="1363.5" x2="372" y2="1363.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="372" y="1352.5" width="78" height="22" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.2"/>
-<text x="411" y="1367.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="450" y1="1363.5" x2="462" y2="1363.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="462" y="1352.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="501" y="1367.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="540" y1="1363.5" x2="708" y2="1363.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<line x1="256" y1="1392" x2="256" y2="1433" stroke="#007a7a" stroke-width="1.4"/>
-<line x1="256" y1="1412.5" x2="282" y2="1412.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="282" y="1401.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="321" y="1416.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="360" y1="1412.5" x2="372" y2="1412.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="372" y="1401.5" width="78" height="22" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.2"/>
-<text x="411" y="1416.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="450" y1="1412.5" x2="462" y2="1412.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="462" y="1401.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="501" y="1416.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="540" y1="1412.5" x2="708" y2="1412.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<line x1="264" y1="1441" x2="264" y2="1482" stroke="#007a7a" stroke-width="1.4"/>
-<line x1="264" y1="1461.5" x2="282" y2="1461.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="282" y="1450.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="321" y="1465.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">pre-mix</text>
-<line x1="360" y1="1461.5" x2="372" y2="1461.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="372" y="1450.5" width="78" height="22" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.2"/>
-<text x="411" y="1465.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">sublayer</text>
-<line x1="450" y1="1461.5" x2="462" y2="1461.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="462" y="1450.5" width="78" height="22" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.2"/>
-<text x="501" y="1465.5" font-size="12" fill="#172033" font-weight="400" text-anchor="middle">post-mix</text>
-<line x1="540" y1="1461.5" x2="708" y2="1461.5" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
-<rect x="712" y="1292" width="10" height="192" rx="12" fill="#007a7a" stroke="#007a7a" stroke-width="1.2"/>
+<text x="222" y="1274" font-size="13.5" fill="#172033" font-weight="700" text-anchor="start">mHC — 4 streams, one shared sublayer pass (Fig 1c)</text>
+<rect x="248" y="1294" width="8" height="176" rx="12" fill="#007a7a" stroke="#007a7a" stroke-width="1"/>
+<rect x="704" y="1294" width="8" height="176" rx="12" fill="#007a7a" stroke="#007a7a" stroke-width="1"/>
+<line x1="252" y1="1474" x2="252" y2="1478" stroke="#007a7a" stroke-width="1.4"/>
+<line x1="252" y1="1478" x2="708" y2="1478" stroke="#007a7a" stroke-width="1.4" marker-end="url(#ar)"/>
+<line x1="708" y1="1478" x2="708" y2="1474" stroke="#007a7a" stroke-width="1.4"/>
+<text x="260" y="1475" font-size="10.5" fill="#007a7a" font-weight="400" text-anchor="start">H-res skip mix across streams</text>
+<rect x="328" y="1363" width="88" height="34" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.5"/>
+<text x="372" y="1384.5" font-size="11.5" fill="#172033" font-weight="600" text-anchor="middle">H-pre (n→1)</text>
+<rect x="432" y="1363" width="96" height="34" rx="12" fill="#ffffff" stroke="#172033" stroke-width="1.5"/>
+<text x="480" y="1384.5" font-size="11.5" fill="#172033" font-weight="600" text-anchor="middle">sublayer F</text>
+<rect x="544" y="1363" width="88" height="34" rx="12" fill="#eaf3fd" stroke="#1769e0" stroke-width="1.5"/>
+<text x="588" y="1384.5" font-size="11.5" fill="#172033" font-weight="600" text-anchor="middle">H-post (1→n)</text>
+<line x1="416" y1="1380" x2="432" y2="1380" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="528" y1="1380" x2="544" y2="1380" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="234" y="1312.25" font-size="10.5" fill="#007a7a" font-weight="600" text-anchor="start">S1</text>
+<line x1="234" y1="1318.25" x2="248" y2="1318.25" stroke="#007a7a" stroke-width="1.3"/>
+<line x1="256" y1="1318.25" x2="328" y2="1367.25" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="632" y1="1367.25" x2="704" y2="1318.25" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="712" y1="1318.25" x2="726" y2="1318.25" stroke="#007a7a" stroke-width="1.3" marker-end="url(#ar)"/>
+<text x="234" y="1352.75" font-size="10.5" fill="#007a7a" font-weight="600" text-anchor="start">S2</text>
+<line x1="234" y1="1358.75" x2="248" y2="1358.75" stroke="#007a7a" stroke-width="1.3"/>
+<line x1="256" y1="1358.75" x2="328" y2="1375.75" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="632" y1="1375.75" x2="704" y2="1358.75" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="712" y1="1358.75" x2="726" y2="1358.75" stroke="#007a7a" stroke-width="1.3" marker-end="url(#ar)"/>
+<text x="234" y="1393.25" font-size="10.5" fill="#007a7a" font-weight="600" text-anchor="start">S3</text>
+<line x1="234" y1="1399.25" x2="248" y2="1399.25" stroke="#007a7a" stroke-width="1.3"/>
+<line x1="256" y1="1399.25" x2="328" y2="1384.25" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="632" y1="1384.25" x2="704" y2="1399.25" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="712" y1="1399.25" x2="726" y2="1399.25" stroke="#007a7a" stroke-width="1.3" marker-end="url(#ar)"/>
+<text x="234" y="1433.75" font-size="10.5" fill="#007a7a" font-weight="600" text-anchor="start">S4</text>
+<line x1="234" y1="1439.75" x2="248" y2="1439.75" stroke="#007a7a" stroke-width="1.3"/>
+<line x1="256" y1="1439.75" x2="328" y2="1392.75" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="632" y1="1392.75" x2="704" y2="1439.75" stroke="#007a7a" stroke-width="1.2" marker-end="url(#ar)"/>
+<line x1="712" y1="1439.75" x2="726" y2="1439.75" stroke="#007a7a" stroke-width="1.3" marker-end="url(#ar)"/>
 <line x1="480" y1="1514" x2="480" y2="1534" stroke="#172033" stroke-width="1.5" marker-end="url(#ar)"/>
 <rect x="380" y="1534" width="200" height="30" rx="12" fill="#d5f0f0" stroke="#007a7a" stroke-width="1.5"/>
 <text x="480" y="1553.5" font-size="12.5" fill="#172033" font-weight="600" text-anchor="middle">mHC mixer (post)</text>
