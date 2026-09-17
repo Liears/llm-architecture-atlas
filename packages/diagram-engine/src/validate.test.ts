@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramScene } from "./types.js";
 import { validateScene } from "./validate.js";
-import { nestedScene } from "./fixtures.js";
+import { nestedScene, mhcStreamsScene } from "./fixtures.js";
 
 function glmOverview(): DiagramScene {
   return {
@@ -175,6 +175,12 @@ describe("validateScene compound rules (#33)", () => {
     const scene = insetScene();
     scene.groups[0]!.ports![0]!.inner = "attn.in";
     expect(validateScene(scene)).toEqual([]);
+  });
+
+  it("rejects duplicate stream declaration ids (round-8 P2 follow-up)", () => {
+    const scene = mhcStreamsScene();
+    scene.streams![1]!.id = scene.streams![0]!.id;
+    expect(validateScene(scene).join("\n")).toMatch(/duplicate stream declaration id/);
   });
 
   it("rejects residual self-loops — pseudo streams are not streams", () => {
