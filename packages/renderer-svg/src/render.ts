@@ -29,6 +29,8 @@ export interface RenderOptions {
   theme?: ThemeName;
   title?: string;
   description?: string;
+  /** Visible editorial title. The accessible title is always emitted. */
+  showTitle?: boolean;
 }
 
 export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): string {
@@ -38,6 +40,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   const description =
     opts.description ??
     `Generated architecture figure for ${scene.scene.modelId}. Every labeled value traces to an evidence claim in the Architecture IR.`;
+  const posterClass = opts.showTitle ? ` class="atlas-poster"` : "";
 
   const cssVars = Object.entries(t)
     .map(([k, v]) => `--${k.replace(/[A-Z]/g, (c) => c.toLowerCase())}:${v.toLowerCase()}`)
@@ -48,7 +51,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
 
   const lines: string[] = [];
   lines.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size.w)} ${fmt(scene.size.h)}" font-family="${esc(fontStacks.sans)}" role="img" aria-labelledby="atlas-title atlas-desc" data-atlas-model="${esc(scene.scene.modelId)}" data-atlas-view="${scene.scene.view}" data-atlas-ir="${esc(scene.scene.irVersion)}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(scene.size.w)} ${fmt(scene.size.h)}" font-family="${esc(fontStacks.sans)}" role="img" aria-labelledby="atlas-title atlas-desc"${posterClass} data-atlas-model="${esc(scene.scene.modelId)}" data-atlas-view="${scene.scene.view}" data-atlas-ir="${esc(scene.scene.irVersion)}">`,
   );
   lines.push(`  <title id="atlas-title">${esc(title)}</title>`);
   lines.push(`  <desc id="atlas-desc">${esc(description)}</desc>`);
@@ -68,6 +71,19 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.g-port{fill:var(--attention);stroke:var(--paper);stroke-width:1}` +
       `.g-label{fill:var(--muted);font-size:12.8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}` +
       `.g-badge{fill:var(--attention);color:#fff}` +
+      (opts.showTitle
+        ? `.atlas-poster .n-label{font-size:15px}.atlas-poster .n-detail{font-size:15px}` +
+          `.atlas-poster .e-label{font-size:13px}.atlas-poster .g-frame{fill:var(--panel)}` +
+          `.atlas-poster .g-inset{fill:var(--panel)}.atlas-poster .g-label{font-size:15px;letter-spacing:.06em}` +
+          `.poster-title{fill:var(--ink);font-size:26px;font-weight:800;letter-spacing:-.02em}` +
+          `.poster-rule{stroke:var(--line);stroke-width:1}` +
+          `.kind-attention .n-box,.kind-indexer .n-box,.kind-selector .n-box,.kind-selection .n-box{stroke:var(--attention)}` +
+          `.kind-state .n-box,.kind-gate .n-box,.kind-mix .n-box{stroke:var(--state)}` +
+          `.kind-moe .n-box,.kind-router .n-box,.kind-ffn .n-box{stroke:var(--compute)}` +
+          `.kind-schedule .n-box{stroke:var(--line);stroke-width:1}` +
+          `.kind-schedule-tail .n-box{stroke:var(--attention);stroke-width:3}` +
+          `.kind-annotation .n-box{stroke:var(--muted);stroke-dasharray:4 4}`
+        : "") +
       `.attn{stroke:var(--attention)}` +
       `.compute{stroke:var(--compute)}</style>`,
   );
@@ -75,6 +91,10 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
     `  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker></defs>`,
   );
   lines.push(`  <rect width="100%" height="100%" fill="var(--paper)"/>`);
+  if (opts.showTitle) {
+    lines.push(`  <text class="poster-title" x="50" y="38">${esc(title)}</text>`);
+    lines.push(`  <line class="poster-rule" x1="50" y1="52" x2="1390" y2="52"/>`);
+  }
 
   for (const group of scene.groups) {
     // when a repeat badge is present the label text would collide on narrow frames
@@ -120,13 +140,16 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       .filter(([name]) => name !== "in" && name !== "out")
       .map(([, p]) => `<circle class="n-port" cx="${fmt(p.x)}" cy="${fmt(p.y)}" r="3"/>`)
       .join("");
+    const semanticKind = opts.showTitle ? ` kind-${node.kind.replace(/[^a-z0-9_-]+/gi, "-").toLowerCase()}` : "";
     const kindClass = node.kind === "attention" ? " attn" : node.kind === "moe" || node.kind === "ffn" ? " compute" : "";
+    const labelSize = node.w >= 160 ? 16 : 15;
+    const detailSize = 15;
     lines.push(
-      `  <g class="node${kindClass}" data-node-id="${esc(node.id)}"${claim}${claimsAttr}><title>${esc(node.label)}</title>` +
+      `  <g class="node${semanticKind}${kindClass}" data-node-id="${esc(node.id)}"${opts.showTitle ? ` data-node-kind="${esc(node.kind)}"` : ""}${claim}${claimsAttr}><title>${esc(node.label)}</title>` +
         `<rect class="n-box${kindClass}" x="${fmt(node.x)}" y="${fmt(node.y)}" width="${fmt(node.w)}" height="${fmt(node.h)}" rx="${radii.node}"/>` +
-        `<text class="n-label" x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + (node.detail ? -4 : 5))}">${esc(node.label)}</text>` +
+        `<text class="n-label"${opts.showTitle ? ` font-size="${fmt(labelSize)}"` : ""} x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + (node.detail ? -4 : 5))}">${esc(node.label)}</text>` +
         (node.detail
-          ? `<text class="n-detail" x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + 14)}">${esc(node.detail)}</text>`
+          ? `<text class="n-detail"${opts.showTitle ? ` font-size="${fmt(detailSize)}"` : ""} x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + 14)}">${esc(node.detail)}</text>`
           : "") +
         portDots +
         `</g>`,

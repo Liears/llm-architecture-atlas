@@ -10,9 +10,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { compileOverviewScene } from "./compile.js";
-import { compileGlmTopologyScene } from "./glm-topology.js";
+import { compileGlmAnatomyScene, glmAnatomyBlueprint } from "./glm-anatomy.js";
 import { auditCoverage } from "./audit.js";
 import { layoutScene } from "./layout.js";
+import { composeEditorialPoster } from "./poster.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const modelsRoot = `${root}/models`;
@@ -31,10 +32,11 @@ function pipelineFor(modelId: string) {
   }
   const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
   const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
-  const scene = modelId === "zai-org/glm-5.3-flash"
-    ? compileGlmTopologyScene(arch, evidence)
+  const isGlm = modelId === "zai-org/glm-5.3-flash";
+  const scene = isGlm
+    ? compileGlmAnatomyScene(arch, evidence)
     : compileOverviewScene(arch, evidence);
-  const positioned = layoutScene(scene, { fontSize: 16 });
+  const positioned = isGlm ? composeEditorialPoster(scene, glmAnatomyBlueprint()) : layoutScene(scene, { fontSize: 16 });
   return {
     modelId: scene.modelId,
     view: scene.view,
@@ -66,7 +68,7 @@ describe.each(snapshots)("structural gate: %s", (file) => {
   it("keeps evidence coverage: every claim-backed segment resolves (#21)", () => {
     const { arch, evidence } = modelInputs(committed.modelId);
     const scene = committed.modelId === "zai-org/glm-5.3-flash"
-      ? compileGlmTopologyScene(arch, evidence)
+      ? compileGlmAnatomyScene(arch, evidence)
       : compileOverviewScene(arch, evidence);
     expect(auditCoverage(scene, evidence.claims, scene.groups)).toEqual([]);
   });
@@ -74,7 +76,7 @@ describe.each(snapshots)("structural gate: %s", (file) => {
   it("negative: removing a shown claim from evidence fails the audit (#21)", () => {
     const { arch, evidence } = modelInputs(committed.modelId);
     const scene = committed.modelId === "zai-org/glm-5.3-flash"
-      ? compileGlmTopologyScene(arch, evidence)
+      ? compileGlmAnatomyScene(arch, evidence)
       : compileOverviewScene(arch, evidence);
     const firstRef = scene.nodes.flatMap((n) => n.claims ?? [])[0];
     if (!firstRef) return; // model has no claim-backed segments

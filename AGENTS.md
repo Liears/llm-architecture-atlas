@@ -8,6 +8,12 @@ Before architecture-diagram, layout, responsive-canvas, drill-down, or evidence
 UI work, read `docs/next-round-visual-quality-plan.md` and follow its dependency
 order and review checkpoints.
 
+When adding, redrawing, or reviewing an LLM model-internals diagram, use the
+repository skill at `.agents/skills/model-architecture-diagram/SKILL.md`. It is
+the canonical workflow for source freezing, Diagram IR, view projections,
+composition, mutation tests, browser review, and PR evidence. It does not apply
+to generic software or cloud architecture diagrams.
+
 ## Role boundary
 
 Implementation agents must submit every product change—code, model data,
