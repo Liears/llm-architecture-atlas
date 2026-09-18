@@ -4,6 +4,8 @@ import { execSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { composeBoardHtml } from "./review-board";
+import { parseCommittedReview, resolveEffectiveReview, reviewLabel, reviewSatisfied } from "./review-state";
 
 /**
  * Page-level gates (#35):
@@ -17,13 +19,16 @@ import { fileURLToPath } from "node:url";
  *   the CI artifact, composed into a before|after board against the
  *   committed frozen baseline (tests/baseline/before-<main head>/).
  *
- * Review-state machine (round 4): apps/web/e2e/contact-manifest.json is the
- * committed source of truth. `status` is an enum; `reviewed` additionally
- * requires reviewer, date, the head sha it was reviewed at and the sha256 of
- * the six shots — if head or shots moved since the signature, the inherited
- * state auto-reverts to pending so an old signature can never vouch for new
- * artifacts. `rejected` and `skipped` are visible states but never satisfy
- * the review: the contact test fails on them after writing the artifacts.
+ * Review-state machine (round 5, logic in review-state.ts + unit tests):
+ * apps/web/e2e/contact-manifest.json is the committed source of truth.
+ * `status` is an enum; `reviewed` additionally requires reviewer, date, the
+ * head sha of the reviewed run and the sha256 of the six shots. The BINDING
+ * is the shot hashes: a signature survives on any later head whose shots
+ * regenerate identically, and auto-reverts to pending when any shot hash
+ * drifts — binding to head equality instead would be unreachable, because
+ * committing the signature itself creates a new head (round-4 review P1).
+ * `rejected` and `skipped` are visible states but never satisfy the review:
+ * the contact test fails on them after writing the artifacts.
  *
  * Mobile full-figure readability (effective font ≥12px in the mobile default
  * state) is owned by #36 and tracked in the scene-gate baseline until then.
@@ -103,84 +108,35 @@ test("contact sheet: before|after board + manifest inheriting bound visual_revie
   const shotHashes = Object.fromEntries(shots.map((f) => [f, sha(`${outDir}/${f}`)]));
   const head = execSync("git rev-parse HEAD", { cwd: root }).toString().trim();
 
-  // round-4 review-state machine: enum + required fields are validated here,
-  // so a hand-edited manifest cannot claim a review it does not describe
-  type ReviewState = {
-    status: string;
-    reviewer: string | null;
-    date: string | null;
-    head?: string | null;
-    shots_sha256?: Record<string, string> | null;
-    note?: string;
-  };
-  const STATUSES = ["pending", "reviewed", "rejected", "skipped"];
-  let committed: ReviewState = { status: "pending", reviewer: null, date: null };
+  // round-5: schema validation and the binding live in review-state.ts (unit
+  // tested); a signature vouches for the six shot hashes, head is provenance
+  let committedRaw: unknown;
   try {
-    const raw = JSON.parse(readFileSync(`${e2eDir}/contact-manifest.json`, "utf8"));
-    if (raw?.visual_review) committed = raw.visual_review as ReviewState;
+    committedRaw = JSON.parse(readFileSync(`${e2eDir}/contact-manifest.json`, "utf8"))?.visual_review;
   } catch {
     // no committed manifest yet: pending is correct
   }
-  if (!STATUSES.includes(committed.status)) {
-    throw new Error(`contact-manifest.json: visual_review.status "${committed.status}" is not one of ${STATUSES.join("/")}`);
-  }
-  if (committed.status === "reviewed") {
-    const missing: string[] = [];
-    if (!committed.reviewer || typeof committed.reviewer !== "string") missing.push("reviewer");
-    if (!committed.date || typeof committed.date !== "string") missing.push("date");
-    if (!committed.head || !/^[0-9a-f]{40}$/.test(committed.head)) missing.push("head (40-hex sha)");
-    if (!committed.shots_sha256 || shots.some((f) => typeof committed.shots_sha256?.[f] !== "string")) {
-      missing.push("shots_sha256 (all six shots)");
-    }
-    if (missing.length > 0) {
-      throw new Error(`contact-manifest.json: status "reviewed" requires ${missing.join(", ")} — an unsigned review is not a review`);
-    }
-  }
-
-  // binding: a signature only vouches for the exact head and exact shots it
-  // names; anything newer auto-reverts to pending in the inherited state
-  let effective: ReviewState = committed;
-  let revertNote: string | null = null;
-  if (committed.status === "reviewed") {
-    const drifted: string[] = [];
-    if (committed.head !== head) drifted.push(`head ${committed.head!.slice(0, 9)} → ${head.slice(0, 9)}`);
-    for (const f of shots) {
-      if (committed.shots_sha256![f] !== shotHashes[f]) drifted.push(`shot ${f}`);
-    }
-    if (drifted.length > 0) {
-      effective = {
-        status: "pending",
-        reviewer: null,
-        date: null,
-        note: `auto-reverted from "reviewed by ${committed.reviewer} ${committed.date}": ${drifted.join(", ")} changed after the signature`,
-      };
-      revertNote = effective.note!;
-    }
-  }
-  const reviewLabel = effective.reviewer
-    ? `${effective.status} by ${effective.reviewer} ${effective.date ?? ""}`.trim()
-    : effective.status;
+  const committed = parseCommittedReview(committedRaw, shots);
+  const { effective, revertNote } = resolveEffectiveReview(committed, head, shotHashes);
+  const label = reviewLabel(effective);
 
   // frozen before-baseline: exactly one committed tests/baseline/before-* dir
   const baselineDirs = readdirSync(`${root}/tests/baseline`).filter((d) => d.startsWith("before-"));
   const baselineDir = baselineDirs.length === 1 ? baselineDirs[0] : null;
-  const beforeCell = (f: string, w: number) => {
-    const p = baselineDir ? `${root}/tests/baseline/${baselineDir}/${f}` : null;
-    if (!p || !exists(p)) {
-      return `<td style="vertical-align:top;padding:4px"><div style="font:600 12px sans-serif">before: none</div></td>`;
-    }
-    return `<td style="vertical-align:top;padding:4px"><div style="font:600 12px sans-serif">${f} (before)</div><img src="data:image/png;base64,${readFileSync(p).toString("base64")}" style="width:${w}px;display:block;border:1px solid #ccc"/></td>`;
-  };
-  const cell = (f: string, w: number) =>
-    `<td style="vertical-align:top;padding:4px"><div style="font:600 12px sans-serif">${f} (after)</div><img src="${f}" style="width:${w}px;display:block;border:1px solid #ccc"/></td>`;
-  const rows = VIEWPORTS.map(([w, h]) =>
-    `<tr><td style="font:700 13px sans-serif">${w}px</td>${beforeCell(`glm-full-${w}x${h}.png`, 300)}${beforeCell(`glm-figure-${w}x${h}.png`, 300)}${cell(`glm-full-${w}x${h}.png`, 300)}${cell(`glm-figure-${w}x${h}.png`, 300)}</tr>`,
-  ).join("");
-  const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:13px sans-serif;margin:12px;background:#fff}</style></head><body>
-<h3>GLM-5.3-Flash review board — before (${baselineDir ?? "none"}) | after at ${head.slice(0, 9)}, at 1440/820/390 (visual_review: ${reviewLabel})</h3>
-${revertNote ? `<p style="color:#a00;font:600 12px sans-serif">${revertNote}</p>` : ""}
-<table><tr><th></th><th colspan="2">before (frozen baseline)</th><th colspan="2">after (this run)</th></tr><tr><th></th><th>full page</th><th>figure</th><th>full page</th><th>figure</th></tr>${rows}</table>
-</body></html>`;
+  const html = composeBoardHtml({
+    baselineDir,
+    head,
+    reviewLabel: label,
+    revertNote,
+    viewports: VIEWPORTS,
+    beforeSrc: (f) => {
+      try {
+        return `data:image/png;base64,${readFileSync(`${root}/tests/baseline/${baselineDir}/${f}`).toString("base64")}`;
+      } catch {
+        return null;
+      }
+    },
+  });
   const { createServer } = await import("node:http");
   const srv = createServer((req, res) => {
     const url = (req.url ?? "/").split("?")[0];
@@ -215,7 +171,8 @@ ${revertNote ? `<p style="color:#a00;font:600 12px sans-serif">${revertNote}</p>
         composed_sha256: sha(`${outDir}/contact-sheet.png`),
         baseline: baselineDir ? { dir: `tests/baseline/${baselineDir}` } : null,
         visual_review: effective,
-        review_satisfied: effective.status === "reviewed",
+        review_satisfied: reviewSatisfied(effective),
+        binding: "shots_sha256 (head is provenance, not binding — see review-state.ts)",
       },
       null,
       2,
@@ -227,12 +184,3 @@ ${revertNote ? `<p style="color:#a00;font:600 12px sans-serif">${revertNote}</p>
     throw new Error(`visual_review status "${committed.status}" never satisfies the #35 review requirement — resolve the rejection or perform the review`);
   }
 });
-
-function exists(p: string): boolean {
-  try {
-    readFileSync(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
