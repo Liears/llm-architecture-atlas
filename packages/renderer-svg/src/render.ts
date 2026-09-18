@@ -73,7 +73,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.g-badge{fill:var(--attention);color:#fff}` +
       (opts.showTitle
         ? `.atlas-poster .n-label{font-size:15px}.atlas-poster .n-detail{font-size:15px}` +
-          `.atlas-poster .e-label{font-size:13px}.atlas-poster .g-frame{fill:var(--panel)}` +
+          `.atlas-poster .e-label{font-size:15px}.atlas-poster .g-frame{fill:var(--panel)}` +
           `.atlas-poster .g-inset{fill:var(--panel)}.atlas-poster .g-label{font-size:15px;letter-spacing:.06em}` +
           `.poster-title{fill:var(--ink);font-size:26px;font-weight:800;letter-spacing:-.02em}` +
           `.poster-rule{stroke:var(--line);stroke-width:1}` +
@@ -93,7 +93,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   lines.push(`  <rect width="100%" height="100%" fill="var(--paper)"/>`);
   if (opts.showTitle) {
     lines.push(`  <text class="poster-title" x="50" y="38">${esc(title)}</text>`);
-    lines.push(`  <line class="poster-rule" x1="50" y1="52" x2="1390" y2="52"/>`);
+    lines.push(`  <line class="poster-rule" x1="50" y1="52" x2="${fmt(scene.size.w - 50)}" y2="52"/>`);
   }
 
   for (const group of scene.groups) {

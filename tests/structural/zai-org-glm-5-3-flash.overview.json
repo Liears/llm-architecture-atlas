@@ -40,7 +40,7 @@
     {
       "id": "mtp",
       "label": "MTP omitted",
-      "detail": "1 layer · training only",
+      "detail": "1 prediction layer",
       "claimPath": "topology.mtp.predict_layers"
     },
     {

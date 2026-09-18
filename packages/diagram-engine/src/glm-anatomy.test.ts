@@ -28,6 +28,26 @@ describe("GLM anatomy poster", () => {
     expect(validateScene(scene).join("\n")).toMatch(/stream s3: missing leg/);
   });
 
+  it("rejects a source IR whose attention schedule does not cover every layer", () => {
+    const mutated = structuredClone(arch);
+    const kda = mutated.topology.attention_groups.find((group) => group.kind === "linear_attention")!;
+    kda.layers = kda.layers.filter((layer) => layer !== 44);
+
+    expect(() => compileGlmAnatomyScene(mutated, evidence)).toThrow(/attention schedule.*layer 44/i);
+  });
+
+  it("derives the visible schedule from source layer membership", () => {
+    const mutated = structuredClone(arch);
+    const kda = mutated.topology.attention_groups.find((group) => group.kind === "linear_attention")!;
+    const dsa = mutated.topology.attention_groups.find((group) => group.kind === "mla_sparse")!;
+    kda.layers = [...kda.layers, 39].sort((a, b) => a - b);
+    dsa.layers = dsa.layers.filter((layer) => layer !== 39);
+
+    const scene = compileGlmAnatomyScene(mutated, evidence);
+    expect(scene.nodes.find((node) => node.id === "pattern-9")?.detail).toBe("K  K  K  K");
+    expect(scene.nodes.find((node) => node.id === "pattern-tail")?.detail).toBe("K · tail KDA");
+  });
+
   it("composes deterministically at the desktop readability aspect ratio", () => {
     const scene = compileGlmAnatomyScene(arch, evidence);
     const first = composeEditorialPoster(scene, glmAnatomyBlueprint());

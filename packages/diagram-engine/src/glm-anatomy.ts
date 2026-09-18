@@ -12,6 +12,38 @@ function commas(value: number): string {
   return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function exactLayerKinds(
+  numLayers: number,
+  groups: ReadonlyArray<{ code: string; layers: number[] }>,
+  scheduleName: string,
+): string[] {
+  const kinds = Array<string | undefined>(numLayers);
+  for (const group of groups) {
+    for (const layer of group.layers) {
+      if (!Number.isInteger(layer) || layer < 0 || layer >= numLayers) {
+        throw new Error(`${scheduleName} schedule contains out-of-range layer ${layer}`);
+      }
+      if (kinds[layer]) {
+        throw new Error(`${scheduleName} schedule assigns layer ${layer} more than once`);
+      }
+      kinds[layer] = group.code;
+    }
+  }
+  const missing = kinds.findIndex((kind) => kind === undefined);
+  if (missing >= 0) throw new Error(`${scheduleName} schedule is missing layer ${missing}`);
+  return kinds as string[];
+}
+
+function scheduleSummary(kinds: string[]): string {
+  const chunks = Array.from({ length: Math.ceil(kinds.length / 4) }, (_, index) => kinds.slice(index * 4, index * 4 + 4));
+  const full = chunks.filter((chunk) => chunk.length === 4).map((chunk) => chunk.join(","));
+  const tail = chunks.find((chunk) => chunk.length < 4);
+  const prefix = full.length > 1 && full.every((chunk) => chunk === full[0])
+    ? `${full[0]} ×${full.length}`
+    : full.join(" + ");
+  return tail ? `${prefix} + ${tail.join(",")}` : prefix;
+}
+
 /**
  * The publishable GLM view. It intentionally models one representative mHC
  * sublayer exactly and keeps KDA/DSA/MoE as separate mechanism lenses.
@@ -28,6 +60,22 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
   if (!kda || !dsa || !dense || !moe || !experts || streams !== 4) {
     throw new Error("GLM anatomy requires KDA, DSA, Dense/MoE and exactly four mHC streams");
   }
+  const attentionKinds = exactLayerKinds(
+    facts.num_hidden_layers,
+    [{ code: "K", layers: kda.layers }, { code: "D", layers: dsa.layers }],
+    "attention",
+  );
+  exactLayerKinds(
+    facts.num_hidden_layers,
+    [{ code: "Dense", layers: dense.layers }, { code: "MoE", layers: moe.layers }],
+    "FFN",
+  );
+  const attentionSummary = scheduleSummary(attentionKinds);
+  const scheduleChunks = Array.from(
+    { length: Math.ceil(attentionKinds.length / 4) },
+    (_, index) => attentionKinds.slice(index * 4, index * 4 + 4),
+  );
+  const denseToMoeLayer = moe.layers[0] ?? -1;
 
   const nodes: SemanticNode[] = [
     { id: "tok", kind: "io", label: "Token ids" },
@@ -36,7 +84,7 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
       claimPath: "facts.hidden_size", claims: [{ claimPath: "facts.hidden_size", label: `hidden ${commas(facts.hidden_size)}` }],
     },
     {
-      id: "decoder", kind: "stack", label: "Decoder pattern", detail: `45 layers · K,K,K,D ×11 + K`,
+      id: "decoder", kind: "stack", label: "Decoder pattern", detail: `${facts.num_hidden_layers} layers · ${attentionSummary}`,
       claimPath: "facts.num_hidden_layers",
       claims: [
         { claimPath: "facts.num_hidden_layers", label: `${facts.num_hidden_layers} layers` },
@@ -50,15 +98,15 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
       claimPath: "facts.vocab_size", claims: [{ claimPath: "facts.vocab_size", label: `vocab ${commas(facts.vocab_size ?? 0)}` }],
     },
     {
-      id: "mtp", kind: "annotation", label: "MTP omitted", detail: "1 layer · training only",
+      id: "mtp", kind: "annotation", label: "MTP omitted", detail: "1 prediction layer",
       claimPath: "topology.mtp.predict_layers",
       claims: [{ claimPath: "topology.mtp.predict_layers", label: "1 prediction layer" }],
     },
-    ...Array.from({ length: 11 }, (_, unit) => ({
+    ...scheduleChunks.filter((chunk) => chunk.length === 4).map((chunk, unit) => ({
       id: `pattern-${unit}`,
       kind: "schedule",
       label: `L${unit * 4}–${unit * 4 + 3}`,
-      detail: unit === 0 ? "K  K  K  D · Dense→MoE at L3" : "K  K  K  D",
+      detail: `${chunk.join("  ")}${denseToMoeLayer >= unit * 4 && denseToMoeLayer <= unit * 4 + 3 ? ` · Dense→MoE at L${denseToMoeLayer}` : ""}`,
       claimPath: "topology.attention_groups[0]",
       claims: [
         { claimPath: "topology.attention_groups[0]", label: "KDA schedule" },
@@ -66,10 +114,15 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
         ...(unit === 0 ? [{ claimPath: "topology.ffn_groups[0]", label: "Dense layers 0–2" }, { claimPath: "topology.ffn_groups[1]", label: "MoE layers 3–44" }] : []),
       ],
     })),
-    {
-      id: "pattern-tail", kind: "schedule-tail", label: "L44", detail: "K · tail KDA",
-      claimPath: "topology.attention_groups[0]", claims: [{ claimPath: "topology.attention_groups[0]", label: "tail KDA" }],
-    },
+    ...scheduleChunks.filter((chunk) => chunk.length < 4).map((chunk) => {
+      const start = Math.floor(facts.num_hidden_layers / 4) * 4;
+      const isKdaTail = chunk.every((kind) => kind === "K");
+      return {
+        id: "pattern-tail", kind: "schedule-tail", label: start === facts.num_hidden_layers - 1 ? `L${start}` : `L${start}–${facts.num_hidden_layers - 1}`,
+        detail: `${chunk.join("  ")}${isKdaTail ? " · tail KDA" : ""}`,
+        claimPath: "topology.attention_groups[0]", claims: [{ claimPath: "topology.attention_groups[0]", label: "tail attention schedule" }],
+      };
+    }),
     {
       id: "mhc-source", kind: "split", label: "4×", detail: "streams",
       claimPath: "topology.residual.streams", ports: streamPorts("s", "right", "egress"),
@@ -186,8 +239,8 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
 
   const groups: DiagramScene["groups"] = [
     {
-      id: "g-pattern", label: "45-layer genome · K,K,K,D ×11 + K", kind: "stack",
-      members: [...Array.from({ length: 11 }, (_, i) => `pattern-${i}`), "pattern-tail"],
+      id: "g-pattern", label: `${facts.num_hidden_layers}-layer genome · ${attentionSummary}`, kind: "stack",
+      members: scheduleChunks.map((chunk, i) => chunk.length === 4 ? `pattern-${i}` : "pattern-tail"),
       claimPath: "facts.num_hidden_layers",
     },
     {
