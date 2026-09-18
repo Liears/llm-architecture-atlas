@@ -57,6 +57,14 @@ Architecture IR → Diagram IR → constrained layout → semantic SVG.
   compositions vary placement, canvas and skin only — labels, details, group
   titles, flow edges and stream rails are read from the scene, so content
   cannot drift between candidates.
+- No invented edges (round 4): an overview spine may collapse per-stream
+  machinery, but only through the declared `PROJECTION` table — each link
+  names the exact scene-edge legs it summarises, and emit asserts every leg
+  exists and consecutive legs connect. Every arrow any composition draws
+  (spine, collapsed links, stream-card lanes) passes `mustLink()`, which
+  throws unless the endpoint pair is a scene edge or a declared projection;
+  a mutation test (inventing `slot-attn -> moe-router`) stops emit.
+  Compositions place and style; they do not add semantics.
 - Reproducibility: the generator has no randomness or timestamps; two runs emit
   byte-identical SVGs (checked by sha256). PNGs are playwright screenshots of
   those SVGs: pixel-stable in a fixed environment, but their byte hashes vary
@@ -94,6 +102,14 @@ the same 49/42/49. A and C tie; the tiebreak (criterion 4, layout quality)
 goes to A (5 vs 4: C's two-column nest reads cleanly but its 1620px-tall
 canvas costs density against A's 1220px). Order after tiebreak:
 **A recommended · C alternate · B third**.
+
+Selection status (round-4 review, 2026-09-18): the reviewer confirmed the
+rubric's order — **A is the canonical direction**, C kept only as a
+containment reference, B not continued. What is accepted is the composition
+direction, not the hand-written SVG: the #34 implementation must port it into
+the canonical renderer (design tokens, layout constraints, renderer
+primitives) and pass the projection/IR rules above, real-site screenshots and
+a gallery blind-read check.
 
 - **Recommended: A.** Strongest reading hierarchy and figure/ground, correct
   slot and mHC semantics, passes the aspect (0.89:1) and effective-type

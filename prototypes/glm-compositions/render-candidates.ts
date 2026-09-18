@@ -359,6 +359,83 @@ for (const i of SID) {
   eq(degree(`sum2-${i}`), [2, 1], `sum2-${i} = Hres term + Hpost term, one out`);
 }
 
+// ---------------------------------------------------------------- projection
+/** Overview projection links (round-4 review P1): the spine of an overview
+ *  composition may collapse per-stream machinery into one drawn link, but
+ *  only links declared HERE, each justified by the exact scene-edge legs it
+ *  summarises. The assertions below prove every leg exists in scene.edges and
+ *  that consecutive legs connect (same endpoint, or a hop through one
+ *  elided/interior node), so a composition function cannot invent a shortcut
+ *  edge — it can only reference a projection id. */
+interface ProjectionLink {
+  id: string;
+  from: string;
+  to: string;
+  elides: string[];
+  legs: (i: number) => string[];
+}
+const PROJECTION: ProjectionLink[] = [
+  {
+    id: "p-emb-dec", from: "embed", to: "g-dec", elides: ["read"],
+    legs: (i) => ["e-emb", `r-read${i}`],
+  },
+  {
+    id: "p-dec-norm", from: "g-dec", to: "norm", elides: ["write"],
+    legs: (i) => [`r-write${i}`, "e-write-norm"],
+  },
+  {
+    id: "p-dec-hpre1", from: "g-dec", to: "hpre1", elides: ["sp0-1", "sp0-2", "sp0-3", "sp0-4"],
+    legs: (i) => [`r-in${i}`, `m-sp0a${i}`],
+  },
+  {
+    id: "p-hpost1-hpre2", from: "hpost1", to: "hpre2", elides: [],
+    legs: (i) => [`m-hp1${i}`, `r-mid${i}`, `m-sp1a${i}`],
+  },
+  {
+    id: "p-hpost2-dec", from: "hpost2", to: "g-dec", elides: [],
+    legs: (i) => [`m-hp2${i}`, `r-out${i}`],
+  },
+  {
+    id: "p-attn-ffn", from: "slot-attn", to: "slot-ffn",
+    elides: ["hpost1", "hpre2", "hres2", "sum1-1", "sum1-2", "sum1-3", "sum1-4", "sp1-1", "sp1-2", "sp1-3", "sp1-4"],
+    legs: (i) => ["m-f-hpost1", `m-hp1${i}`, `r-mid${i}`, `m-sp1a${i}`, "m-hpre2-f"],
+  },
+];
+const E = (id: string): (typeof scene.edges)[number] => {
+  const e = scene.edges.find((x) => x.id === id);
+  if (!e) throw new Error(`scene edge missing: ${id}`);
+  return e;
+};
+const P = (id: string): ProjectionLink => {
+  const l = PROJECTION.find((x) => x.id === id);
+  if (!l) throw new Error(`undeclared overview projection: ${id}`);
+  return l;
+};
+const headOf = (endpoint: string): string => endpoint.split(".")[0]!;
+for (const link of PROJECTION) {
+  for (const i of SID) {
+    const legs = link.legs(i).map(E);
+    eq(headOf(legs[0]!.from), link.from, `${link.id}[S${i}] first leg leaves ${link.from}`);
+    eq(headOf(legs[legs.length - 1]!.to), link.to, `${link.id}[S${i}] last leg enters ${link.to}`);
+    for (let k = 0; k + 1 < legs.length; k++) {
+      const a = legs[k]!.to;
+      const b = legs[k + 1]!.from;
+      ok(a === b || headOf(a) === headOf(b), `${link.id}[S${i}] legs connect: ${a} -> ${b}`);
+    }
+  }
+}
+/** Every arrow a composition draws must be backed by a scene edge or by a
+ *  declared projection link, matched by endpoint heads. Compositions may
+ *  place and style; they may not invent semantic edges (round-4 review P1). */
+const backed = new Set<string>();
+for (const e of scene.edges) backed.add(`${headOf(e.from)}->${headOf(e.to)}`);
+for (const l of PROJECTION) backed.add(`${l.from}->${l.to}`);
+const mustLink = (from: string, to: string): void => {
+  if (!backed.has(`${from}->${to}`)) {
+    throw new Error(`composition drew an unbacked link ${from} -> ${to} (neither a scene edge nor a declared projection)`);
+  }
+};
+
 const marginText = (path: string): string => {
   switch (path) {
     case "facts.num_hidden_layers": return `schedule K,K,K,D ×${UNITS} + K — ${F.layers} layers`;
@@ -574,19 +651,27 @@ function drawStreamCard(s: Svg, r: R): void {
   s.node(hpre.x, hpre.y, hpre.w, hpre.h, "H-pre", { fill: s.s.mech, stroke: s.s.mechStroke, size: 12.5 });
   s.node(fbox.x, fbox.y, fbox.w, fbox.h, "F", { size: 12.5 });
   s.node(hpost.x, hpost.y, hpost.w, hpost.h, "H-post", { fill: s.s.mech, stroke: s.s.mechStroke, size: 12.5 });
+  mustLink("hpre1", "slot-attn");
   s.line(hpre.x + hpre.w, midY, fbox.x, midY, s.s.ink, 1.5, "", true);
+  mustLink("slot-attn", "hpost1");
   s.line(fbox.x + fbox.w, midY, hpost.x, midY, s.s.ink, 1.5, "", true);
   for (let i = 0; i < streams; i++) {
+    const n = i + 1;
     const ly = laneY(i);
     const sy = r.y + 10 + (r.h - 44) * ((i + 0.5) / streams);
     s.text(r.x + 2, sy + 4, `S${i + 1}`, { size: 12, weight: 600, fill: s.s.stream });
     s.line(r.x + 4, sy, dotX - 4, sy, s.s.stream, 1.3);
     s.out.push(`<circle cx="${dotX}" cy="${sy}" r="3" fill="${s.s.stream}"/>`);
+    mustLink(`sp0-${n}`, "hpre1");
     s.line(dotX + 4, sy, hpre.x, hpre.y + hpre.h * ((i + 0.5) / streams), s.s.stream, 1.2, "", true, true);
+    mustLink(`sp0-${n}`, "hres1");
     s.line(dotX + 4, sy, barX - 4, sy, s.s.stream, 1.2, "", true, true);
     s.plus(sumX, sy);
+    mustLink("hres1", `sum1-${n}`);
     s.line(barX + 4, sy, sumX - 10, sy, s.s.stream, 1.2, "", true, true);
+    mustLink("hpost1", `sum1-${n}`);
     s.line(hpost.x + hpost.w, hpost.y + hpost.h * ((i + 0.5) / streams), sumX - 8, sy - 4, s.s.stream, 1.2, "", true, true);
+    mustLink(`sum1-${n}`, `sp1-${n}`);
     s.line(sumX + 10, sy, tickX, sy, s.s.stream, 1.3, "", true, true);
   }
   void laneY;
@@ -629,7 +714,9 @@ function compositionA(): string {
   const hed: R = { x: cx - 120, y: 792, w: 240, h: 44 };
   s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
   s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
+  mustLink("tok", "embed");
   s.line(cx, tok.y + tok.h, cx, emb.y, s.s.ink, 1.5, "", true);
+  mustLink("embed", "g-dec"); // projection p-emb-dec (read elided)
   s.line(cx, emb.y + emb.h, cx, dec.y, s.s.ink, 1.5, "", true);
   s.rect(dec.x, dec.y, dec.w, dec.h, "#c8cdd3", "#3b4046", 1.8, 10);
   s.rect(dec.x + 28, dec.y + 30, dec.w - 56, dec.h - 60, s.s.mech, s.s.mechStroke, 1.6, 8);
@@ -646,16 +733,25 @@ function compositionA(): string {
     else s.irNode(id, cx - 100, chy, 200, hh, { fill: "#ffffff", stroke: s.s.boxStroke, size: 12.5 });
     chy += hh + 14;
   }
-  for (const [a, b] of [["hpre1", "slot-attn"], ["slot-attn", "hpost1"], ["hpre2", "slot-ffn"], ["slot-ffn", "hpost2"]] as const) {
-    s.line(cx, chainR[a]!.y + chainR[a]!.h, cx, chainR[b]!.y, s.s.ink, 1.5, "", true);
+  // spine ink arrows: 1:1 scene edges, looked up so a renamed/deleted edge
+  // stops emit instead of silently losing an arrow
+  for (const eid of ["m-hpre1-f", "m-f-hpost1", "m-hpre2-f", "m-f-hpost2"]) {
+    const e = E(eid);
+    const a = chainR[headOf(e.from)]!;
+    const b = chainR[headOf(e.to)]!;
+    s.line(cx, a.y + a.h, cx, b.y, s.s.ink, 1.5, "", true);
   }
-  for (const [a, b] of [["hpost1", "hpre2"], ["hpost2", "write"]] as const) {
-    const y1 = chainR[a]!.y + chainR[a]!.h;
-    const y2 = b === "write" ? dec.y + dec.h : chainR[b]!.y;
+  // collapsed spine links: declared overview projections only (round-4 P1)
+  for (const pid of ["p-hpost1-hpre2", "p-hpost2-dec"]) {
+    const l = P(pid);
+    const y1 = chainR[l.from]!.y + chainR[l.from]!.h;
+    const y2 = l.to === "g-dec" ? dec.y + dec.h : chainR[l.to]!.y;
     s.line(cx, y1, cx, y2, s.s.stream, 1.3, "", true, true);
   }
+  mustLink("g-dec", "norm"); // projection p-dec-norm (write elided)
   s.line(cx, dec.y + dec.h, cx, nrm.y, s.s.ink, 1.5, "", true);
   s.irNode("norm", nrm.x, nrm.y, nrm.w, nrm.h);
+  mustLink("norm", "head");
   s.line(cx, nrm.y + nrm.h, cx, hed.y, s.s.ink, 1.5, "", true);
   s.irNode("head", hed.x, hed.y, hed.w, hed.h);
   // residual rails from the stream declarations: read ticks left, write right
@@ -722,15 +818,20 @@ function compositionB(): string {
   const hed: R = { x: 1160, y: sy, w: 210, h: 40 };
   s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
   s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
+  mustLink("tok", "embed");
   s.line(tok.x + tok.w, sy + 20, emb.x, sy + 20, s.s.ink, 1.6, "", true);
+  mustLink("embed", "g-dec"); // projection p-emb-dec (read elided)
   s.line(emb.x + emb.w, sy + 20, dec.x, sy + 20, s.s.ink, 1.6, "", true);
   s.rect(dec.x, dec.y, dec.w, dec.h, "none", s.s.panelStroke, 1.8, 0);
   s.text(dec.x + 10, dec.y + 14, `DECODER ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 12.5, weight: 700, font: s.s.mono });
   s.irNode("slot-attn", sa.x, sa.y, sa.w, sa.h, { size: 12.5 });
   s.irNode("slot-ffn", sf.x, sf.y, sf.w, sf.h, { size: 12.5 });
+  mustLink("slot-attn", "slot-ffn"); // projection p-attn-ffn (mHC machinery elided)
   s.line(sa.x + sa.w, sy + 25, sf.x, sy + 25, s.s.ink, 1.5, "", true);
+  mustLink("g-dec", "norm"); // projection p-dec-norm (write elided)
   s.line(dec.x + dec.w, sy + 20, nrm.x, sy + 20, s.s.ink, 1.6, "", true);
   s.irNode("norm", nrm.x, nrm.y, nrm.w, nrm.h);
+  mustLink("norm", "head");
   s.line(nrm.x + nrm.w, sy + 20, hed.x, sy + 20, s.s.ink, 1.6, "", true);
   s.irNode("head", hed.x, hed.y, hed.w, hed.h);
   // orange callout: the tick drops at x=730, clear of the write stubs
@@ -793,8 +894,10 @@ function compositionC(): string {
   const emb: R = { x: sx - 120, y: 160, w: 240, h: 44 };
   const dec: R = { x: cx - 350, y: 240, w: 700, h: 1160 };
   s.irNode("tok", tok.x, tok.y, tok.w, tok.h);
+  mustLink("tok", "embed");
   s.line(sx, tok.y + tok.h, sx, emb.y, s.s.ink, 1.5, "", true);
   s.irNode("embed", emb.x, emb.y, emb.w, emb.h);
+  mustLink("embed", "g-dec"); // projection p-emb-dec (read elided)
   s.line(sx, emb.y + emb.h, sx, dec.y, s.s.ink, 1.5, "", true);
   s.rect(dec.x, dec.y, dec.w, dec.h, "#ffffff", s.s.panelStroke, 1.8, 14);
   s.text(dec.x + 12, dec.y + 22, `DECODER REPEAT UNIT ×${F.layers} (K,K,K,D ×${UNITS} + K)`, { size: 13.5, weight: 700 });
@@ -804,6 +907,7 @@ function compositionC(): string {
   const dsa: R = { x: cx - 110, y: dec.y + 300, w: 440, h: 300 };
   const moe: R = { x: cx - 110, y: dec.y + 620, w: 440, h: 240 };
   const mhc: R = { x: cx - 110, y: dec.y + 880, w: 440, h: 240 };
+  mustLink("g-dec", "hpre1"); // projection p-dec-hpre1 (per-stream splits elided)
   s.line(sx, dec.y, sx, sa.y, s.s.ink, 1.5, "", true);
   const cchain: Array<[string, R]> = [
     ["hpre1", { x: sa.x, y: sa.y, w: sa.w, h: 30 }],
@@ -817,13 +921,16 @@ function compositionC(): string {
     if (id.startsWith("slot")) s.irNode(id, rc.x, rc.y, rc.w, rc.h, { fill: s.s.mech, stroke: s.s.mechStroke });
     else s.irNode(id, rc.x, rc.y, rc.w, rc.h, { size: 12.5 });
   }
-  for (const [a, b] of [["hpre1", "slot-attn"], ["slot-attn", "hpost1"], ["hpre2", "slot-ffn"], ["slot-ffn", "hpost2"]] as const) {
-    const ra = cchain.find((c) => c[0] === a)![1];
-    const rb = cchain.find((c) => c[0] === b)![1];
+  // spine ink arrows: 1:1 scene edges looked up by id
+  for (const eid of ["m-hpre1-f", "m-f-hpost1", "m-hpre2-f", "m-f-hpost2"]) {
+    const e = E(eid);
+    const ra = cchain.find((c) => c[0] === headOf(e.from))![1];
+    const rb = cchain.find((c) => c[0] === headOf(e.to))![1];
     s.line(sx, ra.y + ra.h, sx, rb.y, s.s.ink, 1.5, "", true);
   }
   const r1 = cchain.find((c) => c[0] === "hpost1")![1];
   const r2 = cchain.find((c) => c[0] === "hpre2")![1];
+  P("p-hpost1-hpre2"); // collapsed: H-post → ⊕ → split → H-pre, per stream
   s.line(sx, r1.y + r1.h, sx, r2.y, s.s.stream, 1.3, "", true, true);
   const sa2 = cchain.find((c) => c[0] === "slot-attn")![1];
   const sf2 = cchain.find((c) => c[0] === "slot-ffn")![1];
@@ -842,7 +949,11 @@ function compositionC(): string {
   s.line(sa.x + sa.w, sa.y + sa.h / 2, kda.x, sa.y + sa.h / 2, s.s.muted, 1.2, s.s.dash);
   s.poly([[sa.x + sa.w, sa.y + sa.h / 2 + 8], [cx - 120, sa.y + sa.h / 2 + 8], [cx - 120, dsa.y + 50], [dsa.x, dsa.y + 50]], s.s.muted, 1.2, s.s.dash);
   s.line(sf.x + sf.w, sf.y + sf.h / 2, moe.x, sf.y + sf.h / 2, s.s.muted, 1.2, s.s.dash);
-  s.line(sx, sf.y + sf.h, sx, dec.y + dec.h, s.s.ink, 1.5, "", true);
+  // unit exit: H-post → ⊕ → group out (projection p-hpost2-dec), drawn from
+  // the H-post box so the line no longer runs through it
+  const hp2 = cchain.find((c) => c[0] === "hpost2")![1];
+  P("p-hpost2-dec");
+  s.line(sx, hp2.y + hp2.h, sx, dec.y + dec.h, s.s.ink, 1.5, "", true);
   // residual rails: ticks outside, bundle inside the container edges
   const gd = G("g-dec");
   const iys: number[] = [];
@@ -858,8 +969,10 @@ function compositionC(): string {
   }
   s.line(dec.x + 10, iys[0]!, dec.x + 10, iys[streams - 1]!, s.s.stream, 1.1);
   s.line(dec.x + dec.w - 10, oys[0]!, dec.x + dec.w - 10, oys[streams - 1]!, s.s.stream, 1.1);
+  mustLink("g-dec", "norm"); // projection p-dec-norm (write elided)
   s.line(sx, dec.y + dec.h, sx, dec.y + dec.h + 30, s.s.ink, 1.5, "", true);
   s.irNode("norm", sx - 110, dec.y + dec.h + 30, 220, 34);
+  mustLink("norm", "head");
   s.line(sx, dec.y + dec.h + 64, sx, dec.y + dec.h + 90, s.s.ink, 1.5, "", true);
   s.irNode("head", sx - 120, dec.y + dec.h + 90, 240, 44);
   // margin notes both sides — same rule as A: leaders only carry SHORT facts,
