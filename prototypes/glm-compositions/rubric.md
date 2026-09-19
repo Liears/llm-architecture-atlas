@@ -193,11 +193,15 @@ time and throws on drift.
    per Fig 1(c)/Eq.(3).
 6. In-figure title, omission note, title/reading-notes block and legend.
 
-## Reproduce
+## Frozen audit provenance
 
-```bash
-npx tsx prototypes/glm-compositions/render-candidates.ts          # SVGs + board
-npx tsx prototypes/glm-compositions/render-candidates.ts --png    # + PNGs
-```
+These files are frozen review attachments, not a locally reproducible build
+target in the canonical branch. Their one-time generator is intentionally not
+part of PR #45: it is a 1,064-line prototype that duplicates evidence,
+projection and SVG code now implemented as maintained modules and tests.
 
-Any drift between the frozen brief and the drawn values throws before emit.
+To audit or reproduce the original candidate run, use immutable commit
+[`d70a539`](https://github.com/Liears/llm-architecture-atlas/tree/d70a539f11e4fb5657413f798864646f365f9b64/prototypes/glm-compositions),
+which contains `render-candidates.ts`, its assertions and the byte-identical
+SVG/PNG outputs preserved here. The canonical figure itself remains locally
+reproducible through `corepack pnpm export:golden`.
