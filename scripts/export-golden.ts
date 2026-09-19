@@ -7,7 +7,8 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, statSy
 import { fileURLToPath } from "node:url";
 import type { EvidenceFile, ModelDocument } from "../packages/architecture-ir/src/types.ts";
 import {
-  auditCoverage, compileOverviewScene, compileGlmTopologyScene, layoutScene, validateScene,
+  auditCoverage, compileOverviewScene, compileGlmAnatomyScene, composeEditorialPoster,
+  glmAnatomyBlueprint, layoutScene, validateScene,
 } from "../packages/diagram-engine/src/index.ts";
 import { renderSvg } from "../packages/renderer-svg/src/render.ts";
 
@@ -27,8 +28,9 @@ for (const org of readdirSync(modelsRoot)) {
     const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
     const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
 
-    const scene = arch.model.id === "zai-org/glm-5.3-flash"
-      ? compileGlmTopologyScene(arch, evidence)
+    const isGlm = arch.model.id === "zai-org/glm-5.3-flash";
+    const scene = isGlm
+      ? compileGlmAnatomyScene(arch, evidence)
       : compileOverviewScene(arch, evidence);
     const errors = validateScene(scene);
     if (errors.length > 0) {
@@ -46,10 +48,13 @@ for (const org of readdirSync(modelsRoot)) {
     }
     }
 
-    const positioned = layoutScene(scene, { fontSize: 16 });
+    const positioned = isGlm
+      ? composeEditorialPoster(scene, glmAnatomyBlueprint())
+      : layoutScene(scene, { fontSize: 16 });
     const svg = renderSvg(positioned, {
       theme: "light",
       title: `${arch.model.label} — overview`,
+      showTitle: isGlm,
       description: `Generated from Architecture IR ${scene.irVersion}. ${scene.nodes.length} nodes, ${scene.annotations.length} evidence annotations; both themes ship in this document via CSS variables.`,
     });
     writeFileSync(`${outDir}/${positioned.scene.modelId.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-generated.svg`, svg);

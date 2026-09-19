@@ -69,6 +69,11 @@
       "status": "verified"
     },
     {
+      "element": "KDA Q/K/V ShortConv -> decay/state -> output gate",
+      "locator": "config $.text_config.linear_attn_config (rev f93128cf); Kimi Linear §4, Fig.3 (PDF p.6) for mechanism",
+      "status": "verified"
+    },
+    {
       "element": "mHC 4 residual streams",
       "locator": "config $.text_config.hc_mult (rev f93128cf); mHC paper Fig.1(c) for mechanism",
       "status": "verified"
@@ -81,6 +86,16 @@
     {
       "element": "dense x3 -> sparse MoE x42",
       "locator": "config $.text_config.first_k_dense_replace + mlp_layer_types",
+      "status": "verified"
+    },
+    {
+      "element": "MoE router -> 288 routed (Top-8) + 1 shared -> merge",
+      "locator": "config $.text_config.n_routed_experts + num_experts_per_tok + n_shared_experts (rev f93128cf)",
+      "status": "verified"
+    },
+    {
+      "element": "MTP omitted annotation after the LM head",
+      "locator": "config $.text_config.num_nextn_predict_layers (rev f93128cf)",
       "status": "verified"
     },
     {

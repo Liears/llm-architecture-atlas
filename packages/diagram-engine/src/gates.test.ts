@@ -10,8 +10,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { compileOverviewScene } from "./compile.js";
-import { compileGlmTopologyScene } from "./glm-topology.js";
+import { compileGlmAnatomyScene, glmAnatomyBlueprint } from "./glm-anatomy.js";
 import { layoutScene } from "./layout.js";
+import { composeEditorialPoster } from "./poster.js";
 import { runSceneGates, geometryGates, HARD_GATES } from "./gates.js";
 import { mhcStreamsScene, insetsScene, nestedScene } from "./fixtures.js";
 import type { DiagramScene } from "./types.js";
@@ -27,10 +28,11 @@ function pipelineFor(modelId: string): PositionedScene {
   if (!existsSync(`${modelDir}/architecture.json`)) throw new Error(`missing IR for ${modelId}`);
   const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
   const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
-  const scene = modelId === "zai-org/glm-5.3-flash"
-    ? compileGlmTopologyScene(arch, evidence)
+  const isGlm = modelId === "zai-org/glm-5.3-flash";
+  const scene = isGlm
+    ? compileGlmAnatomyScene(arch, evidence)
     : compileOverviewScene(arch, evidence);
-  return layoutScene(scene, { fontSize: 16 });
+  return isGlm ? composeEditorialPoster(scene, glmAnatomyBlueprint()) : layoutScene(scene, { fontSize: 16 });
 }
 
 const modelIds = readdirSync(`${root}/tests/structural`)

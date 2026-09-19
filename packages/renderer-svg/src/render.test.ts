@@ -34,6 +34,25 @@ describe("renderSvg", () => {
     expect(light.length).toBe(dark.length); // geometry identical
   });
 
+  it("adds editorial semantics only when poster mode is requested", () => {
+    const regular = renderSvg(positioned());
+    const poster = renderSvg(positioned(), { showTitle: true, title: "Editorial view" });
+    expect(regular).not.toContain('class="atlas-poster"');
+    expect(regular).not.toContain("data-node-kind");
+    expect(poster).toContain('class="atlas-poster"');
+    expect(poster).toContain('data-node-kind="stack"');
+    expect(poster).toContain(">Editorial view</text>");
+    expect(poster).toContain(".atlas-poster .e-label{font-size:15px}");
+  });
+
+  it("sizes the poster title rule from the scene width", () => {
+    const scene = positioned();
+    scene.size.w = 600;
+    const poster = renderSvg(scene, { showTitle: true, title: "Narrow poster" });
+    expect(poster).toContain('<line class="poster-rule" x1="50" y1="52" x2="550" y2="52"/>');
+    expect(poster).not.toContain('x2="1390"');
+  });
+
   it("escapes markup-significant characters in labels", () => {
     const scene = positioned();
     scene.nodes[0]!.label = 'Embed <layer> & "quotes"';
