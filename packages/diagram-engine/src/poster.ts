@@ -17,6 +17,8 @@ export interface EditorialPosterBlueprint {
   groups: PosterBox[];
   /** Edges not listed are intentionally omitted from this composition. */
   edges: string[];
+  /** Reviewed routes for callouts that need a clear corridor around dense content. */
+  edgeRoutes?: Record<string, Point[]>;
 }
 
 function distribute(box: PosterBox, side: "left" | "right" | "top" | "bottom", index: number, count: number): Point {
@@ -130,7 +132,7 @@ export function composeEditorialPoster(scene: DiagramScene, blueprint: Editorial
       kind: edge.kind,
       label: edge.label,
       claimPath: edge.claimPath,
-      points: route(anchor(edge.from, true), anchor(edge.to, false)),
+      points: blueprint.edgeRoutes?.[id] ?? route(anchor(edge.from, true), anchor(edge.to, false)),
     };
   });
 

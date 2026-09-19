@@ -44,6 +44,12 @@
       "claimPath": "topology.mtp.predict_layers"
     },
     {
+      "id": "lens-bus",
+      "label": "layer lenses",
+      "detail": null,
+      "claimPath": "facts.num_hidden_layers"
+    },
+    {
       "id": "pattern-0",
       "label": "L0–3",
       "detail": "K  K  K  D · Dense→MoE at L3",
@@ -201,8 +207,8 @@
     },
     {
       "id": "kda-qkv",
-      "label": "Q / K / V",
-      "detail": "Conv · k4",
+      "label": "Q/K/V",
+      "detail": "ShortConv · k4",
       "claimPath": "topology.attention.kda_short_conv_kernel"
     },
     {
@@ -213,7 +219,7 @@
     },
     {
       "id": "kda-gate",
-      "label": "gate",
+      "label": "output gate",
       "detail": null,
       "claimPath": "topology.attention_groups[0]"
     },
@@ -302,6 +308,30 @@
       "kind": "control",
       "from": "decoder",
       "to": "g-mhc.callout"
+    },
+    {
+      "id": "callout-lenses",
+      "kind": "control",
+      "from": "decoder",
+      "to": "lens-bus"
+    },
+    {
+      "id": "callout-kda",
+      "kind": "control",
+      "from": "lens-bus",
+      "to": "g-kda.callout"
+    },
+    {
+      "id": "callout-dsa",
+      "kind": "control",
+      "from": "lens-bus",
+      "to": "g-dsa.callout"
+    },
+    {
+      "id": "callout-moe",
+      "kind": "control",
+      "from": "lens-bus",
+      "to": "g-moe.callout"
     },
     {
       "id": "mhc-enter-1",
@@ -675,6 +705,13 @@
         "kda-state",
         "kda-gate"
       ],
+      "ports": [
+        {
+          "id": "callout",
+          "side": "left",
+          "inner": "kda-qkv"
+        }
+      ],
       "claimPath": "topology.attention_groups[0]"
     },
     {
@@ -687,6 +724,13 @@
         "dsa-selected",
         "dsa-mla"
       ],
+      "ports": [
+        {
+          "id": "callout",
+          "side": "left",
+          "inner": "dsa-indexer"
+        }
+      ],
       "claimPath": "topology.attention_groups[1]"
     },
     {
@@ -698,6 +742,13 @@
         "moe-routed",
         "moe-shared",
         "moe-merge"
+      ],
+      "ports": [
+        {
+          "id": "callout",
+          "side": "left",
+          "inner": "moe-router"
+        }
       ],
       "claimPath": "topology.ffn_groups[1]"
     }
@@ -731,6 +782,11 @@
     {
       "claimPath": "topology.mtp.predict_layers",
       "target": "mtp",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_hidden_layers",
+      "target": "lens-bus",
       "status": "reported"
     },
     {
@@ -991,6 +1047,21 @@
     {
       "claimPath": "topology.mtp.predict_layers",
       "target": "main-mtp",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "callout-kda",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[1]",
+      "target": "callout-dsa",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.ffn_groups[1]",
+      "target": "callout-moe",
       "status": "reported"
     },
     {

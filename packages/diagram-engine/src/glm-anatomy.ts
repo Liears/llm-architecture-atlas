@@ -102,6 +102,7 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
       claimPath: "topology.mtp.predict_layers",
       claims: [{ claimPath: "topology.mtp.predict_layers", label: "1 prediction layer" }],
     },
+    { id: "lens-bus", kind: "annotation", label: "layer lenses", claimPath: "facts.num_hidden_layers" },
     ...scheduleChunks.filter((chunk) => chunk.length === 4).map((chunk, unit) => ({
       id: `pattern-${unit}`,
       kind: "schedule",
@@ -168,12 +169,12 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
       claimPath: "topology.residual.streams", ports: streamPorts("w", "left", "ingress"),
     },
     {
-      id: "kda-qkv", kind: "attention", label: "Q / K / V", detail: "Conv · k4",
+      id: "kda-qkv", kind: "attention", label: "Q/K/V", detail: "ShortConv · k4",
       claimPath: "topology.attention.kda_short_conv_kernel",
       claims: [{ claimPath: "topology.attention.kda_short_conv_kernel", label: "kernel 4" }],
     },
     { id: "kda-state", kind: "state", label: "decay / state", detail: "recurrent", claimPath: "topology.attention_groups[0]" },
-    { id: "kda-gate", kind: "gate", label: "gate", claimPath: "topology.attention_groups[0]" },
+    { id: "kda-gate", kind: "gate", label: "output gate", claimPath: "topology.attention_groups[0]" },
     {
       id: "dsa-indexer", kind: "indexer", label: "Indexer", detail: "32 heads",
       claimPath: "topology.attention.dsa_indexer_heads",
@@ -214,6 +215,10 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     { id: "main-norm-head", from: "norm", to: "head", kind: "flow" },
     { id: "main-mtp", from: "head", to: "mtp", kind: "control", claimPath: "topology.mtp.predict_layers" },
     { id: "callout-mhc", from: "decoder", to: "g-mhc.callout", kind: "control", label: "representative sublayer" },
+    { id: "callout-lenses", from: "decoder", to: "lens-bus", kind: "control" },
+    { id: "callout-kda", from: "lens-bus", to: "g-kda.callout", kind: "control", claimPath: "topology.attention_groups[0]" },
+    { id: "callout-dsa", from: "lens-bus", to: "g-dsa.callout", kind: "control", claimPath: "topology.attention_groups[1]" },
+    { id: "callout-moe", from: "lens-bus", to: "g-moe.callout", kind: "control", claimPath: "topology.ffn_groups[1]" },
     ...SID.flatMap((i) => [
       { id: `mhc-enter-${i}`, from: `mhc-source.s${i}`, to: `g-mhc.in${i}`, kind: "residual" as const, rail: "left" as const, claimPath: "topology.residual.streams" },
       { id: `mhc-bound-in-${i}`, from: `g-mhc.in${i}`, to: `mhc-split-${i}.in`, kind: "flow" as const, claimPath: "topology.residual.scheme" },
@@ -252,15 +257,16 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     },
     {
       id: "g-kda", label: `KDA · ${kda.layers.length} layers`, kind: "inset", members: ["kda-qkv", "kda-state", "kda-gate"],
-      claimPath: "topology.attention_groups[0]",
+      ports: [{ id: "callout", side: "left", inner: "kda-qkv" }], claimPath: "topology.attention_groups[0]",
     },
     {
       id: "g-dsa", label: `DSA · ${dsa.layers.length} layers`, kind: "inset", members: ["dsa-indexer", "dsa-topk", "dsa-selected", "dsa-mla"],
-      claimPath: "topology.attention_groups[1]",
+      ports: [{ id: "callout", side: "left", inner: "dsa-indexer" }], claimPath: "topology.attention_groups[1]",
     },
     {
       id: "g-moe", label: `Sparse MoE · layers ${moe.layers[0]}–${moe.layers[moe.layers.length - 1]}`, kind: "inset",
-      members: ["moe-router", "moe-routed", "moe-shared", "moe-merge"], claimPath: "topology.ffn_groups[1]",
+      members: ["moe-router", "moe-routed", "moe-shared", "moe-merge"],
+      ports: [{ id: "callout", side: "left", inner: "moe-router" }], claimPath: "topology.ffn_groups[1]",
     },
   ];
 
@@ -304,6 +310,7 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
     { id: "norm", x: 850, y: 78, w: 165, h: 60 },
     { id: "head", x: 1060, y: 78, w: 165, h: 60 },
     { id: "mtp", x: 1260, y: 68, w: 130, h: 80 },
+    { id: "lens-bus", x: 935, y: 155, w: 95, h: 28 },
     ...Array.from({ length: 11 }, (_, i) => ({ id: `pattern-${i}`, x: 72, y: 242 + i * 43, w: 266, h: 36 })),
     { id: "pattern-tail", x: 72, y: 715, w: 266, h: 44 },
     { id: "mhc-source", x: 382, y: 445, w: 68, h: 130 },
@@ -314,9 +321,9 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
     { id: "mhc-hres", x: 578, y: 390, w: 110, h: 340 },
     ...SID.map((i) => ({ id: `mhc-sum-${i}`, x: 878, y: 382 + (i - 1) * 105, w: 84, h: 58 })),
     { id: "mhc-sink", x: 1015, y: 445, w: 45, h: 130 },
-    { id: "kda-qkv", x: 1088, y: 255, w: 92, h: 70 },
-    { id: "kda-state", x: 1195, y: 255, w: 105, h: 70 },
-    { id: "kda-gate", x: 1315, y: 255, w: 62, h: 70 },
+    { id: "kda-qkv", x: 1080, y: 255, w: 115, h: 70 },
+    { id: "kda-state", x: 1205, y: 255, w: 115, h: 70 },
+    { id: "kda-gate", x: 1330, y: 255, w: 95, h: 70 },
     { id: "dsa-indexer", x: 1092, y: 430, w: 125, h: 55 },
     { id: "dsa-topk", x: 1240, y: 430, w: 125, h: 55 },
     { id: "dsa-selected", x: 1240, y: 500, w: 125, h: 45 },
@@ -329,18 +336,25 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
   const groups = [
     { id: "g-pattern", x: 48, y: 195, w: 314, h: 610 },
     { id: "g-mhc", x: 458, y: 195, w: 545, h: 610 },
-    { id: "g-kda", x: 1070, y: 195, w: 325, h: 165 },
-    { id: "g-dsa", x: 1070, y: 385, w: 325, h: 180 },
-    { id: "g-moe", x: 1070, y: 590, w: 325, h: 215 },
+    { id: "g-kda", x: 1070, y: 195, w: 360, h: 165 },
+    { id: "g-dsa", x: 1070, y: 385, w: 360, h: 180 },
+    { id: "g-moe", x: 1070, y: 590, w: 360, h: 215 },
   ];
   const edges = [
     "main-token-embed", "main-embed-decoder", "main-decoder-norm", "main-norm-head", "main-mtp",
-    "callout-mhc",
+    "callout-mhc", "callout-lenses", "callout-kda", "callout-dsa", "callout-moe",
     ...SID.flatMap((i) => [
       `mhc-enter-${i}`, `mhc-bound-in-${i}`, `mhc-pre-${i}`, `mhc-res-in-${i}`, `mhc-res-out-${i}`,
       `mhc-post-${i}`, `mhc-bound-out-${i}`, `mhc-exit-${i}`,
     ]),
     "mhc-pre-f", "mhc-f-post", "kda-1", "kda-2", "dsa-1", "dsa-2", "dsa-3", "moe-1", "moe-2", "moe-3", "moe-4",
   ];
-  return { id: "glm-anatomy-desktop", size: { w: 1440, h: 860 }, nodes, groups, edges };
+  const edgeRoutes: NonNullable<EditorialPosterBlueprint["edgeRoutes"]> = {
+    "callout-mhc": [{ x: 650, y: 148 }, { x: 650, y: 185 }, { x: 730.5, y: 185 }, { x: 730.5, y: 195 }],
+    "callout-lenses": [{ x: 690, y: 148 }, { x: 690, y: 169 }, { x: 935, y: 169 }],
+    "callout-kda": [{ x: 1030, y: 169 }, { x: 1045, y: 169 }, { x: 1045, y: 277.5 }, { x: 1070, y: 277.5 }],
+    "callout-dsa": [{ x: 1030, y: 169 }, { x: 1045, y: 169 }, { x: 1045, y: 475 }, { x: 1070, y: 475 }],
+    "callout-moe": [{ x: 1030, y: 169 }, { x: 1045, y: 169 }, { x: 1045, y: 697.5 }, { x: 1070, y: 697.5 }],
+  };
+  return { id: "glm-anatomy-desktop", size: { w: 1440, h: 860 }, nodes, groups, edges, edgeRoutes };
 }

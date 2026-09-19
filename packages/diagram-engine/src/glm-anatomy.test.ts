@@ -20,6 +20,15 @@ describe("GLM anatomy poster", () => {
     expect(scene.edges.find((edge) => edge.id === "dsa-2")?.to).toBe("dsa-selected");
     expect(scene.edges.filter((edge) => edge.id.startsWith("moe-") && edge.to === "moe-merge")).toHaveLength(2);
     expect(scene.nodes.find((node) => node.id === "pattern-tail")?.detail).toContain("tail KDA");
+    expect(scene.nodes.find((node) => node.id === "kda-qkv")).toMatchObject({ label: "Q/K/V", detail: "ShortConv · k4" });
+    expect(scene.nodes.find((node) => node.id === "kda-gate")?.label).toBe("output gate");
+    expect(scene.edges.filter((edge) => edge.id.startsWith("callout-")).map((edge) => edge.to)).toEqual([
+      "g-mhc.callout",
+      "lens-bus",
+      "g-kda.callout",
+      "g-dsa.callout",
+      "g-moe.callout",
+    ]);
   });
 
   it("fails validation when a residual stream leg is deleted", () => {
@@ -55,5 +64,8 @@ describe("GLM anatomy poster", () => {
     expect(first).toEqual(second);
     expect(first.size.w / first.size.h).toBeLessThanOrEqual(1.8);
     expect(first.nodes).toHaveLength(scene.nodes.length);
+    for (const id of ["callout-kda", "callout-dsa", "callout-moe"]) {
+      expect(first.edges.find((edge) => edge.id === id)?.points.length).toBeGreaterThan(2);
+    }
   });
 });
