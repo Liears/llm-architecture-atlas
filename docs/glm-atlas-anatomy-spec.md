@@ -94,6 +94,9 @@ area.
 
 ## Acceptance tests
 
+- The PR contains the three same-input composition candidates, comparison
+  board, weighted rubric, elimination reasons and a canonical-port decision
+  record. Prototype coordinates are not canonical source code.
 - Scene validation rejects a missing mHC stream leg, selected-KV edge, expert
   merge edge or tail KDA schedule cell.
 - Projection validation rejects an unknown, disconnected or endpoint-mismatched

@@ -1,0 +1,263 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 950" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M,0 L10,5 L0,10 z" fill="#e8f1fa"/></marker><marker id="art" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#63d8b8"/></marker></defs>
+<rect x="0" y="0" width="1560" height="950" rx="2" fill="#0d1a2b" stroke="none" stroke-width="0"/>
+<line x1="0" y1="0" x2="0" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="26" y1="0" x2="26" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="52" y1="0" x2="52" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="78" y1="0" x2="78" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="104" y1="0" x2="104" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="130" y1="0" x2="130" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="156" y1="0" x2="156" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="182" y1="0" x2="182" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="208" y1="0" x2="208" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="234" y1="0" x2="234" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="260" y1="0" x2="260" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="286" y1="0" x2="286" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="312" y1="0" x2="312" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="338" y1="0" x2="338" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="364" y1="0" x2="364" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="390" y1="0" x2="390" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="416" y1="0" x2="416" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="442" y1="0" x2="442" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="468" y1="0" x2="468" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="494" y1="0" x2="494" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="520" y1="0" x2="520" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="546" y1="0" x2="546" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="572" y1="0" x2="572" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="598" y1="0" x2="598" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="624" y1="0" x2="624" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="650" y1="0" x2="650" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="676" y1="0" x2="676" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="702" y1="0" x2="702" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="728" y1="0" x2="728" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="754" y1="0" x2="754" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="780" y1="0" x2="780" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="806" y1="0" x2="806" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="832" y1="0" x2="832" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="858" y1="0" x2="858" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="884" y1="0" x2="884" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="910" y1="0" x2="910" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="936" y1="0" x2="936" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="962" y1="0" x2="962" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="988" y1="0" x2="988" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1014" y1="0" x2="1014" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1040" y1="0" x2="1040" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1066" y1="0" x2="1066" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1092" y1="0" x2="1092" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1118" y1="0" x2="1118" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1144" y1="0" x2="1144" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1170" y1="0" x2="1170" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1196" y1="0" x2="1196" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1222" y1="0" x2="1222" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1248" y1="0" x2="1248" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1274" y1="0" x2="1274" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1300" y1="0" x2="1300" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1326" y1="0" x2="1326" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1352" y1="0" x2="1352" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1378" y1="0" x2="1378" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1404" y1="0" x2="1404" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1430" y1="0" x2="1430" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1456" y1="0" x2="1456" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1482" y1="0" x2="1482" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1508" y1="0" x2="1508" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1534" y1="0" x2="1534" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="1560" y1="0" x2="1560" y2="950" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="0" x2="1560" y2="0" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="26" x2="1560" y2="26" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="52" x2="1560" y2="52" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="78" x2="1560" y2="78" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="104" x2="1560" y2="104" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="130" x2="1560" y2="130" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="156" x2="1560" y2="156" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="182" x2="1560" y2="182" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="208" x2="1560" y2="208" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="234" x2="1560" y2="234" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="260" x2="1560" y2="260" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="286" x2="1560" y2="286" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="312" x2="1560" y2="312" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="338" x2="1560" y2="338" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="364" x2="1560" y2="364" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="390" x2="1560" y2="390" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="416" x2="1560" y2="416" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="442" x2="1560" y2="442" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="468" x2="1560" y2="468" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="494" x2="1560" y2="494" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="520" x2="1560" y2="520" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="546" x2="1560" y2="546" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="572" x2="1560" y2="572" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="598" x2="1560" y2="598" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="624" x2="1560" y2="624" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="650" x2="1560" y2="650" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="676" x2="1560" y2="676" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="702" x2="1560" y2="702" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="728" x2="1560" y2="728" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="754" x2="1560" y2="754" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="780" x2="1560" y2="780" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="806" x2="1560" y2="806" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="832" x2="1560" y2="832" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="858" x2="1560" y2="858" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="884" x2="1560" y2="884" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="910" x2="1560" y2="910" stroke="#15273c" stroke-width="0.6"/>
+<line x1="0" y1="936" x2="1560" y2="936" stroke="#15273c" stroke-width="0.6"/>
+<text x="28" y="40" font-size="22" fill="#e8f1fa" font-weight="700" text-anchor="start" font-family="ui-monospace, monospace">GLM-5.3-Flash (320B-A18B) — ENGINEERING SHEET</text>
+<text x="28" y="62" font-size="12.5" fill="#8fa6bd" font-weight="400" text-anchor="start">Text decoder shown; vision encoder and MTP head omitted</text>
+<rect x="40" y="96" width="180" height="40" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="130" y="120.5" font-size="13" fill="#e8f1fa" font-weight="600" text-anchor="middle">Tokenized text</text>
+<rect x="240" y="96" width="210" height="40" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="345" y="114" font-size="13" fill="#e8f1fa" font-weight="600" text-anchor="middle">Token embedding</text>
+<text x="345" y="129" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">hidden 4,096 · vocab 154,880</text>
+<line x1="220" y1="116" x2="240" y2="116" stroke="#e8f1fa" stroke-width="1.6" marker-end="url(#ar)"/>
+<line x1="450" y1="116" x2="470" y2="116" stroke="#e8f1fa" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="470" y="78" width="460" height="76" rx="0" fill="none" stroke="#67b7e8" stroke-width="1.8"/>
+<text x="480" y="92" font-size="12.5" fill="#e8f1fa" font-weight="700" text-anchor="start" font-family="ui-monospace, monospace">DECODER ×45 (K,K,K,D ×11 + K)</text>
+<rect x="490" y="104" width="200" height="34" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="590" y="119" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">attention slot = sublayer F</text>
+<text x="590" y="134" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">K,K,K,D per 4 layers</text>
+<rect x="710" y="104" width="200" height="34" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="810" y="119" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">FFN slot = sublayer F</text>
+<text x="810" y="134" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">3 dense → 42 MoE</text>
+<line x1="690" y1="121" x2="710" y2="121" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="930" y1="116" x2="960" y2="116" stroke="#e8f1fa" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="960" y="96" width="170" height="40" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="1045" y="120.5" font-size="13" fill="#e8f1fa" font-weight="600" text-anchor="middle">Final RMSNorm</text>
+<line x1="1130" y1="116" x2="1160" y2="116" stroke="#e8f1fa" stroke-width="1.6" marker-end="url(#ar)"/>
+<rect x="1160" y="96" width="210" height="40" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="1265" y="114" font-size="13" fill="#e8f1fa" font-weight="600" text-anchor="middle">Linear output</text>
+<text x="1265" y="129" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">vocab 154,880</text>
+<line x1="730" y1="154" x2="730" y2="218" stroke="#f2a33c" stroke-width="1.3"/>
+<text x="740" y="222" font-size="12" fill="#f2a33c" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">45 layers (K,K,K,D ×11 + K) · 4 streams · 64 heads</text>
+<line x1="527.5" y1="62" x2="527.5" y2="75" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="523.5" y="58" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="end">S1</text>
+<line x1="527.5" y1="157" x2="527.5" y2="170" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<line x1="642.5" y1="62" x2="642.5" y2="75" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="638.5" y="58" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="end">S2</text>
+<line x1="642.5" y1="157" x2="642.5" y2="170" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<line x1="757.5" y1="62" x2="757.5" y2="75" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="753.5" y="58" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="end">S3</text>
+<line x1="757.5" y1="157" x2="757.5" y2="170" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<line x1="872.5" y1="62" x2="872.5" y2="75" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="868.5" y="58" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="end">S4</text>
+<line x1="872.5" y1="157" x2="872.5" y2="170" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="40" y="190" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">schedule K,K,K,D ×11 + K — 45 layers</text>
+<text x="40" y="208" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">64 heads</text>
+<text x="40" y="226" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">context 1M tokens</text>
+<text x="40" y="244" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">34 KDA layers</text>
+<text x="420" y="190" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">11 MLA/DSA layers</text>
+<text x="420" y="208" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">first 3 dense</text>
+<text x="420" y="226" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">then 42 MoE · 288 routed top-8 + 1 shared</text>
+<text x="420" y="244" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">4 residual streams</text>
+<text x="40" y="258" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">mHC Eq.(3): x' = Hres·x + Hpostᵀ·F(Hpre·x)</text>
+<rect x="40" y="268" width="730" height="310" rx="2" fill="#0d1a2b" stroke="#67b7e8" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="52" y="288" font-size="13.5" fill="#e8f1fa" font-weight="700" text-anchor="start">KDA — 34 layers (Kimi Linear §4 Fig 3)</text>
+<rect x="60" y="339" width="212.66666666666666" height="180" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="166.33333333333331" y="427" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">Q/K/V ShortConv</text>
+<text x="166.33333333333331" y="442" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">kernel 4</text>
+<rect x="298.66666666666663" y="339" width="212.66666666666666" height="180" rx="2" fill="#12364a" stroke="#e08c2f" stroke-width="1.5"/>
+<text x="404.99999999999994" y="427" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">KDA core</text>
+<text x="404.99999999999994" y="442" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">decay + recurrent state</text>
+<rect x="537.3333333333333" y="339" width="212.66666666666666" height="180" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="643.6666666666666" y="433.5" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">output gate</text>
+<line x1="272.66666666666663" y1="429" x2="298.66666666666663" y2="429" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="511.33333333333326" y1="429" x2="537.3333333333333" y2="429" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="800" y="268" width="730" height="310" rx="2" fill="#0d1a2b" stroke="#67b7e8" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="812" y="288" font-size="13.5" fill="#e8f1fa" font-weight="700" text-anchor="start">DSA — 11 layers, 1 per 4 (V3.2 §2.1 Fig 2)</text>
+<rect x="820" y="339" width="153" height="180" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="896.5" y="427" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">Lightning indexer</text>
+<text x="896.5" y="442" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">32 heads</text>
+<rect x="999" y="339" width="153" height="180" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="1075.5" y="427" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">Top-k</text>
+<text x="1075.5" y="442" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">k=2048</text>
+<rect x="1178" y="339" width="153" height="180" rx="2" fill="#12364a" stroke="#e08c2f" stroke-width="1.5"/>
+<text x="1254.5" y="433.5" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">selected KV</text>
+<rect x="1357" y="339" width="153" height="180" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="1433.5" y="427" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">MLA core</text>
+<text x="1433.5" y="442" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">latent KV</text>
+<line x1="973" y1="429" x2="999" y2="429" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="1152" y1="429" x2="1178" y2="429" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="1331" y1="429" x2="1357" y2="429" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="40" y="598" width="730" height="310" rx="2" fill="#0d1a2b" stroke="#67b7e8" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="52" y="618" font-size="13.5" fill="#e8f1fa" font-weight="700" text-anchor="start">MoE — layers 3–44</text>
+<rect x="287.7" y="646" width="234.60000000000002" height="34" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="405" y="667.5" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">Router</text>
+<rect x="60" y="704" width="333" height="46" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="226.5" y="725" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">Routed experts</text>
+<text x="226.5" y="740" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">288 · top-8</text>
+<rect x="417" y="704" width="333" height="46" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="583.5" y="725" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">Shared expert</text>
+<text x="583.5" y="740" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="middle">1 always on</text>
+<circle cx="405" cy="785" r="10" fill="#0f2136" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="400" y1="785" x2="410" y2="785" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="405" y1="780" x2="405" y2="790" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="405" y1="680" x2="226.5" y2="704" stroke="#e8f1fa" stroke-width="1.4" marker-end="url(#ar)"/>
+<line x1="405" y1="680" x2="583.5" y2="704" stroke="#e8f1fa" stroke-width="1.4" marker-end="url(#ar)"/>
+<line x1="226.5" y1="750" x2="405" y2="774" stroke="#e8f1fa" stroke-width="1.4" marker-end="url(#ar)"/>
+<line x1="583.5" y1="750" x2="405" y2="774" stroke="#e8f1fa" stroke-width="1.4" marker-end="url(#ar)"/>
+<rect x="800" y="598" width="730" height="310" rx="2" fill="#0d1a2b" stroke="#67b7e8" stroke-width="1.6" stroke-dasharray="5 4"/>
+<text x="812" y="618" font-size="13.5" fill="#e8f1fa" font-weight="700" text-anchor="start">mHC — 4 streams, shared pass (Fig 1c Eq 3)</text>
+<rect x="878" y="648" width="8" height="204" rx="2" fill="#63d8b8" stroke="#63d8b8" stroke-width="1"/>
+<text x="888" y="868" font-size="12" fill="#63d8b8" font-weight="400" text-anchor="start">H-res mix (skip, across streams)</text>
+<rect x="904" y="736" width="74" height="34" rx="2" fill="#12364a" stroke="#e08c2f" stroke-width="1.5"/>
+<text x="941" y="757.5" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">H-pre</text>
+<rect x="992" y="736" width="74" height="34" rx="2" fill="#0f2136" stroke="#9fd4f5" stroke-width="1.5"/>
+<text x="1029" y="757.5" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">F</text>
+<rect x="1080" y="736" width="74" height="34" rx="2" fill="#12364a" stroke="#e08c2f" stroke-width="1.5"/>
+<text x="1117" y="757.5" font-size="12.5" fill="#e8f1fa" font-weight="600" text-anchor="middle">H-post</text>
+<line x1="978" y1="753" x2="992" y2="753" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<line x1="1066" y1="753" x2="1080" y2="753" stroke="#e8f1fa" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="822" y="679.75" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="start">S1</text>
+<line x1="824" y1="675.75" x2="842" y2="675.75" stroke="#63d8b8" stroke-width="1.3"/>
+<circle cx="846" cy="675.75" r="3" fill="#63d8b8"/>
+<line x1="850" y1="675.75" x2="904" y2="740.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="850" y1="675.75" x2="878" y2="675.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<circle cx="1470" cy="675.75" r="10" fill="#0f2136" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1465" y1="675.75" x2="1475" y2="675.75" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1470" y1="670.75" x2="1470" y2="680.75" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="886" y1="675.75" x2="1460" y2="675.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1154" y1="740.25" x2="1462" y2="671.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1480" y1="675.75" x2="1504" y2="675.75" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="822" y="727.25" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="start">S2</text>
+<line x1="824" y1="723.25" x2="842" y2="723.25" stroke="#63d8b8" stroke-width="1.3"/>
+<circle cx="846" cy="723.25" r="3" fill="#63d8b8"/>
+<line x1="850" y1="723.25" x2="904" y2="748.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="850" y1="723.25" x2="878" y2="723.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<circle cx="1470" cy="723.25" r="10" fill="#0f2136" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1465" y1="723.25" x2="1475" y2="723.25" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1470" y1="718.25" x2="1470" y2="728.25" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="886" y1="723.25" x2="1460" y2="723.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1154" y1="748.75" x2="1462" y2="719.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1480" y1="723.25" x2="1504" y2="723.25" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="822" y="774.75" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="start">S3</text>
+<line x1="824" y1="770.75" x2="842" y2="770.75" stroke="#63d8b8" stroke-width="1.3"/>
+<circle cx="846" cy="770.75" r="3" fill="#63d8b8"/>
+<line x1="850" y1="770.75" x2="904" y2="757.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="850" y1="770.75" x2="878" y2="770.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<circle cx="1470" cy="770.75" r="10" fill="#0f2136" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1465" y1="770.75" x2="1475" y2="770.75" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1470" y1="765.75" x2="1470" y2="775.75" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="886" y1="770.75" x2="1460" y2="770.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1154" y1="757.25" x2="1462" y2="766.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1480" y1="770.75" x2="1504" y2="770.75" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<text x="822" y="822.25" font-size="12" fill="#63d8b8" font-weight="600" text-anchor="start">S4</text>
+<line x1="824" y1="818.25" x2="842" y2="818.25" stroke="#63d8b8" stroke-width="1.3"/>
+<circle cx="846" cy="818.25" r="3" fill="#63d8b8"/>
+<line x1="850" y1="818.25" x2="904" y2="765.75" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="850" y1="818.25" x2="878" y2="818.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<circle cx="1470" cy="818.25" r="10" fill="#0f2136" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1465" y1="818.25" x2="1475" y2="818.25" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="1470" y1="813.25" x2="1470" y2="823.25" stroke="#e8f1fa" stroke-width="1.5"/>
+<line x1="886" y1="818.25" x2="1460" y2="818.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1154" y1="765.75" x2="1462" y2="814.25" stroke="#63d8b8" stroke-width="1.2" marker-end="url(#art)"/>
+<line x1="1480" y1="818.25" x2="1504" y2="818.25" stroke="#63d8b8" stroke-width="1.3" marker-end="url(#art)"/>
+<rect x="1210" y="150" width="320" height="92" rx="2" fill="#0d1a2b" stroke="#67b7e8" stroke-width="1.4"/>
+<text x="1220" y="168" font-size="12.5" fill="#e8f1fa" font-weight="700" text-anchor="start" font-family="ui-monospace, monospace">LLM ARCHITECTURE ATLAS — GLM-01</text>
+<text x="1220" y="186" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">MODEL zai-org/GLM-5.3-Flash REV f93128cf</text>
+<text x="1220" y="204" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">DRAWN B blueprint · SCALE none</text>
+<text x="1220" y="222" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start" font-family="ui-monospace, monospace">SRC pinned config + publishable claims</text>
+<line x1="40" y1="916" x2="74" y2="916" stroke="#e8f1fa" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="80" y="920" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start">data flow</text>
+<line x1="170" y1="916" x2="204" y2="916" stroke="#8fa6bd" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="210" y="920" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start">callout</text>
+<line x1="290" y1="916" x2="324" y2="916" stroke="#63d8b8" stroke-width="1.6" marker-end="url(#art)"/>
+<text x="330" y="920" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="start">residual stream ×4</text>
+<text x="1520" y="920" font-size="12" fill="#8fa6bd" font-weight="400" text-anchor="end" font-family="ui-monospace, monospace">B · engineering-blueprint</text>
+</svg>
