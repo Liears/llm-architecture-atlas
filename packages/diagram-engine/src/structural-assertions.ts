@@ -4,18 +4,14 @@
  * and not count-matching. Each violation is a GateFinding so it can enter the
  * persistent-red baseline with the issue that owns the fix.
  *
- * - schedule: exact K,K,K,D ×11 + K layer MEMBERSHIP (any 34/11 partition
- *   that misplaces a layer fails), plus scene expression of the repeat unit
- *   and explicit tail layer;
- * - mHC: when the scene declares streams, each must run read → stage →
- *   stage → write crossing group boundaries and visiting operator
- *   ingress/egress ports; undeclared/placeholder topology stays red;
- * - DSA: selected-KV edge topk → MLA core carrying the dsa_topk claim, plus
- *   indexer → topk;
- * - MoE: router → experts edge carrying the active_routed claim, a shared
- *   feed edge carrying the experts.shared claim, and a merge node whose
- *   inputs are exactly the routed experts and the shared expert (unrelated
- *   double-outs/double-ins are rejected).
+ * - schedule: exact K,K,K,D ×11 + K layer membership and the same visible
+ *   chunks in the reviewed anatomy poster;
+ * - mHC: every declared stream crosses the inset boundary and preserves its
+ *   read/residual/write legs around the shared H-pre → F → H-post path;
+ * - DSA: indexer → top-k → selected KV → MLA, with the selected edge carrying
+ *   the dsa_topk claim;
+ * - MoE: router fan-out to routed/shared experts and an exact two-branch
+ *   merge. Unrelated double-outs/double-ins are rejected.
  */
 
 import type { DiagramScene } from "./types.js";
@@ -53,18 +49,19 @@ export function assertGlmStructure(scene: DiagramScene, arch: ModelDocument): Ga
   if (!scheduleOk) {
     push("schedule", "canvas", `layer schedule does not match K,K,K,D ×${Math.floor((total - 1) / 4)} + K membership over ${total} layers`);
   }
-  const unit = scene.nodes.find((n) => n.id === "unit");
-  const tail = scene.nodes.find((n) => n.id === "tail-kda");
-  const decoder = scene.groups.find((g) => g.id === "g-decoder");
-  const unitExpressesSchedule =
-    unit && mla && unit.label.includes(`× ${mla.layers.length} units`) &&
-    (unit.claims ?? []).some((c) => c.claimPath === "topology.attention_groups[0]") &&
-    (unit.claims ?? []).some((c) => c.claimPath === "topology.attention_groups[1]");
-  if (!unitExpressesSchedule || !tail || !decoder?.repeat || decoder.repeat.count !== total) {
-    push("schedule", "g-decoder", "scene does not express the 45-layer decoder with a repeating unit (schedule claims) and an explicit tail KDA layer");
+  const expectedKinds = Array.from({ length: total }, (_, layer) => expectedMla.has(layer) ? "D" : "K");
+  const expectedChunks = Array.from({ length: Math.ceil(total / 4) }, (_, index) => expectedKinds.slice(index * 4, index * 4 + 4));
+  const pattern = scene.groups.find((g) => g.id === "g-pattern");
+  const visibleScheduleOk = expectedChunks.every((chunk, index) => {
+    const id = chunk.length === 4 ? `pattern-${index}` : "pattern-tail";
+    const node = scene.nodes.find((candidate) => candidate.id === id);
+    return node?.detail?.startsWith(chunk.join("  ")) && pattern?.members.includes(id);
+  });
+  if (!visibleScheduleOk || pattern?.members.length !== expectedChunks.length) {
+    push("schedule", "g-pattern", `scene does not express the source-derived ${total}-layer K,K,K,D ×${Math.floor((total - 1) / 4)} + K schedule`);
   }
 
-  // -- mHC: declared streams must be complete read→stage→stage→write paths
+  // -- mHC: four explicit boundary/read/residual/write paths around F
   const streams = arch.topology.residual?.streams ?? 4;
   if (!scene.streams || scene.streams.length < streams) {
     push(
@@ -73,24 +70,16 @@ export function assertGlmStructure(scene: DiagramScene, arch: ModelDocument): Ga
       `mHC: expected ${streams} declared cross-sublayer streams, found ${scene.streams?.length ?? 0} (placeholder self-rails until #34)`,
     );
   } else {
-    const groupOfNode = new Map<string, string>();
-    for (const g of scene.groups) for (const m of g.members) groupOfNode.set(m, g.id);
+    const edgePairs = new Set(scene.edges.map((edge) => `${edge.from}->${edge.to}`));
+    const sharedOperatorPath =
+      edgePairs.has("mhc-hpre.out->mhc-f.in") && edgePairs.has("mhc-f.out->mhc-hpost.in");
     for (const stream of scene.streams) {
-      const groupsVisited = new Set<string>();
-      let crossings = 0;
-      let operatorHops = 0;
-      let prev: string | undefined;
-      for (let i = 0; i < stream.path.length; i++) {
-        const ref = stream.path[i]!;
-        const head = splitRef(ref);
-        const grp = groupOfNode.get(head);
-        if (grp) groupsVisited.add(grp);
-        if (grp !== prev) crossings += 1; // every group change, including to/from the spine
-        prev = grp;
-        if (i + 1 < stream.path.length && splitRef(stream.path[i + 1]!) === head) {
-          operatorHops += 1; // ingress→egress inside one operator
-        }
-      }
+      const index = stream.id.replace(/^s/, "");
+      const expectedPath = [
+        `mhc-source.s${index}`, `g-mhc.in${index}`, `mhc-split-${index}.in`, `mhc-split-${index}.res`,
+        `mhc-hres.in${index}`, `mhc-hres.out${index}`, `mhc-sum-${index}.res`, `mhc-sum-${index}.out`,
+        `g-mhc.out${index}`, `mhc-sink.w${index}`,
+      ];
       const firstHead = splitRef(stream.path[0]!);
       const lastHead = splitRef(stream.path[stream.path.length - 1]!);
       const firstKind = scene.nodes.find((n) => n.id === firstHead)?.kind;
@@ -98,44 +87,47 @@ export function assertGlmStructure(scene: DiagramScene, arch: ModelDocument): Ga
       if (firstKind !== "split" || lastKind !== "merge") {
         push("mhc-streams", stream.id, `stream ${stream.id} must start at a split (read) node and end at a merge (write) node`);
       }
-      if (groupsVisited.size < 2 || crossings < 3) {
-        push("mhc-streams", stream.id, `stream ${stream.id} visits ${groupsVisited.size} sublayer(s) with ${crossings} boundary crossings; expected >=2 sublayers and >=3 crossings`);
-      }
-      if (operatorHops < groupsVisited.size) {
-        push("mhc-streams", stream.id, `stream ${stream.id} traverses ${operatorHops} operator(s); expected one ingress→egress hop per visited sublayer`);
+      const pathOk = stream.path.length === expectedPath.length && stream.path.every((ref, position) => ref === expectedPath[position]);
+      const branchOk =
+        edgePairs.has(`mhc-split-${index}.pre->mhc-hpre.in${index}`) &&
+        edgePairs.has(`mhc-hres.out${index}->mhc-sum-${index}.res`) &&
+        edgePairs.has(`mhc-hpost.out${index}->mhc-sum-${index}.post`);
+      if (!pathOk || !branchOk || !sharedOperatorPath) {
+        push("mhc-streams", stream.id, `stream ${stream.id} does not preserve the boundary/read/residual/write path around H-pre → F → H-post`);
       }
     }
   }
 
   // -- DSA: selected-KV path indexer → top-k → MLA core, claim-backed
   const selKv = scene.edges.find((e) => e.claimPath === "topology.attention.dsa_topk");
-  const indexerToTopk = scene.edges.find((e) => splitRef(e.from) === "indexer" && splitRef(e.to) === "topk");
-  if (!selKv || splitRef(selKv.from) !== "topk" || splitRef(selKv.to) !== "dsa") {
-    push("dsa-selected-kv", "topk", "DSA selected-KV edge topk → dsa with the dsa_topk claim is missing");
+  const indexerToTopk = scene.edges.find((e) => splitRef(e.from) === "dsa-indexer" && splitRef(e.to) === "dsa-topk");
+  const selectedToMla = scene.edges.find((e) => splitRef(e.from) === "dsa-selected" && splitRef(e.to) === "dsa-mla");
+  if (!selKv || splitRef(selKv.from) !== "dsa-topk" || splitRef(selKv.to) !== "dsa-selected" || !selectedToMla) {
+    push("dsa-selected-kv", "dsa-topk", "DSA selected-KV path dsa-topk → dsa-selected → dsa-mla with the dsa_topk claim is missing");
   }
   if (!indexerToTopk) {
-    push("dsa-selected-kv", "indexer", "DSA indexer → top-k edge is missing");
+    push("dsa-selected-kv", "dsa-indexer", "DSA indexer → top-k edge is missing");
   }
 
   // -- MoE: specific fan-out/fan-in contract
   const routerToExperts = scene.edges.find(
-    (e) => splitRef(e.from) === "router" && splitRef(e.to) === "experts" && e.claimPath === "topology.experts.active_routed",
+    (e) => splitRef(e.from) === "moe-router" && splitRef(e.to) === "moe-routed" && e.claimPath === "topology.experts.active_routed",
   );
   if (!routerToExperts) {
-    push("moe-fanout", "router", "MoE router → experts edge carrying the active_routed claim is missing");
+    push("moe-fanout", "moe-router", "MoE router → routed experts edge carrying the active_routed claim is missing");
   }
-  const sharedFeed = scene.edges.find((e) => e.claimPath === "topology.experts.shared");
+  const sharedFeed = scene.edges.find(
+    (e) => splitRef(e.from) === "moe-router" && splitRef(e.to) === "moe-shared" && e.claimPath === "topology.experts.shared",
+  );
   if (!sharedFeed) {
-    push("moe-fanout", "shared", "shared-expert feed edge carrying the experts.shared claim is missing");
+    push("moe-fanout", "moe-shared", "shared-expert feed edge carrying the experts.shared claim is missing");
   }
-  const merges = scene.nodes.filter((n) => n.kind === "merge");
-  const goodMerge = merges.find((m) => {
-    const sources = scene.edges.filter((e) => splitRef(e.to) === m.id).map((e) => splitRef(e.from));
-    const set = new Set(sources);
-    return set.has("experts") && set.has("shared") && sources.length === set.size && [...set].every((s) => s === "experts" || s === "shared");
-  });
+  const merge = scene.nodes.find((node) => node.id === "moe-merge" && node.kind === "merge");
+  const sources = merge ? scene.edges.filter((edge) => splitRef(edge.to) === merge.id).map((edge) => splitRef(edge.from)) : [];
+  const sourceSet = new Set(sources);
+  const goodMerge = merge && sources.length === 2 && sourceSet.size === 2 && sourceSet.has("moe-routed") && sourceSet.has("moe-shared");
   if (!goodMerge) {
-    push("moe-fanin", "experts", "MoE has no merge node whose inputs are exactly the routed experts and the shared expert (explicit fan-in until #34)");
+    push("moe-fanin", "moe-merge", "MoE merge inputs are not exactly the routed and shared expert branches");
   }
 
   return findings;

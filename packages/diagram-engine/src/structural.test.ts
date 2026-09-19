@@ -9,9 +9,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
-import { compileForModel } from "./gates-report.js";
+import { compileForModel, positionForModel } from "./gates-report.js";
 import { auditCoverage } from "./audit.js";
-import { layoutScene } from "./layout.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const modelsRoot = `${root}/models`;
@@ -31,7 +30,7 @@ function pipelineFor(modelId: string) {
   const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
   const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
   const scene = compileForModel(arch, evidence);
-  const positioned = layoutScene(scene, { fontSize: 16 });
+  const positioned = positionForModel(scene).positioned;
   return {
     modelId: scene.modelId,
     view: scene.view,

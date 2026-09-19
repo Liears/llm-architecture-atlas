@@ -367,7 +367,14 @@ export function validateScene(scene: DiagramScene): string[] {
     return ma?.role === "ingress" && mb?.role === "egress";
   };
   const declaredPairs = new Set<string>();
+  const streamIds = new Set<string>();
   for (const stream of scene.streams ?? []) {
+    // round-8 P2 follow-up: duplicate stream ids would silently merge two
+    // streams' path checks into one
+    if (streamIds.has(stream.id)) {
+      errors.push(`stream ${stream.id}: duplicate stream declaration id`);
+    }
+    streamIds.add(stream.id);
     for (let i = 0; i + 1 < stream.path.length; i++) {
       const a = stream.path[i]!;
       const b = stream.path[i + 1]!;

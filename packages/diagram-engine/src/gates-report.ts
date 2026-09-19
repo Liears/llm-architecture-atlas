@@ -10,10 +10,11 @@
 import type { DiagramScene } from "./types.js";
 import type { ModelDocument } from "@atlas/architecture-ir";
 import type { PositionedScene } from "./positioned.js";
-import { runSceneGates, fontGates, HARD_GATES, type GateFinding } from "./gates.js";
+import { layoutWithCorrection, runSceneGates, fontGates, HARD_GATES, type CorrectionResult, type GateFinding } from "./gates.js";
 import { assertGlmStructure } from "./structural-assertions.js";
 import { compileOverviewScene } from "./compile.js";
-import { compileGlmTopologyScene } from "./glm-topology.js";
+import { compileGlmAnatomyScene, glmAnatomyBlueprint } from "./glm-anatomy.js";
+import { composeEditorialPoster } from "./poster.js";
 
 /**
  * Round-3 review: the specialized-compiler choice lived in three places
@@ -22,8 +23,21 @@ import { compileGlmTopologyScene } from "./glm-topology.js";
  */
 export function compileForModel(arch: ModelDocument, evidence: Parameters<typeof compileOverviewScene>[1]): DiagramScene {
   return arch.model.id === "zai-org/glm-5.3-flash"
-    ? compileGlmTopologyScene(arch, evidence)
+    ? compileGlmAnatomyScene(arch, evidence)
     : compileOverviewScene(arch, evidence);
+}
+
+/**
+ * Keep the reviewed model-specific composition choice beside the compiler
+ * choice. Editorial posters are fixed review artifacts, so they are checked
+ * as-is; generic layouts retain the two-round bounded correction policy.
+ */
+export function positionForModel(scene: DiagramScene): CorrectionResult {
+  if (scene.modelId === "zai-org/glm-5.3-flash") {
+    const positioned = composeEditorialPoster(scene, glmAnatomyBlueprint());
+    return { positioned, rounds: 0, hard: hardFindings(positioned) };
+  }
+  return layoutWithCorrection(scene);
 }
 
 export interface BaselineFinding extends GateFinding {

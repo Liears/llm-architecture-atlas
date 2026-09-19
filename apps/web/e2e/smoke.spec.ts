@@ -22,12 +22,15 @@ test("model page serves the IR-generated golden figure with evidence links", asy
   const svg = await res.text();
   expect(svg).toContain('data-atlas-model="zai-org/glm-5.3-flash"');
   expect(svg).toContain("data-claim-path"); // every number traces to evidence
-  expect(svg).toContain("288 routed"); // MoE info survives generation
-  expect(svg).toContain("s1"); // mHC stream rails are drawn
-  expect(svg).toContain("s4");
-  expect(svg).toContain("Lightning indexer"); // DSA chain (#24)
-  expect(svg).toContain("Top-k selector");
-  expect(svg).toContain("45 ×"); // decoder repeat
+  expect(svg).toContain('viewBox="0 0 1440 860"'); // readable poster, not the old ultra-wide strip
+  expect(svg).toContain('data-node-id="moe-routed"');
+  expect(svg).toContain("288 · top-8"); // routed + active expert counts survive generation
+  expect(svg).toContain('data-node-id="mhc-split-1"'); // all four mHC rails are structural
+  expect(svg).toContain('data-node-id="mhc-split-4"');
+  expect(svg).toContain('data-node-id="dsa-indexer"'); // indexer -> top-k -> selected KV -> MLA
+  expect(svg).toContain('data-node-id="dsa-topk"');
+  expect(svg).toContain('data-node-id="dsa-selected"');
+  expect(svg).toContain("K · tail KDA");
   // evidence table lists claims with status chips
   await expect(page.locator("table.evidence tbody tr").first()).toBeVisible();
 });

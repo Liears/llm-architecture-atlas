@@ -5,255 +5,261 @@
   "correctionRounds": 0,
   "findings": [
     {
-      "gate": "aspect",
-      "target": "canvas",
-      "message": "aspect ratio 2.00:1 exceeds 1.8:1 — split into main figure + insets instead of shrinking text",
+      "gate": "edge-node",
+      "target": "callout-dsa/mhc-sink",
+      "message": "edge callout-dsa passes through node mhc-sink",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-dsa-q/indexer",
-      "message": "edge e-dsa-q passes through node indexer",
+      "target": "callout-moe/mhc-sink",
+      "message": "edge callout-moe passes through node mhc-sink",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-dsa-q/topk",
-      "message": "edge e-dsa-q passes through node topk",
+      "target": "mhc-post-2/mhc-sum-1",
+      "message": "edge mhc-post-2 passes through node mhc-sum-1",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-moe-router/mhc",
-      "message": "edge e-moe-router passes through node mhc",
+      "target": "mhc-post-3/mhc-sum-1",
+      "message": "edge mhc-post-3 passes through node mhc-sum-1",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-shared/mhc",
-      "message": "edge e-shared passes through node mhc",
+      "target": "mhc-post-3/mhc-sum-2",
+      "message": "edge mhc-post-3 passes through node mhc-sum-2",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-embed-mhc/moe42",
-      "message": "edge e-embed-mhc passes through node moe42",
+      "target": "mhc-post-4/mhc-sum-1",
+      "message": "edge mhc-post-4 passes through node mhc-sum-1",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-mhc-head/tail-kda",
-      "message": "edge e-mhc-head passes through node tail-kda",
+      "target": "mhc-post-4/mhc-sum-2",
+      "message": "edge mhc-post-4 passes through node mhc-sum-2",
       "owner": "#34"
     },
     {
       "gate": "edge-node",
-      "target": "e-mhc-head/norm",
-      "message": "edge e-mhc-head passes through node norm",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-tail-norm/g-decoder:label",
-      "message": "edge e-tail-norm passes through reserved region g-decoder:label",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-dsa-q/g-dsa:label",
-      "message": "edge e-dsa-q passes through reserved region g-dsa:label",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-moe-router/g-mhc:label",
-      "message": "edge e-moe-router passes through reserved region g-mhc:label",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-shared/g-mhc:label",
-      "message": "edge e-shared passes through reserved region g-mhc:label",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-mhc-head/g-decoder:label",
-      "message": "edge e-mhc-head passes through reserved region g-decoder:label",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "e-mhc-head/g-mhc:label",
-      "message": "edge e-mhc-head passes through reserved region g-mhc:label",
-      "owner": "#34"
-    },
-    {
-      "gate": "edge-reserved",
-      "target": "c-mtp/g-mhc:label",
-      "message": "edge c-mtp passes through reserved region g-mhc:label",
+      "target": "mhc-post-4/mhc-sum-3",
+      "message": "edge mhc-post-4 passes through node mhc-sum-3",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-tok-embed+e-mhc-s1",
-      "message": "edges e-tok-embed and e-mhc-s1 overlap collinearly",
+      "target": "callout-kda+callout-dsa",
+      "message": "edges callout-kda and callout-dsa overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-tok-embed+e-mhc-s2",
-      "message": "edges e-tok-embed and e-mhc-s2 overlap collinearly",
+      "target": "callout-kda+callout-moe",
+      "message": "edges callout-kda and callout-moe overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-tok-embed+e-mhc-s3",
-      "message": "edges e-tok-embed and e-mhc-s3 overlap collinearly",
+      "target": "callout-dsa+callout-moe",
+      "message": "edges callout-dsa and callout-moe overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-tok-embed+e-mhc-s4",
-      "message": "edges e-tok-embed and e-mhc-s4 overlap collinearly",
+      "target": "mhc-enter-1+mhc-enter-2",
+      "message": "edges mhc-enter-1 and mhc-enter-2 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-unit-tail+e-mhc-head",
-      "message": "edges e-unit-tail and e-mhc-head overlap collinearly",
+      "target": "mhc-pre-1+mhc-pre-2",
+      "message": "edges mhc-pre-1 and mhc-pre-2 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-tail-norm+e-mhc-head",
-      "message": "edges e-tail-norm and e-mhc-head overlap collinearly",
+      "target": "mhc-pre-1+mhc-pre-3",
+      "message": "edges mhc-pre-1 and mhc-pre-3 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-norm-head+e-mhc-head",
-      "message": "edges e-norm-head and e-mhc-head overlap collinearly",
+      "target": "mhc-pre-1+mhc-pre-4",
+      "message": "edges mhc-pre-1 and mhc-pre-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-dsa-q+e-index-topk",
-      "message": "edges e-dsa-q and e-index-topk overlap collinearly",
+      "target": "mhc-post-1+mhc-post-2",
+      "message": "edges mhc-post-1 and mhc-post-2 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-moe-router+e-shared",
-      "message": "edges e-moe-router and e-shared overlap collinearly",
+      "target": "mhc-post-1+mhc-post-3",
+      "message": "edges mhc-post-1 and mhc-post-3 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s1+e-mhc-s2",
-      "message": "edges e-mhc-s1 and e-mhc-s2 overlap collinearly",
+      "target": "mhc-post-1+mhc-post-4",
+      "message": "edges mhc-post-1 and mhc-post-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s1+e-mhc-s3",
-      "message": "edges e-mhc-s1 and e-mhc-s3 overlap collinearly",
+      "target": "mhc-exit-1+mhc-exit-2",
+      "message": "edges mhc-exit-1 and mhc-exit-2 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s1+e-mhc-s4",
-      "message": "edges e-mhc-s1 and e-mhc-s4 overlap collinearly",
+      "target": "mhc-pre-2+mhc-pre-3",
+      "message": "edges mhc-pre-2 and mhc-pre-3 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s1+e-embed-mhc",
-      "message": "edges e-mhc-s1 and e-embed-mhc overlap collinearly",
+      "target": "mhc-pre-2+mhc-pre-4",
+      "message": "edges mhc-pre-2 and mhc-pre-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s1+c-mtp",
-      "message": "edges e-mhc-s1 and c-mtp overlap collinearly",
+      "target": "mhc-post-2+mhc-post-3",
+      "message": "edges mhc-post-2 and mhc-post-3 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s2+e-mhc-s3",
-      "message": "edges e-mhc-s2 and e-mhc-s3 overlap collinearly",
+      "target": "mhc-post-2+mhc-post-4",
+      "message": "edges mhc-post-2 and mhc-post-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s2+e-mhc-s4",
-      "message": "edges e-mhc-s2 and e-mhc-s4 overlap collinearly",
+      "target": "mhc-enter-3+mhc-enter-4",
+      "message": "edges mhc-enter-3 and mhc-enter-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s2+e-embed-mhc",
-      "message": "edges e-mhc-s2 and e-embed-mhc overlap collinearly",
+      "target": "mhc-pre-3+mhc-pre-4",
+      "message": "edges mhc-pre-3 and mhc-pre-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s2+c-mtp",
-      "message": "edges e-mhc-s2 and c-mtp overlap collinearly",
+      "target": "mhc-post-3+mhc-post-4",
+      "message": "edges mhc-post-3 and mhc-post-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s3+e-mhc-s4",
-      "message": "edges e-mhc-s3 and e-mhc-s4 overlap collinearly",
+      "target": "mhc-exit-3+mhc-exit-4",
+      "message": "edges mhc-exit-3 and mhc-exit-4 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s3+e-embed-mhc",
-      "message": "edges e-mhc-s3 and e-embed-mhc overlap collinearly",
+      "target": "dsa-2+dsa-3",
+      "message": "edges dsa-2 and dsa-3 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s3+c-mtp",
-      "message": "edges e-mhc-s3 and c-mtp overlap collinearly",
+      "target": "moe-1+moe-2",
+      "message": "edges moe-1 and moe-2 overlap collinearly",
       "owner": "#34"
     },
     {
       "gate": "edge-overlap",
-      "target": "e-mhc-s4+e-embed-mhc",
-      "message": "edges e-mhc-s4 and e-embed-mhc overlap collinearly",
+      "target": "moe-3+moe-4",
+      "message": "edges moe-3 and moe-4 overlap collinearly",
       "owner": "#34"
     },
     {
-      "gate": "edge-overlap",
-      "target": "e-mhc-s4+c-mtp",
-      "message": "edges e-mhc-s4 and c-mtp overlap collinearly",
+      "gate": "text-overflow",
+      "target": "mtp",
+      "message": "node mtp label needs 105px but has 102px",
       "owner": "#34"
     },
     {
-      "gate": "edge-overlap",
-      "target": "e-embed-mhc+c-mtp",
-      "message": "edges e-embed-mhc and c-mtp overlap collinearly",
+      "gate": "text-overflow",
+      "target": "mtp",
+      "message": "node mtp detail needs 114px but has 102px",
       "owner": "#34"
     },
     {
-      "gate": "font",
-      "target": "canvas",
-      "message": "effective label font 9.4px at 1150px content width is below 12px",
+      "gate": "text-overflow",
+      "target": "lens-bus",
+      "message": "node lens-bus label needs 113px but has 67px",
       "owner": "#34"
     },
     {
-      "gate": "mhc-streams",
-      "target": "mhc",
-      "message": "mHC: expected 4 declared cross-sublayer streams, found 0 (placeholder self-rails until #34)",
+      "gate": "text-overflow",
+      "target": "mhc-source",
+      "message": "node mhc-source detail needs 53px but has 40px",
       "owner": "#34"
     },
     {
-      "gate": "moe-fanin",
-      "target": "experts",
-      "message": "MoE has no merge node whose inputs are exactly the routed experts and the shared expert (explicit fan-in until #34)",
+      "gate": "text-overflow",
+      "target": "mhc-f",
+      "message": "node mhc-f label needs 134px but has 97px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mhc-f",
+      "message": "node mhc-f detail needs 101px but has 97px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mhc-sink",
+      "message": "node mhc-sink detail needs 34px but has 17px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "kda-qkv",
+      "message": "node kda-qkv detail needs 94px but has 87px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "kda-state",
+      "message": "node kda-state label needs 119px but has 87px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "kda-gate",
+      "message": "node kda-gate label needs 98px but has 67px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "dsa-selected",
+      "message": "node dsa-selected label needs 103px but has 97px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "moe-router",
+      "message": "node moe-router label needs 59px but has 50px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "moe-merge",
+      "message": "node moe-merge detail needs 41px but has 30px",
       "owner": "#34"
     }
   ]

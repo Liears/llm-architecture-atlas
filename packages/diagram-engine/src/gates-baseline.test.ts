@@ -12,8 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
-import { layoutWithCorrection } from "./gates.js";
-import { hardFindings, composeBaselineFindings, compileForModel } from "./gates-report.js";
+import { hardFindings, composeBaselineFindings, compileForModel, positionForModel } from "./gates-report.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const gatesDir = `${root}/tests/gates`;
@@ -33,7 +32,7 @@ function inputsFor(modelId: string): { arch: ModelDocument; evidence: EvidenceFi
 function reportFor(modelId: string) {
   const { arch, evidence } = inputsFor(modelId);
   const scene = compileForModel(arch, evidence);
-  const positioned = layoutWithCorrection(scene).positioned;
+  const positioned = positionForModel(scene).positioned;
   return { hard: hardFindings(positioned), findings: composeBaselineFindings(scene, positioned, arch) };
 }
 

@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { layoutScene } from "./layout.js";
-import { compileForModel } from "./gates-report.js";
+import { compileForModel, positionForModel } from "./gates-report.js";
 import { runSceneGates, geometryGates, fontGates, effectiveFontPx, layoutWithCorrection, HARD_GATES, type GateFinding } from "./gates.js";
 import { renderSvg, scanSvgSafety } from "../../renderer-svg/src/render.js";
 import { mhcStreamsScene, insetsScene } from "./fixtures.js";
@@ -30,7 +30,7 @@ function pipelineFor(modelId: string): PositionedScene {
   const arch = JSON.parse(readFileSync(`${modelDir}/architecture.json`, "utf8")) as ModelDocument;
   const evidence = JSON.parse(readFileSync(`${modelDir}/evidence.json`, "utf8")) as EvidenceFile;
   const scene = compileForModel(arch, evidence);
-  return layoutScene(scene, { fontSize: 16 });
+  return positionForModel(scene).positioned;
 }
 
 const modelIds = readdirSync(`${root}/tests/structural`)

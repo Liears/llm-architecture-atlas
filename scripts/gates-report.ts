@@ -8,7 +8,7 @@
 import type { EvidenceFile, ModelDocument } from "../packages/architecture-ir/src/types.ts";
 import {
   compileForModel,
-  layoutWithCorrection,
+  positionForModel,
   hardFindings,
   composeBaselineFindings,
   type GateFinding,
@@ -31,7 +31,7 @@ export const compileFor = compileForModel;
 
 export function computeGatesReport(arch: ModelDocument, evidence: EvidenceFile): GatesReport {
   const scene = compileFor(arch, evidence);
-  const correction = layoutWithCorrection(scene);
+  const correction = positionForModel(scene);
   const positioned = correction.positioned;
 
   const hard = hardFindings(positioned);
@@ -40,6 +40,7 @@ export function computeGatesReport(arch: ModelDocument, evidence: EvidenceFile):
   const svg = renderSvg(positioned, {
     theme: "light",
     title: `${arch.model.label} — overview`,
+    showTitle: arch.model.id === "zai-org/glm-5.3-flash",
     description: `Generated from Architecture IR ${scene.irVersion}. ${scene.nodes.length} nodes, ${scene.annotations.length} evidence annotations; both themes ship in this document via CSS variables.`,
   });
   for (const f of scanSvgSafety(svg)) {
