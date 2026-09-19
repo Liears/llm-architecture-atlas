@@ -14,7 +14,8 @@
     "pytest": "pytest tools/ingest",
     "export:golden": "tsx scripts/export-golden.ts",
     "verify": "node scripts/verify.mjs",
-    "verify:e2e": "node scripts/verify.mjs --e2e"
+    "verify:e2e": "node scripts/verify.mjs --e2e",
+    "test:debt": "tsx scripts/debt-check.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.13",

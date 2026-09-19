@@ -1,0 +1,20 @@
+{
+  "purpose": "before-baseline for the #35 review board: what the deployed site looked like at the recorded main head",
+  "source": "https://liears.github.io/llm-architecture-atlas/models/zai-org-glm-5-3-flash/",
+  "mainHead": "72ca0d31d3ddc41dc91283a7ca277955ed197459",
+  "capturedAt": "2026-09-17T11:21:35.137Z",
+  "browser": "chromium 153.0.8010.12 (playwright)",
+  "viewports": [
+    "1440x900",
+    "820x1180",
+    "390x844"
+  ],
+  "files": {
+    "glm-full-1440x900.png": "3d560d2e6963765eb3403bb1e677c49642ced1a08e14eb6170b3c6f292c73d95",
+    "glm-figure-1440x900.png": "333dde9b32a00856bc181040de2ec88d17dd0f520dc9301b90b3c2f7d8ca488f",
+    "glm-full-820x1180.png": "74d8bd827a93908ccfb8cef4daafa7298e4ba73671f8bc21d307491008be4393",
+    "glm-figure-820x1180.png": "7bf9c95aa44cd755c8bd773b39242a89b9a88490e217f1eda2cf046a16310cf8",
+    "glm-full-390x844.png": "e32b37a8869d4c7041e2799dfee8011ea7e6726481ea9af0f918237d7c4e0223",
+    "glm-figure-390x844.png": "c03d61affe5bedb3896d32cc8f4b5ca431a33428d8a2b3e3da98a5e751845477"
+  }
+}

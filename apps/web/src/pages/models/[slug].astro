@@ -57,7 +57,7 @@ const statusSymbol = (s: string) =>
 
   <h2 data-i18n="detail.genome">Architecture Genome</h2>
   <p class="muted" data-i18n="detail.genomeNote">One column per layer — top: attention, bottom: FFN/MoE.</p>
-  <div class="genome" role="listbox" aria-label={`Per-layer genome: ${genome.numLayers} layers. Arrow keys move, Enter selects.`} tabindex="0">
+  <div class="genome" data-atlas-scroll="x" role="listbox" aria-label={`Per-layer genome: ${genome.numLayers} layers. Arrow keys move, Enter selects.`} tabindex="0">
     {genome.layers.map((l) => (
       <button
         type="button"
@@ -95,7 +95,7 @@ const statusSymbol = (s: string) =>
 
   <h2 data-i18n="detail.evidence">Evidence</h2>
   <p class="muted" data-i18n="detail.evidenceNote">Every visible number resolves to one of these claims. Inferred or unknown values are never shown as fact.</p>
-  <div class="evidence-wrap">
+  <div class="evidence-wrap" data-atlas-scroll="x">
   <table class="evidence">
     <thead><tr>
         <th data-i18n="detail.claim">Claim</th>

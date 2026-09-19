@@ -3,6 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 // Smoke suite for issue #1: the static site builds and serves.
 export default defineConfig({
   testDir: "./e2e",
+  // *.test.ts under e2e/ are vitest unit tests (review-state), not playwright
+  testIgnore: ["**/*.test.ts"],
   timeout: 30_000,
   expect: { timeout: 10_000 },
   workers: 1,

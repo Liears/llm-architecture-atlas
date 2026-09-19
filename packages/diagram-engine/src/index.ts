@@ -4,6 +4,8 @@ export * from "./audit.js";
 export * from "./ports.js";
 export * from "./projection.js";
 export * from "./gates.js";
+export * from "./gates-report.js";
+export * from "./structural-assertions.js";
 export * from "./positioned.js";
 export * from "./poster.js";
 export * from "./text.js";
