@@ -23,12 +23,18 @@ describe("GLM anatomy poster", () => {
     expect(scene.nodes.find((node) => node.id === "pattern-tail")?.detail).toContain("tail KDA");
     expect(scene.nodes.find((node) => node.id === "kda-qkv")).toMatchObject({ label: "Q/K/V", detail: "ShortConv · k4" });
     expect(scene.nodes.find((node) => node.id === "kda-gate")).toMatchObject({ label: "Gate", detail: "output" });
+    expect(scene.groups.find((group) => group.id === "g-mhc")?.members).toEqual(expect.arrayContaining(["mhc-source", "mhc-sink"]));
+    expect(scene.edges.some((edge) => edge.id.startsWith("mhc-bound-"))).toBe(false);
+    expect(scene.nodes.find((node) => node.id === "mhc-add")?.ports).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "res1", side: "left" }),
+      expect.objectContaining({ name: "post1", side: "top" }),
+      expect.objectContaining({ name: "out1", side: "right" }),
+    ]));
+    expect(scene.edges.filter((edge) => edge.id.startsWith("mhc-post-"))).toHaveLength(4);
+    expect(scene.edges.filter((edge) => edge.kind === "residual")).toHaveLength(12);
     expect(scene.edges.filter((edge) => edge.id.startsWith("callout-")).map((edge) => edge.to)).toEqual([
       "g-mhc.callout",
       "lens-bus",
-      "g-kda.callout",
-      "g-dsa.callout",
-      "g-moe.callout",
     ]);
   });
 
@@ -66,16 +72,16 @@ describe("GLM anatomy poster", () => {
     expect(first.size.w / first.size.h).toBeLessThanOrEqual(1.8);
     expect(first.nodes).toHaveLength(scene.nodes.length);
     for (const id of ["callout-kda", "callout-dsa", "callout-moe"]) {
-      expect(first.edges.find((edge) => edge.id === id)?.points.length).toBeGreaterThan(2);
+      expect(first.edges.find((edge) => edge.id === id)).toBeUndefined();
     }
   });
 
   it("rejects an editorial route detached from its semantic endpoint", () => {
     const scene = compileGlmAnatomyScene(arch, evidence);
     const blueprint = glmAnatomyBlueprint();
-    blueprint.edgeRoutes!["callout-kda"]![0] = { x: 0, y: 0 };
+    blueprint.edgeRoutes!["callout-mhc"]![0] = { x: 0, y: 0 };
 
-    expect(() => composeEditorialPoster(scene, blueprint)).toThrow(/callout-kda.*source anchor/i);
+    expect(() => composeEditorialPoster(scene, blueprint)).toThrow(/callout-mhc.*source anchor/i);
   });
 
   it("ships the reviewed poster without geometry or desktop font debt", () => {
