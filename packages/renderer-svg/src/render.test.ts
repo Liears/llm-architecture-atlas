@@ -42,7 +42,18 @@ describe("renderSvg", () => {
     expect(poster).toContain('class="atlas-poster"');
     expect(poster).toContain('data-node-kind="stack"');
     expect(poster).toContain(">Editorial view</text>");
-    expect(poster).toContain(".atlas-poster .e-label{font-size:15px}");
+    expect(poster).toContain(".atlas-poster .n-label{font-size:16px}");
+    expect(poster).toContain(".atlas-poster .n-detail{font-size:15px}");
+  });
+
+  it("keeps editorial typography when the composition omits a visible title", () => {
+    const scene = positioned();
+    scene.composition = "editorial-poster";
+
+    const poster = renderSvg(scene);
+    expect(poster).toContain('class="atlas-poster"');
+    expect(poster).toContain('font-size="16"');
+    expect(poster).not.toContain('class="poster-title"');
   });
 
   it("sizes the poster title rule from the scene width", () => {

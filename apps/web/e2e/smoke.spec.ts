@@ -22,7 +22,7 @@ test("model page serves the IR-generated golden figure with evidence links", asy
   const svg = await res.text();
   expect(svg).toContain('data-atlas-model="zai-org/glm-5.3-flash"');
   expect(svg).toContain("data-claim-path"); // every number traces to evidence
-  expect(svg).toContain('viewBox="0 0 1440 860"'); // readable poster, not the old ultra-wide strip
+  expect(svg).toContain('viewBox="0 0 1520 860"'); // readable poster, not the old ultra-wide strip
   expect(svg).toContain('data-node-id="moe-routed"');
   expect(svg).toContain("288 · top-8"); // routed + active expert counts survive generation
   expect(svg).toContain('data-node-id="mhc-split-1"'); // all four mHC rails are structural

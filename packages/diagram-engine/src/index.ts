@@ -9,6 +9,7 @@ export * from "./structural-assertions.js";
 export * from "./positioned.js";
 export * from "./poster.js";
 export * from "./text.js";
+export * from "./typography.js";
 export * from "./layout.js";
 export * from "./elk.js";
 export * from "./compile.js";

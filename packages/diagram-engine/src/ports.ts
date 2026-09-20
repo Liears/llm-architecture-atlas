@@ -8,7 +8,7 @@ import type { SemanticNode } from "./types.js";
 
 export interface SidePort {
   name: string;
-  side: "left" | "right";
+  side: "left" | "right" | "top" | "bottom";
   /** stream identity tag (#33 round 4): ports of one residual stream share it */
   stream?: string;
   /** ingress/egress role (#33 round 5) */
@@ -75,14 +75,16 @@ export function nodePortAnchors(
         in: { x: rect.x, y: rect.y + rect.h / 2 },
         out: { x: rect.x + rect.w, y: rect.y + rect.h / 2 },
       };
-  const side = resolveSidePorts(node);
-  const leftNames = side.filter((p) => p.side === "left").map((p) => p.name);
-  const rightNames = side.filter((p) => p.side === "right").map((p) => p.name);
-  leftNames.forEach((name, i) => {
-    ports[name] = { x: rect.x, y: rect.y + (rect.h * (i + 1)) / (leftNames.length + 1) };
-  });
-  rightNames.forEach((name, i) => {
-    ports[name] = { x: rect.x + rect.w, y: rect.y + (rect.h * (i + 1)) / (rightNames.length + 1) };
-  });
+  const declared = resolveSidePorts(node);
+  for (const portSide of ["left", "right", "top", "bottom"] as const) {
+    const names = declared.filter((port) => port.side === portSide).map((port) => port.name);
+    names.forEach((name, index) => {
+      const fraction = (index + 1) / (names.length + 1);
+      if (portSide === "left") ports[name] = { x: rect.x, y: rect.y + rect.h * fraction };
+      else if (portSide === "right") ports[name] = { x: rect.x + rect.w, y: rect.y + rect.h * fraction };
+      else if (portSide === "top") ports[name] = { x: rect.x + rect.w * fraction, y: rect.y };
+      else ports[name] = { x: rect.x + rect.w * fraction, y: rect.y + rect.h };
+    });
+  }
   return ports;
 }

@@ -1,3 +1,4 @@
 interface:
   display_name: "Model Architecture Diagram"
   short_description: "Build evidence-backed LLM architecture figures"
+  default_prompt: "Use $model-architecture-diagram to build or redraw this model-internals figure from immutable sources through semantic validation, zero-debt composition, browser QA, and an independently reviewable PR evidence package."

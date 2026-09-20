@@ -3,7 +3,7 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1440,
+    "w": 1520,
     "h": 860
   },
   "nodes": [
@@ -219,8 +219,8 @@
     },
     {
       "id": "kda-gate",
-      "label": "output gate",
-      "detail": null,
+      "label": "Gate",
+      "detail": "output",
       "claimPath": "topology.attention_groups[0]"
     },
     {
@@ -306,31 +306,31 @@
     {
       "id": "callout-mhc",
       "kind": "control",
-      "from": "decoder",
+      "from": "decoder.mhc",
       "to": "g-mhc.callout"
     },
     {
       "id": "callout-lenses",
       "kind": "control",
-      "from": "decoder",
+      "from": "decoder.lenses",
       "to": "lens-bus"
     },
     {
       "id": "callout-kda",
       "kind": "control",
-      "from": "lens-bus",
+      "from": "lens-bus.out1",
       "to": "g-kda.callout"
     },
     {
       "id": "callout-dsa",
       "kind": "control",
-      "from": "lens-bus",
+      "from": "lens-bus.out2",
       "to": "g-dsa.callout"
     },
     {
       "id": "callout-moe",
       "kind": "control",
-      "from": "lens-bus",
+      "from": "lens-bus.out3",
       "to": "g-moe.callout"
     },
     {
@@ -559,37 +559,37 @@
       "id": "dsa-2",
       "kind": "flow",
       "from": "dsa-topk",
-      "to": "dsa-selected"
+      "to": "dsa-selected.in"
     },
     {
       "id": "dsa-3",
       "kind": "flow",
-      "from": "dsa-selected",
-      "to": "dsa-mla"
+      "from": "dsa-selected.out",
+      "to": "dsa-mla.in"
     },
     {
       "id": "moe-1",
       "kind": "control",
-      "from": "moe-router",
-      "to": "moe-routed"
+      "from": "moe-router.routed",
+      "to": "moe-routed.in"
     },
     {
       "id": "moe-2",
       "kind": "control",
-      "from": "moe-router",
-      "to": "moe-shared"
+      "from": "moe-router.shared",
+      "to": "moe-shared.in"
     },
     {
       "id": "moe-3",
       "kind": "flow",
-      "from": "moe-routed",
-      "to": "moe-merge"
+      "from": "moe-routed.out",
+      "to": "moe-merge.routed"
     },
     {
       "id": "moe-4",
       "kind": "flow",
-      "from": "moe-shared",
-      "to": "moe-merge"
+      "from": "moe-shared.out",
+      "to": "moe-merge.shared"
     }
   ],
   "groups": [

@@ -48,6 +48,8 @@ export interface PositionedGroup {
 
 export interface PositionedScene {
   scene: DiagramScene; // back-reference for annotations etc.
+  /** Rendering/layout profile; gates and renderers must share its typography. */
+  composition?: "editorial-poster";
   size: { w: number; h: number };
   nodes: PositionedNode[];
   edges: PositionedEdge[];

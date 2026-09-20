@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import { compileGlmAnatomyScene, glmAnatomyBlueprint } from "./glm-anatomy.js";
+import { fontGates, runSceneGates } from "./gates.js";
 import { composeEditorialPoster } from "./poster.js";
 import { validateScene } from "./validate.js";
 
@@ -17,11 +18,11 @@ describe("GLM anatomy poster", () => {
     const scene = compileGlmAnatomyScene(arch, evidence);
     expect(validateScene(scene)).toEqual([]);
     expect(scene.streams).toHaveLength(4);
-    expect(scene.edges.find((edge) => edge.id === "dsa-2")?.to).toBe("dsa-selected");
-    expect(scene.edges.filter((edge) => edge.id.startsWith("moe-") && edge.to === "moe-merge")).toHaveLength(2);
+    expect(scene.edges.find((edge) => edge.id === "dsa-2")?.to).toBe("dsa-selected.in");
+    expect(scene.edges.filter((edge) => edge.id.startsWith("moe-") && edge.to.startsWith("moe-merge."))).toHaveLength(2);
     expect(scene.nodes.find((node) => node.id === "pattern-tail")?.detail).toContain("tail KDA");
     expect(scene.nodes.find((node) => node.id === "kda-qkv")).toMatchObject({ label: "Q/K/V", detail: "ShortConv · k4" });
-    expect(scene.nodes.find((node) => node.id === "kda-gate")?.label).toBe("output gate");
+    expect(scene.nodes.find((node) => node.id === "kda-gate")).toMatchObject({ label: "Gate", detail: "output" });
     expect(scene.edges.filter((edge) => edge.id.startsWith("callout-")).map((edge) => edge.to)).toEqual([
       "g-mhc.callout",
       "lens-bus",
@@ -67,5 +68,19 @@ describe("GLM anatomy poster", () => {
     for (const id of ["callout-kda", "callout-dsa", "callout-moe"]) {
       expect(first.edges.find((edge) => edge.id === id)?.points.length).toBeGreaterThan(2);
     }
+  });
+
+  it("rejects an editorial route detached from its semantic endpoint", () => {
+    const scene = compileGlmAnatomyScene(arch, evidence);
+    const blueprint = glmAnatomyBlueprint();
+    blueprint.edgeRoutes!["callout-kda"]![0] = { x: 0, y: 0 };
+
+    expect(() => composeEditorialPoster(scene, blueprint)).toThrow(/callout-kda.*source anchor/i);
+  });
+
+  it("ships the reviewed poster without geometry or desktop font debt", () => {
+    const positioned = composeEditorialPoster(compileGlmAnatomyScene(arch, evidence), glmAnatomyBlueprint());
+
+    expect([...runSceneGates(positioned), ...fontGates(positioned, { referenceWidth: 1150 })]).toEqual([]);
   });
 });

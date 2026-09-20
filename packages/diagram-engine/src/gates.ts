@@ -25,6 +25,7 @@
 
 import type { PositionedScene, LayoutOptions } from "./positioned.js";
 import { measureText } from "./text.js";
+import { diagramTypography } from "./typography.js";
 import { layoutScene } from "./layout.js";
 import type { DiagramScene } from "./types.js";
 
@@ -347,15 +348,18 @@ export function edgeOverlapGates(scene: PositionedScene, opts: GateOptions = {})
 /** measured label/detail width vs available inner width */
 export function textOverflowGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {
   const { epsilon, baseFontSize } = { ...DEFAULTS, ...opts };
+  const typography = scene.composition === "editorial-poster"
+    ? diagramTypography("editorial-poster")
+    : { ...diagramTypography("generic"), nodeLabel: baseFontSize, nodeDetail: baseFontSize * 0.8, groupLabel: baseFontSize * 0.8 };
   const out: GateFinding[] = [];
   for (const n of scene.nodes) {
     const inner = n.w - 28; // layout padding 14×2
-    const labelW = measureText(n.label, baseFontSize, true) * 1.14;
+    const labelW = measureText(n.label, typography.nodeLabel, true) * 1.14;
     if (labelW > inner + epsilon) {
       out.push({ gate: "text-overflow", target: n.id, message: `node ${n.id} label needs ${Math.ceil(labelW)}px but has ${Math.ceil(inner)}px` });
     }
     if (n.detail) {
-      const detailW = measureText(n.detail, baseFontSize * 0.8) * 1.14;
+      const detailW = measureText(n.detail, typography.nodeDetail) * 1.14;
       if (detailW > inner + epsilon) {
         out.push({ gate: "text-overflow", target: n.id, message: `node ${n.id} detail needs ${Math.ceil(detailW)}px but has ${Math.ceil(inner)}px` });
       }
@@ -364,7 +368,7 @@ export function textOverflowGates(scene: PositionedScene, opts: GateOptions = {}
   for (const g of scene.groups) {
     const showLabel = !(g.repeatBadge && g.w < 300);
     if (showLabel) {
-      const labelW = measureText(g.label, baseFontSize * 0.8, true);
+      const labelW = measureText(g.label, typography.groupLabel, true);
       if (labelW + 24 > g.w + epsilon) {
         out.push({ gate: "text-overflow", target: g.id, message: `group ${g.id} label needs ${Math.ceil(labelW + 24)}px but frame is ${Math.ceil(g.w)}px` });
       }
@@ -410,7 +414,10 @@ export function geometryGates(scene: PositionedScene, opts: GateOptions = {}): s
  */
 export function effectiveFontPx(scene: PositionedScene, displayWidth: number, baseFontSize = DEFAULTS.baseFontSize): { label: number; detail: number } {
   const scale = displayWidth / scene.size.w;
-  return { label: baseFontSize * scale, detail: baseFontSize * 0.8 * scale };
+  const typography = scene.composition === "editorial-poster"
+    ? diagramTypography("editorial-poster")
+    : { nodeLabel: baseFontSize, nodeDetail: baseFontSize * 0.8 };
+  return { label: typography.nodeLabel * scale, detail: typography.nodeDetail * scale };
 }
 
 export function fontGates(scene: PositionedScene, opts: GateOptions = {}): GateFinding[] {

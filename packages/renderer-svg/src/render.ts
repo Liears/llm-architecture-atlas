@@ -9,7 +9,7 @@
  - output is deterministic: fixed precision, declared order, no locale.
  */
 
-import type { PositionedScene } from "@atlas/diagram-engine";
+import { diagramTypography, type PositionedScene } from "@atlas/diagram-engine";
 import { strokeWidths, themes, fontStacks, radii, type ThemeName } from "@atlas/ui";
 
 function esc(s: string): string {
@@ -85,7 +85,9 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
   const description =
     opts.description ??
     `Generated architecture figure for ${scene.scene.modelId}. Every labeled value traces to an evidence claim in the Architecture IR.`;
-  const posterClass = opts.showTitle ? ` class="atlas-poster"` : "";
+  const posterMode = scene.composition === "editorial-poster" || opts.showTitle === true;
+  const posterClass = posterMode ? ` class="atlas-poster"` : "";
+  const typography = diagramTypography(posterMode ? "editorial-poster" : "generic");
 
   const cssVars = Object.entries(t)
     .map(([k, v]) => `--${k.replace(/[A-Z]/g, (c) => c.toLowerCase())}:${v.toLowerCase()}`)
@@ -116,10 +118,10 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.g-port{fill:var(--attention);stroke:var(--paper);stroke-width:1}` +
       `.g-label{fill:var(--muted);font-size:12.8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}` +
       `.g-badge{fill:var(--attention);color:#fff}` +
-      (opts.showTitle
-        ? `.atlas-poster .n-label{font-size:15px}.atlas-poster .n-detail{font-size:15px}` +
-          `.atlas-poster .e-label{font-size:15px}.atlas-poster .g-frame{fill:var(--panel)}` +
-          `.atlas-poster .g-inset{fill:var(--panel)}.atlas-poster .g-label{font-size:15px;letter-spacing:.06em}` +
+      (posterMode
+        ? `.atlas-poster .n-label{font-size:${typography.nodeLabel}px}.atlas-poster .n-detail{font-size:${typography.nodeDetail}px}` +
+          `.atlas-poster .e-label{font-size:${typography.edgeLabel}px}.atlas-poster .g-frame{fill:var(--panel)}` +
+          `.atlas-poster .g-inset{fill:var(--panel)}.atlas-poster .g-label{font-size:${typography.groupLabel}px;letter-spacing:.06em}` +
           `.poster-title{fill:var(--ink);font-size:26px;font-weight:800;letter-spacing:-.02em}` +
           `.poster-rule{stroke:var(--line);stroke-width:1}` +
           `.kind-attention .n-box,.kind-indexer .n-box,.kind-selector .n-box,.kind-selection .n-box{stroke:var(--attention)}` +
@@ -185,16 +187,16 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       .filter(([name]) => name !== "in" && name !== "out")
       .map(([, p]) => `<circle class="n-port" cx="${fmt(p.x)}" cy="${fmt(p.y)}" r="3"/>`)
       .join("");
-    const semanticKind = opts.showTitle ? ` kind-${node.kind.replace(/[^a-z0-9_-]+/gi, "-").toLowerCase()}` : "";
+    const semanticKind = posterMode ? ` kind-${node.kind.replace(/[^a-z0-9_-]+/gi, "-").toLowerCase()}` : "";
     const kindClass = node.kind === "attention" ? " attn" : node.kind === "moe" || node.kind === "ffn" ? " compute" : "";
-    const labelSize = node.w >= 160 ? 16 : 15;
-    const detailSize = 15;
+    const labelSize = typography.nodeLabel;
+    const detailSize = typography.nodeDetail;
     lines.push(
-      `  <g class="node${semanticKind}${kindClass}" data-node-id="${esc(node.id)}"${opts.showTitle ? ` data-node-kind="${esc(node.kind)}"` : ""}${claim}${claimsAttr}><title>${esc(node.label)}</title>` +
+      `  <g class="node${semanticKind}${kindClass}" data-node-id="${esc(node.id)}"${posterMode ? ` data-node-kind="${esc(node.kind)}"` : ""}${claim}${claimsAttr}><title>${esc(node.label)}</title>` +
         `<rect class="n-box${kindClass}" x="${fmt(node.x)}" y="${fmt(node.y)}" width="${fmt(node.w)}" height="${fmt(node.h)}" rx="${radii.node}"/>` +
-        `<text class="n-label"${opts.showTitle ? ` font-size="${fmt(labelSize)}"` : ""} x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + (node.detail ? -4 : 5))}">${esc(node.label)}</text>` +
+        `<text class="n-label"${posterMode ? ` font-size="${fmt(labelSize)}"` : ""} x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + (node.detail ? -4 : 5))}">${esc(node.label)}</text>` +
         (node.detail
-          ? `<text class="n-detail"${opts.showTitle ? ` font-size="${fmt(detailSize)}"` : ""} x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + 14)}">${esc(node.detail)}</text>`
+          ? `<text class="n-detail"${posterMode ? ` font-size="${fmt(detailSize)}"` : ""} x="${fmt(node.x + node.w / 2)}" y="${fmt(node.y + node.h / 2 + 14)}">${esc(node.detail)}</text>`
           : "") +
         portDots +
         `</g>`,

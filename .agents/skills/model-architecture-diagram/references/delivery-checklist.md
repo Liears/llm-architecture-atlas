@@ -23,6 +23,8 @@ updated: 2026-09-18
 - [ ] Selector/selected-value deletion fails.
 - [ ] Router branch or merge deletion fails.
 - [ ] Export and structural snapshot are deterministic.
+- [ ] Geometry-only work compares equal to its pre-edit normalized semantic
+      freeze (node/edge/group/stream/claim identity).
 
 ## Visual review
 
@@ -31,6 +33,8 @@ updated: 2026-09-18
 - [ ] Lines do not cross text, reserved titles or unrelated nodes.
 - [ ] No text clips or relies on browser tooltips to be understood.
 - [ ] Desktop aspect ratio and effective type-size gates pass.
+- [ ] The target model's single-model report contains zero hard findings and
+      zero debt findings; no baseline was edited to hide a red.
 - [ ] The actual page, not only the isolated SVG, is checked at every required
       viewport and in both themes when supported.
 - [ ] Blind comparison records where the Atlas figure is better or worse than
@@ -45,3 +49,5 @@ updated: 2026-09-18
 - [ ] Scope, non-goals and known limitations stated.
 - [ ] Status says `review pending`; implementation author does not approve,
       merge or close the issue.
+- [ ] A fresh independent reviewer inspected the actual generated artifacts,
+      not only the author's summary.
