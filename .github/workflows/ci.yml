@@ -44,12 +44,53 @@ jobs:
       - name: Regenerate golden artifacts and require clean diff
         run: |
           pnpm export:golden
-          git diff --exit-code --stat tests/structural apps/web/public/figures
+          test -z "$(git status --porcelain -- tests/structural apps/web/public/figures tests/gates)"
 
       - name: E2E smoke (Playwright)
         run: pnpm --filter @atlas/web test:e2e
         env:
           CI: true
+
+      # #35 round 2: human-review artifacts must actually reach the run. The
+      # contact sheet (composed + per-viewport) and any gate failure reports
+      # are uploaded on every run, success or failure.
+      - name: Upload review contact sheet and gate failure reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-artifacts
+          path: |
+            apps/web/e2e/contact/
+            tests/gates/*.failure.md
+            tests/gates/*.failure.svg
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # #35 round 2: known debt (aspect, effective font, edge routing, GLM
+  # topology items) is owned by #34/#36/#39 and must stay VISIBLY RED until
+  # those land. This job is intentionally non-required: it fails while debt
+  # exists and may not be silenced by baseline edits — only by resolving the
+  # debt or deleting this job in a reviewed change.
+  debt-known-red:
+    name: debt known-red (non-required until #34/#36/#39)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Debt check (expected red while owned debt exists)
+        run: pnpm test:debt
 
   python:
     name: python (pytest)

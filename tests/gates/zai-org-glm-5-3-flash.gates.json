@@ -1,0 +1,266 @@
+{
+  "modelId": "zai-org/glm-5.3-flash",
+  "generatedBy": "pnpm export:golden",
+  "note": "Persistent-red baseline (#35). Each entry is a known, owned debt; CI fails on new reds and on entries that clear without being removed here.",
+  "correctionRounds": 0,
+  "findings": [
+    {
+      "gate": "edge-node",
+      "target": "callout-dsa/mhc-sink",
+      "message": "edge callout-dsa passes through node mhc-sink",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "callout-moe/mhc-sink",
+      "message": "edge callout-moe passes through node mhc-sink",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "mhc-post-2/mhc-sum-1",
+      "message": "edge mhc-post-2 passes through node mhc-sum-1",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "mhc-post-3/mhc-sum-1",
+      "message": "edge mhc-post-3 passes through node mhc-sum-1",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "mhc-post-3/mhc-sum-2",
+      "message": "edge mhc-post-3 passes through node mhc-sum-2",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "mhc-post-4/mhc-sum-1",
+      "message": "edge mhc-post-4 passes through node mhc-sum-1",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "mhc-post-4/mhc-sum-2",
+      "message": "edge mhc-post-4 passes through node mhc-sum-2",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-node",
+      "target": "mhc-post-4/mhc-sum-3",
+      "message": "edge mhc-post-4 passes through node mhc-sum-3",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "callout-kda+callout-dsa",
+      "message": "edges callout-kda and callout-dsa overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "callout-kda+callout-moe",
+      "message": "edges callout-kda and callout-moe overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "callout-dsa+callout-moe",
+      "message": "edges callout-dsa and callout-moe overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-enter-1+mhc-enter-2",
+      "message": "edges mhc-enter-1 and mhc-enter-2 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-pre-1+mhc-pre-2",
+      "message": "edges mhc-pre-1 and mhc-pre-2 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-pre-1+mhc-pre-3",
+      "message": "edges mhc-pre-1 and mhc-pre-3 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-pre-1+mhc-pre-4",
+      "message": "edges mhc-pre-1 and mhc-pre-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-post-1+mhc-post-2",
+      "message": "edges mhc-post-1 and mhc-post-2 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-post-1+mhc-post-3",
+      "message": "edges mhc-post-1 and mhc-post-3 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-post-1+mhc-post-4",
+      "message": "edges mhc-post-1 and mhc-post-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-exit-1+mhc-exit-2",
+      "message": "edges mhc-exit-1 and mhc-exit-2 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-pre-2+mhc-pre-3",
+      "message": "edges mhc-pre-2 and mhc-pre-3 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-pre-2+mhc-pre-4",
+      "message": "edges mhc-pre-2 and mhc-pre-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-post-2+mhc-post-3",
+      "message": "edges mhc-post-2 and mhc-post-3 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-post-2+mhc-post-4",
+      "message": "edges mhc-post-2 and mhc-post-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-enter-3+mhc-enter-4",
+      "message": "edges mhc-enter-3 and mhc-enter-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-pre-3+mhc-pre-4",
+      "message": "edges mhc-pre-3 and mhc-pre-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-post-3+mhc-post-4",
+      "message": "edges mhc-post-3 and mhc-post-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "mhc-exit-3+mhc-exit-4",
+      "message": "edges mhc-exit-3 and mhc-exit-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "dsa-2+dsa-3",
+      "message": "edges dsa-2 and dsa-3 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "moe-1+moe-2",
+      "message": "edges moe-1 and moe-2 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "edge-overlap",
+      "target": "moe-3+moe-4",
+      "message": "edges moe-3 and moe-4 overlap collinearly",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mtp",
+      "message": "node mtp label needs 105px but has 102px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mtp",
+      "message": "node mtp detail needs 114px but has 102px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "lens-bus",
+      "message": "node lens-bus label needs 113px but has 67px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mhc-source",
+      "message": "node mhc-source detail needs 53px but has 40px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mhc-f",
+      "message": "node mhc-f label needs 134px but has 97px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mhc-f",
+      "message": "node mhc-f detail needs 101px but has 97px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "mhc-sink",
+      "message": "node mhc-sink detail needs 34px but has 17px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "kda-qkv",
+      "message": "node kda-qkv detail needs 94px but has 87px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "kda-state",
+      "message": "node kda-state label needs 119px but has 87px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "kda-gate",
+      "message": "node kda-gate label needs 98px but has 67px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "dsa-selected",
+      "message": "node dsa-selected label needs 103px but has 97px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "moe-router",
+      "message": "node moe-router label needs 59px but has 50px",
+      "owner": "#34"
+    },
+    {
+      "gate": "text-overflow",
+      "target": "moe-merge",
+      "message": "node moe-merge detail needs 41px but has 30px",
+      "owner": "#34"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "purpose": "Review state for the #35 contact sheet artifacts uploaded by CI (review-artifacts).",
+  "shots": [
+    "glm-full-1440x900.png",
+    "glm-figure-1440x900.png",
+    "glm-full-820x1180.png",
+    "glm-figure-820x1180.png",
+    "glm-full-390x844.png",
+    "glm-figure-390x844.png",
+    "contact-sheet.png"
+  ],
+  "visual_review": {
+    "status": "reviewed",
+    "reviewer": "Codex dual-axis independent review",
+    "date": "2026-09-20",
+    "head": "6f3daeeeb7246c12f85a463ab73dcffb9c4f8531",
+    "shots_sha256": {
+      "glm-full-1440x900.png": "2906d38e7321f52e94344ebb466685d0654bc8abc25545fc5555b5fcf7bc9daa",
+      "glm-figure-1440x900.png": "d5a2f1f126b3494cee0c3f97fc34960b424d6a3855ffa2c87198c57b14b55c5a",
+      "glm-full-820x1180.png": "4de29ad1c14ae3accc7f63cd39cd3dd307a9eb992a4fced3ae73625b45e9474f",
+      "glm-figure-820x1180.png": "3a39daf6aacf48dcde4fbc93ce3612ea078ad9e2502156f4b0876638588aa339",
+      "glm-full-390x844.png": "22846d01031a8dc6ea526d2d3560b026d3b6e8b125c0a6494ea6f108244a7832",
+      "glm-figure-390x844.png": "0b3368169d718d8c39d7d5d68c6f942750dc0337bd8cd44dc03bdcc2e0b86d7f"
+    },
+    "note": "Reviewed the Linux CI before/after contact sheet at 1440x900, 820x1180, and 390x844 after independent Standards and Spec reviews passed. The signature is bound to the six shot hashes; remaining GLM geometry debt stays visible under reopened #34."
+  }
+}
