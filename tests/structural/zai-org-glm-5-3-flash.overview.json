@@ -128,30 +128,6 @@
       "claimPath": "topology.residual.streams"
     },
     {
-      "id": "mhc-split-1",
-      "label": "S1",
-      "detail": "read",
-      "claimPath": "topology.residual.streams"
-    },
-    {
-      "id": "mhc-split-2",
-      "label": "S2",
-      "detail": "read",
-      "claimPath": "topology.residual.streams"
-    },
-    {
-      "id": "mhc-split-3",
-      "label": "S3",
-      "detail": "read",
-      "claimPath": "topology.residual.streams"
-    },
-    {
-      "id": "mhc-split-4",
-      "label": "S4",
-      "detail": "read",
-      "claimPath": "topology.residual.streams"
-    },
-    {
       "id": "mhc-hpre",
       "label": "H-pre",
       "detail": "4 → 1 read",
@@ -176,27 +152,9 @@
       "claimPath": "topology.residual.streams"
     },
     {
-      "id": "mhc-sum-1",
-      "label": "S1 ⊕",
-      "detail": null,
-      "claimPath": "topology.residual.scheme"
-    },
-    {
-      "id": "mhc-sum-2",
-      "label": "S2 ⊕",
-      "detail": null,
-      "claimPath": "topology.residual.scheme"
-    },
-    {
-      "id": "mhc-sum-3",
-      "label": "S3 ⊕",
-      "detail": null,
-      "claimPath": "topology.residual.scheme"
-    },
-    {
-      "id": "mhc-sum-4",
-      "label": "S4 ⊕",
-      "detail": null,
+      "id": "mhc-add",
+      "label": "⊕ ×4",
+      "detail": "per-stream add",
       "claimPath": "topology.residual.scheme"
     },
     {
@@ -316,214 +274,106 @@
       "to": "lens-bus"
     },
     {
-      "id": "callout-kda",
-      "kind": "control",
-      "from": "lens-bus.out1",
-      "to": "g-kda.callout"
-    },
-    {
-      "id": "callout-dsa",
-      "kind": "control",
-      "from": "lens-bus.out2",
-      "to": "g-dsa.callout"
-    },
-    {
-      "id": "callout-moe",
-      "kind": "control",
-      "from": "lens-bus.out3",
-      "to": "g-moe.callout"
-    },
-    {
-      "id": "mhc-enter-1",
+      "id": "mhc-res-in-1",
       "kind": "residual",
       "from": "mhc-source.s1",
-      "to": "g-mhc.in1"
-    },
-    {
-      "id": "mhc-bound-in-1",
-      "kind": "flow",
-      "from": "g-mhc.in1",
-      "to": "mhc-split-1.in"
-    },
-    {
-      "id": "mhc-pre-1",
-      "kind": "flow",
-      "from": "mhc-split-1.pre",
-      "to": "mhc-hpre.in1"
-    },
-    {
-      "id": "mhc-res-in-1",
-      "kind": "flow",
-      "from": "mhc-split-1.res",
       "to": "mhc-hres.in1"
     },
     {
       "id": "mhc-res-out-1",
-      "kind": "flow",
+      "kind": "residual",
       "from": "mhc-hres.out1",
-      "to": "mhc-sum-1.res"
+      "to": "mhc-add.res1"
     },
     {
       "id": "mhc-post-1",
       "kind": "flow",
       "from": "mhc-hpost.out1",
-      "to": "mhc-sum-1.post"
-    },
-    {
-      "id": "mhc-bound-out-1",
-      "kind": "flow",
-      "from": "mhc-sum-1.out",
-      "to": "g-mhc.out1"
+      "to": "mhc-add.post1"
     },
     {
       "id": "mhc-exit-1",
       "kind": "residual",
-      "from": "g-mhc.out1",
+      "from": "mhc-add.out1",
       "to": "mhc-sink.w1"
     },
     {
-      "id": "mhc-enter-2",
+      "id": "mhc-res-in-2",
       "kind": "residual",
       "from": "mhc-source.s2",
-      "to": "g-mhc.in2"
-    },
-    {
-      "id": "mhc-bound-in-2",
-      "kind": "flow",
-      "from": "g-mhc.in2",
-      "to": "mhc-split-2.in"
-    },
-    {
-      "id": "mhc-pre-2",
-      "kind": "flow",
-      "from": "mhc-split-2.pre",
-      "to": "mhc-hpre.in2"
-    },
-    {
-      "id": "mhc-res-in-2",
-      "kind": "flow",
-      "from": "mhc-split-2.res",
       "to": "mhc-hres.in2"
     },
     {
       "id": "mhc-res-out-2",
-      "kind": "flow",
+      "kind": "residual",
       "from": "mhc-hres.out2",
-      "to": "mhc-sum-2.res"
+      "to": "mhc-add.res2"
     },
     {
       "id": "mhc-post-2",
       "kind": "flow",
       "from": "mhc-hpost.out2",
-      "to": "mhc-sum-2.post"
-    },
-    {
-      "id": "mhc-bound-out-2",
-      "kind": "flow",
-      "from": "mhc-sum-2.out",
-      "to": "g-mhc.out2"
+      "to": "mhc-add.post2"
     },
     {
       "id": "mhc-exit-2",
       "kind": "residual",
-      "from": "g-mhc.out2",
+      "from": "mhc-add.out2",
       "to": "mhc-sink.w2"
     },
     {
-      "id": "mhc-enter-3",
+      "id": "mhc-res-in-3",
       "kind": "residual",
       "from": "mhc-source.s3",
-      "to": "g-mhc.in3"
-    },
-    {
-      "id": "mhc-bound-in-3",
-      "kind": "flow",
-      "from": "g-mhc.in3",
-      "to": "mhc-split-3.in"
-    },
-    {
-      "id": "mhc-pre-3",
-      "kind": "flow",
-      "from": "mhc-split-3.pre",
-      "to": "mhc-hpre.in3"
-    },
-    {
-      "id": "mhc-res-in-3",
-      "kind": "flow",
-      "from": "mhc-split-3.res",
       "to": "mhc-hres.in3"
     },
     {
       "id": "mhc-res-out-3",
-      "kind": "flow",
+      "kind": "residual",
       "from": "mhc-hres.out3",
-      "to": "mhc-sum-3.res"
+      "to": "mhc-add.res3"
     },
     {
       "id": "mhc-post-3",
       "kind": "flow",
       "from": "mhc-hpost.out3",
-      "to": "mhc-sum-3.post"
-    },
-    {
-      "id": "mhc-bound-out-3",
-      "kind": "flow",
-      "from": "mhc-sum-3.out",
-      "to": "g-mhc.out3"
+      "to": "mhc-add.post3"
     },
     {
       "id": "mhc-exit-3",
       "kind": "residual",
-      "from": "g-mhc.out3",
+      "from": "mhc-add.out3",
       "to": "mhc-sink.w3"
     },
     {
-      "id": "mhc-enter-4",
+      "id": "mhc-res-in-4",
       "kind": "residual",
       "from": "mhc-source.s4",
-      "to": "g-mhc.in4"
-    },
-    {
-      "id": "mhc-bound-in-4",
-      "kind": "flow",
-      "from": "g-mhc.in4",
-      "to": "mhc-split-4.in"
-    },
-    {
-      "id": "mhc-pre-4",
-      "kind": "flow",
-      "from": "mhc-split-4.pre",
-      "to": "mhc-hpre.in4"
-    },
-    {
-      "id": "mhc-res-in-4",
-      "kind": "flow",
-      "from": "mhc-split-4.res",
       "to": "mhc-hres.in4"
     },
     {
       "id": "mhc-res-out-4",
-      "kind": "flow",
+      "kind": "residual",
       "from": "mhc-hres.out4",
-      "to": "mhc-sum-4.res"
+      "to": "mhc-add.res4"
     },
     {
       "id": "mhc-post-4",
       "kind": "flow",
       "from": "mhc-hpost.out4",
-      "to": "mhc-sum-4.post"
-    },
-    {
-      "id": "mhc-bound-out-4",
-      "kind": "flow",
-      "from": "mhc-sum-4.out",
-      "to": "g-mhc.out4"
+      "to": "mhc-add.post4"
     },
     {
       "id": "mhc-exit-4",
       "kind": "residual",
-      "from": "g-mhc.out4",
+      "from": "mhc-add.out4",
       "to": "mhc-sink.w4"
+    },
+    {
+      "id": "mhc-pre",
+      "kind": "flow",
+      "from": "mhc-source.read",
+      "to": "mhc-hpre.in"
     },
     {
       "id": "mhc-pre-f",
@@ -618,76 +468,15 @@
       "label": "mHC anatomy · Figure 1(c) / Eq. 3",
       "kind": "inset",
       "members": [
-        "mhc-split-1",
-        "mhc-split-2",
-        "mhc-split-3",
-        "mhc-split-4",
+        "mhc-source",
         "mhc-hpre",
         "mhc-hres",
         "mhc-f",
         "mhc-hpost",
-        "mhc-sum-1",
-        "mhc-sum-2",
-        "mhc-sum-3",
-        "mhc-sum-4"
+        "mhc-add",
+        "mhc-sink"
       ],
       "ports": [
-        {
-          "id": "in1",
-          "side": "left",
-          "inner": "mhc-split-1.in",
-          "stream": "s1",
-          "role": "ingress"
-        },
-        {
-          "id": "in2",
-          "side": "left",
-          "inner": "mhc-split-2.in",
-          "stream": "s2",
-          "role": "ingress"
-        },
-        {
-          "id": "in3",
-          "side": "left",
-          "inner": "mhc-split-3.in",
-          "stream": "s3",
-          "role": "ingress"
-        },
-        {
-          "id": "in4",
-          "side": "left",
-          "inner": "mhc-split-4.in",
-          "stream": "s4",
-          "role": "ingress"
-        },
-        {
-          "id": "out1",
-          "side": "right",
-          "inner": "mhc-sum-1.out",
-          "stream": "s1",
-          "role": "egress"
-        },
-        {
-          "id": "out2",
-          "side": "right",
-          "inner": "mhc-sum-2.out",
-          "stream": "s2",
-          "role": "egress"
-        },
-        {
-          "id": "out3",
-          "side": "right",
-          "inner": "mhc-sum-3.out",
-          "stream": "s3",
-          "role": "egress"
-        },
-        {
-          "id": "out4",
-          "side": "right",
-          "inner": "mhc-sum-4.out",
-          "stream": "s4",
-          "role": "egress"
-        },
         {
           "id": "callout",
           "side": "top",
@@ -705,13 +494,6 @@
         "kda-state",
         "kda-gate"
       ],
-      "ports": [
-        {
-          "id": "callout",
-          "side": "left",
-          "inner": "kda-qkv"
-        }
-      ],
       "claimPath": "topology.attention_groups[0]"
     },
     {
@@ -724,13 +506,6 @@
         "dsa-selected",
         "dsa-mla"
       ],
-      "ports": [
-        {
-          "id": "callout",
-          "side": "left",
-          "inner": "dsa-indexer"
-        }
-      ],
       "claimPath": "topology.attention_groups[1]"
     },
     {
@@ -742,13 +517,6 @@
         "moe-routed",
         "moe-shared",
         "moe-merge"
-      ],
-      "ports": [
-        {
-          "id": "callout",
-          "side": "left",
-          "inner": "moe-router"
-        }
       ],
       "claimPath": "topology.ffn_groups[1]"
     }
@@ -921,26 +689,6 @@
     },
     {
       "claimPath": "topology.residual.streams",
-      "target": "mhc-split-1",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.streams",
-      "target": "mhc-split-2",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.streams",
-      "target": "mhc-split-3",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.streams",
-      "target": "mhc-split-4",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.streams",
       "target": "mhc-hpre",
       "status": "reported"
     },
@@ -961,22 +709,7 @@
     },
     {
       "claimPath": "topology.residual.scheme",
-      "target": "mhc-sum-1",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-sum-2",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-sum-3",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-sum-4",
+      "target": "mhc-add",
       "status": "reported"
     },
     {
@@ -1050,37 +783,7 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[0]",
-      "target": "callout-kda",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.attention_groups[1]",
-      "target": "callout-dsa",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.ffn_groups[1]",
-      "target": "callout-moe",
-      "status": "reported"
-    },
-    {
       "claimPath": "topology.residual.streams",
-      "target": "mhc-enter-1",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-in-1",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-pre-1",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
       "target": "mhc-res-in-1",
       "status": "reported"
     },
@@ -1095,32 +798,12 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-out-1",
-      "status": "reported"
-    },
-    {
       "claimPath": "topology.residual.streams",
       "target": "mhc-exit-1",
       "status": "reported"
     },
     {
       "claimPath": "topology.residual.streams",
-      "target": "mhc-enter-2",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-in-2",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-pre-2",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
       "target": "mhc-res-in-2",
       "status": "reported"
     },
@@ -1135,32 +818,12 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-out-2",
-      "status": "reported"
-    },
-    {
       "claimPath": "topology.residual.streams",
       "target": "mhc-exit-2",
       "status": "reported"
     },
     {
       "claimPath": "topology.residual.streams",
-      "target": "mhc-enter-3",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-in-3",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-pre-3",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
       "target": "mhc-res-in-3",
       "status": "reported"
     },
@@ -1175,32 +838,12 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-out-3",
-      "status": "reported"
-    },
-    {
       "claimPath": "topology.residual.streams",
       "target": "mhc-exit-3",
       "status": "reported"
     },
     {
       "claimPath": "topology.residual.streams",
-      "target": "mhc-enter-4",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-in-4",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-pre-4",
-      "status": "reported"
-    },
-    {
-      "claimPath": "topology.residual.scheme",
       "target": "mhc-res-in-4",
       "status": "reported"
     },
@@ -1215,13 +858,13 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.scheme",
-      "target": "mhc-bound-out-4",
+      "claimPath": "topology.residual.streams",
+      "target": "mhc-exit-4",
       "status": "reported"
     },
     {
-      "claimPath": "topology.residual.streams",
-      "target": "mhc-exit-4",
+      "claimPath": "topology.residual.scheme",
+      "target": "mhc-pre",
       "status": "reported"
     },
     {

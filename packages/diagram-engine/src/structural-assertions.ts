@@ -6,8 +6,8 @@
  *
  * - schedule: exact K,K,K,D ×11 + K layer membership and the same visible
  *   chunks in the reviewed anatomy poster;
- * - mHC: every declared stream crosses the inset boundary and preserves its
- *   read/residual/write legs around the shared H-pre → F → H-post path;
+ * - mHC: every declared stream preserves its read/residual/write legs around
+ *   the shared H-pre → F → H-post path inside the representative unit;
  * - DSA: indexer → top-k → selected KV → MLA, with the selected edge carrying
  *   the dsa_topk claim;
  * - MoE: router fan-out to routed/shared experts and an exact two-branch
@@ -72,13 +72,15 @@ export function assertGlmStructure(scene: DiagramScene, arch: ModelDocument): Ga
   } else {
     const edgePairs = new Set(scene.edges.map((edge) => `${edge.from}->${edge.to}`));
     const sharedOperatorPath =
-      edgePairs.has("mhc-hpre.out->mhc-f.in") && edgePairs.has("mhc-f.out->mhc-hpost.in");
+      edgePairs.has("mhc-source.read->mhc-hpre.in") &&
+      edgePairs.has("mhc-hpre.out->mhc-f.in") &&
+      edgePairs.has("mhc-f.out->mhc-hpost.in");
     for (const stream of scene.streams) {
       const index = stream.id.replace(/^s/, "");
       const expectedPath = [
-        `mhc-source.s${index}`, `g-mhc.in${index}`, `mhc-split-${index}.in`, `mhc-split-${index}.res`,
-        `mhc-hres.in${index}`, `mhc-hres.out${index}`, `mhc-sum-${index}.res`, `mhc-sum-${index}.out`,
-        `g-mhc.out${index}`, `mhc-sink.w${index}`,
+        `mhc-source.s${index}`, `mhc-hres.in${index}`, `mhc-hres.out${index}`,
+        `mhc-add.res${index}`, `mhc-add.out${index}`,
+        `mhc-sink.w${index}`,
       ];
       const firstHead = splitRef(stream.path[0]!);
       const lastHead = splitRef(stream.path[stream.path.length - 1]!);
@@ -89,11 +91,12 @@ export function assertGlmStructure(scene: DiagramScene, arch: ModelDocument): Ga
       }
       const pathOk = stream.path.length === expectedPath.length && stream.path.every((ref, position) => ref === expectedPath[position]);
       const branchOk =
-        edgePairs.has(`mhc-split-${index}.pre->mhc-hpre.in${index}`) &&
-        edgePairs.has(`mhc-hres.out${index}->mhc-sum-${index}.res`) &&
-        edgePairs.has(`mhc-hpost.out${index}->mhc-sum-${index}.post`);
+        edgePairs.has(`mhc-source.s${index}->mhc-hres.in${index}`) &&
+        edgePairs.has(`mhc-hres.out${index}->mhc-add.res${index}`) &&
+        edgePairs.has(`mhc-hpost.out${index}->mhc-add.post${index}`) &&
+        edgePairs.has(`mhc-add.out${index}->mhc-sink.w${index}`);
       if (!pathOk || !branchOk || !sharedOperatorPath) {
-        push("mhc-streams", stream.id, `stream ${stream.id} does not preserve the boundary/read/residual/write path around H-pre → F → H-post`);
+        push("mhc-streams", stream.id, `stream ${stream.id} does not preserve the read/residual/write path around H-pre → F → H-post`);
       }
     }
   }

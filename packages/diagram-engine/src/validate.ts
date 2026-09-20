@@ -5,7 +5,8 @@
  * - inset groups are compound layout units; an edge that crosses an inset
  *   boundary must land on a declared boundary port (groupId.port);
  * - residual edges are real multi-stream paths: no self-loops, and each must
- *   cross at least one sublayer (group) boundary;
+ *   either cross a sublayer boundary or connect matching, explicitly tagged
+ *   stream ports inside one representative unit;
  * - split nodes fan out to >=2 targets, merge nodes collect >=2 sources;
  * - groups form a tree (unique membership, acyclic parent chain).
  */
@@ -245,7 +246,9 @@ export function validateScene(scene: DiagramScene): string[] {
       }
       const fromGroup = fromNode ? groupOf(fromNode, memberGroup) : null;
       const toGroup = toNode ? groupOf(toNode, memberGroup) : null;
-      if (fromGroup === toGroup) {
+      const sharedInset = fromGroup !== null && fromGroup === toGroup && groupById.get(fromGroup)?.kind === "inset";
+      const explicitInternalStream = sharedInset && fromTag !== undefined && fromTag === toTag;
+      if (fromGroup === toGroup && !explicitInternalStream) {
         errors.push(`residual edge ${edge.id}: does not cross a sublayer boundary`);
       }
     }

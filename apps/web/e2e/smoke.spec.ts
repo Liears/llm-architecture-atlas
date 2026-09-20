@@ -25,8 +25,11 @@ test("model page serves the IR-generated golden figure with evidence links", asy
   expect(svg).toContain('viewBox="0 0 1520 860"'); // readable poster, not the old ultra-wide strip
   expect(svg).toContain('data-node-id="moe-routed"');
   expect(svg).toContain("288 · top-8"); // routed + active expert counts survive generation
-  expect(svg).toContain('data-node-id="mhc-split-1"'); // all four mHC rails are structural
-  expect(svg).toContain('data-node-id="mhc-split-4"');
+  expect(svg).toContain('data-edge-id="mhc-res-in-1"'); // all four mHC rails are structural
+  expect(svg).toContain('data-edge-id="mhc-res-in-4"');
+  expect(svg).toContain('data-edge-id="mhc-post-1"'); // H-post writes each stream explicitly
+  expect(svg).toContain('data-edge-id="mhc-post-4"');
+  expect(svg).toContain('data-node-id="mhc-add"');
   expect(svg).toContain('data-node-id="dsa-indexer"'); // indexer -> top-k -> selected KV -> MLA
   expect(svg).toContain('data-node-id="dsa-topk"');
   expect(svg).toContain('data-node-id="dsa-selected"');

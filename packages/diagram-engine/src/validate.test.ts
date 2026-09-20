@@ -196,6 +196,42 @@ describe("validateScene compound rules (#33)", () => {
     expect(validateScene(scene).join("\n")).toMatch(/residual edge s1: does not cross a sublayer boundary/);
   });
 
+  it("accepts a residual leg between matching tagged stream ports inside one representative unit", () => {
+    const scene: DiagramScene = {
+      irVersion: "0.1.0",
+      view: "overview",
+      modelId: "fixture/internal-residual",
+      nodes: [
+        { id: "read", kind: "mix", label: "Read", ports: [{ name: "s1", side: "right", stream: "s1", role: "egress" }] },
+        { id: "write", kind: "mix", label: "Write", ports: [{ name: "s1", side: "left", stream: "s1", role: "ingress" }] },
+      ],
+      edges: [{ id: "s1", from: "read.s1", to: "write.s1", kind: "residual" }],
+      groups: [{ id: "unit", label: "Unit", kind: "inset", members: ["read", "write"] }],
+      streams: [{ id: "s1", path: ["read.s1", "write.s1"] }],
+      annotations: [],
+      constraints: [],
+    };
+    expect(validateScene(scene)).toEqual([]);
+  });
+
+  it("rejects matching tagged residual ports when they are not inside a shared inset", () => {
+    const scene: DiagramScene = {
+      irVersion: "0.1.0",
+      view: "overview",
+      modelId: "fixture/ungrouped-residual",
+      nodes: [
+        { id: "read", kind: "mix", label: "Read", ports: [{ name: "s1", side: "right", stream: "s1", role: "egress" }] },
+        { id: "write", kind: "mix", label: "Write", ports: [{ name: "s1", side: "left", stream: "s1", role: "ingress" }] },
+      ],
+      edges: [{ id: "s1", from: "read.s1", to: "write.s1", kind: "residual" }],
+      groups: [],
+      streams: [{ id: "s1", path: ["read.s1", "write.s1"] }],
+      annotations: [],
+      constraints: [],
+    };
+    expect(validateScene(scene).join("\n")).toMatch(/residual edge s1: does not cross a sublayer boundary/);
+  });
+
   it("rejects residual edges not covered by a declared stream path (round 7)", () => {
     const scene = insetScene();
     scene.edges.push({ id: "s1", from: "embed", to: "g-attn.in", kind: "residual" });
