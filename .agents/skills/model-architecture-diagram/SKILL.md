@@ -6,7 +6,19 @@ description: Build or redraw evidence-backed LLM model-architecture diagrams fro
 # Model Architecture Diagram
 
 Produce a figure whose topology remains correct when labels are hidden. Treat
-visual quality as a composition problem after the facts and graph are frozen.
+visual quality as a composition problem after facts and graph structure freeze.
+
+Start by copying `assets/diagram-task.template.md` and choosing one mode:
+
+- `new-model`: establish exact-model sources, IR and evidence before drawing.
+- `semantic-change`: change facts/topology and their mutation tests first.
+- `geometry-only`: freeze the normalized semantic graph, then change only
+  ports, blueprint, routes, typography or visual tokens.
+
+Use the generic compiler for ordinary Transformer overviews. Use a
+model-specific semantic compiler and editorial blueprint only when mechanisms,
+streams or schedule anatomy must be explained, or generic layout fails the
+readability gates.
 
 ## Workflow
 
@@ -30,23 +42,30 @@ visual quality as a composition problem after the facts and graph are frozen.
 7. Add mutation tests for signature topology and a deterministic structural
    snapshot. Deleting a residual stream leg, selector path, router merge or
    schedule boundary must fail.
-8. Export the real artifact and inspect the real model page in a browser. Check
+8. Run the single-model checker with `--require-zero-debt`. New figures and
+   stable redraws are not complete with any finding; never edit a baseline to
+   turn a red into green.
+9. Export the real artifact and inspect the real model page in a browser. Check
    the required viewports, effective type size, crossings, clipping and reading
    order. A green screenshot diff is not a visual review.
-9. Submit through the repository PR workflow with `Refs #N`, source links,
+10. Submit through the repository PR workflow with `Refs #N`, source links,
    commands, limitations, screenshots and `review pending`. The implementer
    does not merge, accept or close the issue.
 
 For implementation invariants and the reusable module boundary, read
 [references/diagram-contract.md](references/diagram-contract.md). For the final
 evidence package and visual pass, read
-[references/delivery-checklist.md](references/delivery-checklist.md).
+[references/delivery-checklist.md](references/delivery-checklist.md). Read
+[references/execution-playbook.md](references/execution-playbook.md) for exact
+commands and stop states, and
+[references/composition-and-routing.md](references/composition-and-routing.md)
+before editing geometry.
 
 ## Stop conditions
 
 - Stop export if a displayed fact lacks evidence or a projection does not
   validate; do not replace it with plausible-looking prose.
-- Stop after two bounded geometry correction passes and report the remaining
-  conflict instead of deleting a gate.
+- Stop after two complete geometry passes and report the remaining conflict
+  instead of deleting a gate or registering new debt.
 - If the source is ambiguous, show the ambiguity or omit the detail. Do not let
   an image generator, diagram tool or visual reference decide topology.
