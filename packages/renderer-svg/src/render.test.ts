@@ -46,6 +46,16 @@ describe("renderSvg", () => {
     expect(poster).toContain(".atlas-poster .n-detail{font-size:15px}");
   });
 
+  it("keeps editorial typography when the composition omits a visible title", () => {
+    const scene = positioned();
+    scene.composition = "editorial-poster";
+
+    const poster = renderSvg(scene);
+    expect(poster).toContain('class="atlas-poster"');
+    expect(poster).toContain('font-size="16"');
+    expect(poster).not.toContain('class="poster-title"');
+  });
+
   it("sizes the poster title rule from the scene width", () => {
     const scene = positioned();
     scene.size.w = 600;
