@@ -20,6 +20,29 @@ const modelsRoot = `${root}/models`;
 
 const baselines = readdirSync(gatesDir).filter((f) => f.endsWith(".gates.json"));
 
+const committedModelIds = readdirSync(modelsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).flatMap((org) =>
+  readdirSync(`${modelsRoot}/${org.name}`, { withFileTypes: true }).filter((entry) => entry.isDirectory()).flatMap((model) => {
+    const architecture = `${modelsRoot}/${org.name}/${model.name}/main/architecture.json`;
+    try {
+      return [(JSON.parse(readFileSync(architecture, "utf8")) as ModelDocument).model.id];
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  }),
+);
+
+const baselineModelIds = baselines.map((file) =>
+  (JSON.parse(readFileSync(`${gatesDir}/${file}`, "utf8")) as { modelId: string }).modelId,
+);
+
+describe("gate baseline inventory", () => {
+  it("covers every committed model exactly once, with no stale baselines", () => {
+    expect([...new Set(baselineModelIds)].sort()).toEqual([...committedModelIds].sort());
+    expect(baselineModelIds).toHaveLength(new Set(baselineModelIds).size);
+  });
+});
+
 function inputsFor(modelId: string): { arch: ModelDocument; evidence: EvidenceFile } {
   const [orgRaw, ...rest] = modelId.split("/");
   const modelDir = `${modelsRoot}/${orgRaw!.toLowerCase()}/${rest.join("/").toLowerCase().replace(/\./g, "-")}/main`;

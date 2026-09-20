@@ -429,7 +429,7 @@ export function fontGates(scene: PositionedScene, opts: GateOptions = {}): GateF
 }
 
 /** Gates that must never be red in a committed figure (layout invariants). */
-export const HARD_GATES = new Set(["overlap", "bounds", "containment", "port-border", "svg-active", "svg-external"]);
+export const HARD_GATES = new Set(["overlap", "bounds", "containment", "port-border", "svg-active", "svg-external", "svg-viewbox"]);
 
 export interface CorrectionResult {
   positioned: PositionedScene;

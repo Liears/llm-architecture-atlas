@@ -49,6 +49,35 @@ export function scanSvgSafety(svg: string): Array<{ gate: string; target: string
   return findings;
 }
 
+/**
+ * Validate the rendered root viewBox against the positioned canvas. This is
+ * deliberately a post-render gate: scene bounds can be correct while a
+ * renderer regression emits a shifted or smaller viewBox that clips them.
+ */
+export function scanSvgViewBox(
+  svg: string,
+  expected: { w: number; h: number },
+): Array<{ gate: string; target: string; message: string }> {
+  const root = svg.match(/<svg\b[^>]*>/i)?.[0];
+  const raw = root?.match(/\bviewBox\s*=\s*"([^"]+)"/i)?.[1];
+  const values = raw?.trim().split(/[\s,]+/).map(Number) ?? [];
+  const expectedWidth = Math.round(expected.w * 2) / 2;
+  const expectedHeight = Math.round(expected.h * 2) / 2;
+  const valid =
+    values.length === 4 &&
+    values.every(Number.isFinite) &&
+    values[0] === 0 &&
+    values[1] === 0 &&
+    values[2] === expectedWidth &&
+    values[3] === expectedHeight;
+  if (valid) return [];
+  return [{
+    gate: "svg-viewbox",
+    target: "svg",
+    message: `rendered SVG viewBox ${raw ? `"${raw}"` : "is missing"} does not cover canvas 0 0 ${expectedWidth} ${expectedHeight}`,
+  }];
+}
+
 export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): string {
   const themeName = opts.theme ?? "light";
   const t = themes[themeName];

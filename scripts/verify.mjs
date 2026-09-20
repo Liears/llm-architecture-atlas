@@ -31,8 +31,8 @@ run("pnpm test");
 run(`"${venvPython}" -m pytest tools/ingest`);
 run("pnpm export:golden");
 // regenerate must be a clean no-op (deterministic pipeline)
-const diff = spawnSync("git", ["diff", "--exit-code", "--stat", "tests/structural", "apps/web/public/figures"], { encoding: "utf8" });
-if (diff.status !== 0) {
+const diff = spawnSync("git", ["status", "--porcelain", "--", "tests/structural", "apps/web/public/figures", "tests/gates"], { encoding: "utf8" });
+if (diff.status !== 0 || diff.stdout.trim().length > 0) {
   console.error("Regenerated artifacts differ from committed ones:\n" + diff.stdout);
   process.exit(1);
 }

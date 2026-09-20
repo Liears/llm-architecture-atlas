@@ -44,7 +44,7 @@ jobs:
       - name: Regenerate golden artifacts and require clean diff
         run: |
           pnpm export:golden
-          git diff --exit-code --stat tests/structural apps/web/public/figures
+          test -z "$(git status --porcelain -- tests/structural apps/web/public/figures tests/gates)"
 
       - name: E2E smoke (Playwright)
         run: pnpm --filter @atlas/web test:e2e

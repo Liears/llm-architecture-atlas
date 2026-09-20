@@ -15,7 +15,7 @@ import {
   type CorrectionResult,
   type BaselineFinding,
 } from "../packages/diagram-engine/src/index.ts";
-import { renderSvg, scanSvgSafety } from "../packages/renderer-svg/src/render.ts";
+import { renderSvg, scanSvgSafety, scanSvgViewBox } from "../packages/renderer-svg/src/render.ts";
 
 export interface GatesReport {
   modelId: string;
@@ -43,7 +43,7 @@ export function computeGatesReport(arch: ModelDocument, evidence: EvidenceFile):
     showTitle: arch.model.id === "zai-org/glm-5.3-flash",
     description: `Generated from Architecture IR ${scene.irVersion}. ${scene.nodes.length} nodes, ${scene.annotations.length} evidence annotations; both themes ship in this document via CSS variables.`,
   });
-  for (const f of scanSvgSafety(svg)) {
+  for (const f of [...scanSvgSafety(svg), ...scanSvgViewBox(svg, positioned.size)]) {
     // inert-document violations are hard failures, never baseline debt
     hard.push(f);
   }

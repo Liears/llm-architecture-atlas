@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { layoutScene } from "@atlas/diagram-engine";
-import { renderSvg } from "./render.js";
+import { renderSvg, scanSvgViewBox } from "./render.js";
 import { glmScene } from "../../diagram-engine/src/test-scene.js";
 import { mhcStreamsScene } from "../../diagram-engine/src/fixtures.js";
 
@@ -63,5 +63,23 @@ describe("renderSvg", () => {
 
   it("is deterministic byte-for-byte", () => {
     expect(renderSvg(positioned(), {})).toBe(renderSvg(positioned(), {}));
+  });
+
+  it("rejects a rendered document whose viewBox clips or shifts the scene", () => {
+    const scene = positioned();
+    const svg = renderSvg(scene);
+    expect(scanSvgViewBox(svg, scene.size)).toEqual([]);
+
+    const clipped = svg.replace(
+      `viewBox="0 0 ${scene.size.w} ${scene.size.h}"`,
+      `viewBox="0 0 ${scene.size.w - 1} ${scene.size.h - 1}"`,
+    );
+    expect(scanSvgViewBox(clipped, scene.size).map((finding) => finding.gate)).toContain("svg-viewbox");
+
+    const shifted = svg.replace(
+      `viewBox="0 0 ${scene.size.w} ${scene.size.h}"`,
+      `viewBox="1 1 ${scene.size.w} ${scene.size.h}"`,
+    );
+    expect(scanSvgViewBox(shifted, scene.size).map((finding) => finding.gate)).toContain("svg-viewbox");
   });
 });
