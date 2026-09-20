@@ -42,7 +42,8 @@ describe("renderSvg", () => {
     expect(poster).toContain('class="atlas-poster"');
     expect(poster).toContain('data-node-kind="stack"');
     expect(poster).toContain(">Editorial view</text>");
-    expect(poster).toContain(".atlas-poster .e-label{font-size:15px}");
+    expect(poster).toContain(".atlas-poster .n-label{font-size:16px}");
+    expect(poster).toContain(".atlas-poster .n-detail{font-size:15px}");
   });
 
   it("sizes the poster title rule from the scene width", () => {

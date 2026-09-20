@@ -35,11 +35,12 @@ const statusSymbol = (s: string) =>
   </p>
 
   <h2 data-i18n="detail.overview">Overview</h2>
-  <img
-    src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
-    alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
-    style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--paper)"
-  />
+  <div class="figure-wrap" data-atlas-scroll="x" tabindex="0" aria-label="Scrollable architecture figure">
+    <img
+      src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
+      alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
+    />
+  </div>
   <p>
     <a href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download data-i18n="detail.downloadSvg">Download SVG</a>
     <button type="button" class="png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={`${model.slug}`} data-i18n="detail.downloadPng">Download PNG</button>
@@ -193,6 +194,11 @@ const statusSymbol = (s: string) =>
   </script>
 
   <style>
+    .figure-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .figure-wrap img {
+      display: block; width: 100%; min-width: 72rem; height: auto;
+      border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
+    }
     .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.6rem; padding: 0; }
     .facts > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.8rem; background: var(--panel); }
     .facts dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }

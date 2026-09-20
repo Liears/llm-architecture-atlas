@@ -26,7 +26,7 @@ export interface SemanticNode {
    * (round 5): ingress ports accept exactly one incoming edge and emit none,
    * egress ports the mirror — which makes operator traversal an IR invariant.
    */
-  ports?: Array<string | { name: string; side: "left" | "right"; stream?: string; role?: "ingress" | "egress" }>;
+  ports?: Array<string | { name: string; side: "left" | "right" | "top" | "bottom"; stream?: string; role?: "ingress" | "egress" }>;
   /** IR claim path backing this node's label, for evidence annotations. */
   claimPath?: string;
   /** Per-segment evidence: every number-bearing text piece references its claim. */

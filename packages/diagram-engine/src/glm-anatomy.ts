@@ -5,7 +5,7 @@ import type { DiagramScene, EvidenceAnnotation, SemanticGroupPort, SemanticNode 
 type AnnStatus = NonNullable<EvidenceAnnotation["status"]>;
 const SID = [1, 2, 3, 4] as const;
 
-const streamPorts = (prefix: string, side: "left" | "right", role: "ingress" | "egress") =>
+const streamPorts = (prefix: string, side: "left" | "right" | "top" | "bottom", role: "ingress" | "egress") =>
   SID.map((i) => ({ name: `${prefix}${i}`, side, stream: `s${i}`, role }));
 
 function commas(value: number): string {
@@ -86,6 +86,7 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     {
       id: "decoder", kind: "stack", label: "Decoder pattern", detail: `${facts.num_hidden_layers} layers · ${attentionSummary}`,
       claimPath: "facts.num_hidden_layers",
+      ports: [{ name: "mhc", side: "bottom" }, { name: "lenses", side: "bottom" }],
       claims: [
         { claimPath: "facts.num_hidden_layers", label: `${facts.num_hidden_layers} layers` },
         { claimPath: "topology.attention_groups[0]", label: `${kda.layers.length} KDA` },
@@ -102,7 +103,10 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
       claimPath: "topology.mtp.predict_layers",
       claims: [{ claimPath: "topology.mtp.predict_layers", label: "1 prediction layer" }],
     },
-    { id: "lens-bus", kind: "annotation", label: "layer lenses", claimPath: "facts.num_hidden_layers" },
+    {
+      id: "lens-bus", kind: "annotation", label: "layer lenses", claimPath: "facts.num_hidden_layers",
+      ports: SID.slice(0, 3).map((i) => ({ name: `out${i}`, side: "right" as const })),
+    },
     ...scheduleChunks.filter((chunk) => chunk.length === 4).map((chunk, unit) => ({
       id: `pattern-${unit}`,
       kind: "schedule",
@@ -154,13 +158,13 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     {
       id: "mhc-hpost", kind: "split", label: "H-post", detail: "1 → 4 write",
       claimPath: "topology.residual.streams",
-      ports: [{ name: "in", side: "left" as const }, ...streamPorts("out", "right", "egress")],
+      ports: [{ name: "in", side: "left" as const }, ...streamPorts("out", "bottom", "egress")],
     },
     ...SID.map((i) => ({
       id: `mhc-sum-${i}`, kind: "merge", label: `S${i} ⊕`, claimPath: "topology.residual.scheme",
       ports: [
-        { name: "post", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
         { name: "res", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
+        { name: "post", side: "left" as const, stream: `s${i}`, role: "ingress" as const },
         { name: "out", side: "right" as const, stream: `s${i}`, role: "egress" as const },
       ],
     })),
@@ -174,7 +178,7 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
       claims: [{ claimPath: "topology.attention.kda_short_conv_kernel", label: "kernel 4" }],
     },
     { id: "kda-state", kind: "state", label: "decay / state", detail: "recurrent", claimPath: "topology.attention_groups[0]" },
-    { id: "kda-gate", kind: "gate", label: "output gate", claimPath: "topology.attention_groups[0]" },
+    { id: "kda-gate", kind: "gate", label: "Gate", detail: "output", claimPath: "topology.attention_groups[0]" },
     {
       id: "dsa-indexer", kind: "indexer", label: "Indexer", detail: "32 heads",
       claimPath: "topology.attention.dsa_indexer_heads",
@@ -183,13 +187,24 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     {
       id: "dsa-topk", kind: "selector", label: "Top-k", detail: "2,048",
       claimPath: "topology.attention.dsa_topk", claims: [{ claimPath: "topology.attention.dsa_topk", label: "k=2048" }],
+      ports: [{ name: "out", side: "bottom" }],
     },
-    { id: "dsa-selected", kind: "selection", label: "selected KV", claimPath: "topology.attention_groups[1]" },
-    { id: "dsa-mla", kind: "attention", label: "MLA", detail: "latent KV", claimPath: "topology.attention_groups[1]" },
-    { id: "moe-router", kind: "router", label: "Router", claimPath: "topology.experts.routed_total" },
+    {
+      id: "dsa-selected", kind: "selection", label: "selected KV", claimPath: "topology.attention_groups[1]",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "left" }],
+    },
+    {
+      id: "dsa-mla", kind: "attention", label: "MLA", detail: "latent KV", claimPath: "topology.attention_groups[1]",
+      ports: [{ name: "in", side: "right" }],
+    },
+    {
+      id: "moe-router", kind: "router", label: "Router", claimPath: "topology.experts.routed_total",
+      ports: [{ name: "routed", side: "right" }, { name: "shared", side: "right" }],
+    },
     {
       id: "moe-routed", kind: "moe", label: "Routed", detail: `${experts.routed_total} · top-${experts.active_routed}`,
       claimPath: "topology.experts.routed_total",
+      ports: [{ name: "in", side: "left" }, { name: "out", side: "right" }],
       claims: [
         { claimPath: "topology.experts.routed_total", label: `${experts.routed_total} total` },
         { claimPath: "topology.experts.active_routed", label: `top-${experts.active_routed}` },
@@ -198,8 +213,12 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     {
       id: "moe-shared", kind: "moe", label: "Shared", detail: `${experts.shared} always-on`,
       claimPath: "topology.experts.shared", claims: [{ claimPath: "topology.experts.shared", label: `${experts.shared} shared` }],
+      ports: [{ name: "in", side: "left" }, { name: "out", side: "right" }],
     },
-    { id: "moe-merge", kind: "merge", label: "⊕", detail: "merge", claimPath: "topology.ffn_groups[1]" },
+    {
+      id: "moe-merge", kind: "merge", label: "⊕", detail: "merge", claimPath: "topology.ffn_groups[1]",
+      ports: [{ name: "routed", side: "left" }, { name: "shared", side: "left" }],
+    },
   ];
 
   const mhcPorts: SemanticGroupPort[] = [
@@ -214,11 +233,11 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     { id: "main-decoder-norm", from: "decoder", to: "norm", kind: "flow" },
     { id: "main-norm-head", from: "norm", to: "head", kind: "flow" },
     { id: "main-mtp", from: "head", to: "mtp", kind: "control", claimPath: "topology.mtp.predict_layers" },
-    { id: "callout-mhc", from: "decoder", to: "g-mhc.callout", kind: "control", label: "representative sublayer" },
-    { id: "callout-lenses", from: "decoder", to: "lens-bus", kind: "control" },
-    { id: "callout-kda", from: "lens-bus", to: "g-kda.callout", kind: "control", claimPath: "topology.attention_groups[0]" },
-    { id: "callout-dsa", from: "lens-bus", to: "g-dsa.callout", kind: "control", claimPath: "topology.attention_groups[1]" },
-    { id: "callout-moe", from: "lens-bus", to: "g-moe.callout", kind: "control", claimPath: "topology.ffn_groups[1]" },
+    { id: "callout-mhc", from: "decoder.mhc", to: "g-mhc.callout", kind: "control", label: "representative sublayer" },
+    { id: "callout-lenses", from: "decoder.lenses", to: "lens-bus", kind: "control" },
+    { id: "callout-kda", from: "lens-bus.out1", to: "g-kda.callout", kind: "control", claimPath: "topology.attention_groups[0]" },
+    { id: "callout-dsa", from: "lens-bus.out2", to: "g-dsa.callout", kind: "control", claimPath: "topology.attention_groups[1]" },
+    { id: "callout-moe", from: "lens-bus.out3", to: "g-moe.callout", kind: "control", claimPath: "topology.ffn_groups[1]" },
     ...SID.flatMap((i) => [
       { id: `mhc-enter-${i}`, from: `mhc-source.s${i}`, to: `g-mhc.in${i}`, kind: "residual" as const, rail: "left" as const, claimPath: "topology.residual.streams" },
       { id: `mhc-bound-in-${i}`, from: `g-mhc.in${i}`, to: `mhc-split-${i}.in`, kind: "flow" as const, claimPath: "topology.residual.scheme" },
@@ -234,12 +253,12 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
     { id: "kda-1", from: "kda-qkv", to: "kda-state", kind: "flow", claimPath: "topology.attention_groups[0]" },
     { id: "kda-2", from: "kda-state", to: "kda-gate", kind: "flow", claimPath: "topology.attention_groups[0]" },
     { id: "dsa-1", from: "dsa-indexer", to: "dsa-topk", kind: "flow", claimPath: "topology.attention.dsa_indexer_heads" },
-    { id: "dsa-2", from: "dsa-topk", to: "dsa-selected", kind: "flow", claimPath: "topology.attention.dsa_topk" },
-    { id: "dsa-3", from: "dsa-selected", to: "dsa-mla", kind: "flow", claimPath: "topology.attention_groups[1]" },
-    { id: "moe-1", from: "moe-router", to: "moe-routed", kind: "control", label: `top-${experts.active_routed}`, claimPath: "topology.experts.active_routed" },
-    { id: "moe-2", from: "moe-router", to: "moe-shared", kind: "control", claimPath: "topology.experts.shared" },
-    { id: "moe-3", from: "moe-routed", to: "moe-merge", kind: "flow", claimPath: "topology.experts.routed_total" },
-    { id: "moe-4", from: "moe-shared", to: "moe-merge", kind: "flow", claimPath: "topology.experts.shared" },
+    { id: "dsa-2", from: "dsa-topk", to: "dsa-selected.in", kind: "flow", claimPath: "topology.attention.dsa_topk" },
+    { id: "dsa-3", from: "dsa-selected.out", to: "dsa-mla.in", kind: "flow", claimPath: "topology.attention_groups[1]" },
+    { id: "moe-1", from: "moe-router.routed", to: "moe-routed.in", kind: "control", label: `top-${experts.active_routed}`, claimPath: "topology.experts.active_routed" },
+    { id: "moe-2", from: "moe-router.shared", to: "moe-shared.in", kind: "control", claimPath: "topology.experts.shared" },
+    { id: "moe-3", from: "moe-routed.out", to: "moe-merge.routed", kind: "flow", claimPath: "topology.experts.routed_total" },
+    { id: "moe-4", from: "moe-shared.out", to: "moe-merge.shared", kind: "flow", claimPath: "topology.experts.shared" },
   ];
 
   const groups: DiagramScene["groups"] = [
@@ -309,36 +328,36 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
     { id: "decoder", x: 465, y: 68, w: 330, h: 80 },
     { id: "norm", x: 850, y: 78, w: 165, h: 60 },
     { id: "head", x: 1060, y: 78, w: 165, h: 60 },
-    { id: "mtp", x: 1260, y: 68, w: 130, h: 80 },
-    { id: "lens-bus", x: 935, y: 155, w: 95, h: 28 },
+    { id: "mtp", x: 1335, y: 68, w: 165, h: 80 },
+    { id: "lens-bus", x: 915, y: 155, w: 145, h: 28 },
     ...Array.from({ length: 11 }, (_, i) => ({ id: `pattern-${i}`, x: 72, y: 242 + i * 43, w: 266, h: 36 })),
     { id: "pattern-tail", x: 72, y: 715, w: 266, h: 44 },
-    { id: "mhc-source", x: 382, y: 445, w: 68, h: 130 },
+    { id: "mhc-source", x: 365, y: 445, w: 90, h: 130 },
     ...SID.map((i) => ({ id: `mhc-split-${i}`, x: 477, y: 330 + (i - 1) * 105, w: 70, h: 52 })),
     { id: "mhc-hpre", x: 572, y: 250, w: 105, h: 82 },
-    { id: "mhc-f", x: 710, y: 250, w: 125, h: 82 },
-    { id: "mhc-hpost", x: 868, y: 250, w: 105, h: 82 },
-    { id: "mhc-hres", x: 578, y: 390, w: 110, h: 340 },
-    ...SID.map((i) => ({ id: `mhc-sum-${i}`, x: 878, y: 382 + (i - 1) * 105, w: 84, h: 58 })),
-    { id: "mhc-sink", x: 1015, y: 445, w: 45, h: 130 },
-    { id: "kda-qkv", x: 1080, y: 255, w: 115, h: 70 },
-    { id: "kda-state", x: 1205, y: 255, w: 115, h: 70 },
-    { id: "kda-gate", x: 1330, y: 255, w: 95, h: 70 },
-    { id: "dsa-indexer", x: 1092, y: 430, w: 125, h: 55 },
-    { id: "dsa-topk", x: 1240, y: 430, w: 125, h: 55 },
-    { id: "dsa-selected", x: 1240, y: 500, w: 125, h: 45 },
-    { id: "dsa-mla", x: 1092, y: 500, w: 125, h: 45 },
-    { id: "moe-router", x: 1090, y: 665, w: 78, h: 70 },
-    { id: "moe-routed", x: 1192, y: 632, w: 105, h: 72 },
-    { id: "moe-shared", x: 1192, y: 722, w: 105, h: 60 },
-    { id: "moe-merge", x: 1325, y: 675, w: 58, h: 72 },
+    { id: "mhc-f", x: 710, y: 250, w: 165, h: 82 },
+    { id: "mhc-hpost", x: 900, y: 250, w: 120, h: 82 },
+    { id: "mhc-hres", x: 578, y: 390, w: 128, h: 340 },
+    ...SID.map((i) => ({ id: `mhc-sum-${i}`, x: 875, y: 382 + (i - 1) * 105, w: 84, h: 58 })),
+    { id: "mhc-sink", x: 1030, y: 445, w: 70, h: 130 },
+    { id: "kda-qkv", x: 1115, y: 255, w: 138, h: 70 },
+    { id: "kda-state", x: 1263, y: 255, w: 147, h: 70 },
+    { id: "kda-gate", x: 1420, y: 255, w: 90, h: 70 },
+    { id: "dsa-indexer", x: 1127, y: 430, w: 125, h: 55 },
+    { id: "dsa-topk", x: 1275, y: 430, w: 125, h: 55 },
+    { id: "dsa-selected", x: 1275, y: 500, w: 135, h: 45 },
+    { id: "dsa-mla", x: 1127, y: 500, w: 125, h: 45 },
+    { id: "moe-router", x: 1125, y: 665, w: 90, h: 70 },
+    { id: "moe-routed", x: 1235, y: 632, w: 115, h: 72 },
+    { id: "moe-shared", x: 1235, y: 722, w: 115, h: 60 },
+    { id: "moe-merge", x: 1375, y: 675, w: 75, h: 72 },
   ];
   const groups = [
     { id: "g-pattern", x: 48, y: 195, w: 314, h: 610 },
-    { id: "g-mhc", x: 458, y: 195, w: 545, h: 610 },
-    { id: "g-kda", x: 1070, y: 195, w: 360, h: 165 },
-    { id: "g-dsa", x: 1070, y: 385, w: 360, h: 180 },
-    { id: "g-moe", x: 1070, y: 590, w: 360, h: 215 },
+    { id: "g-mhc", x: 458, y: 195, w: 567, h: 610 },
+    { id: "g-kda", x: 1105, y: 195, w: 405, h: 165 },
+    { id: "g-dsa", x: 1105, y: 385, w: 405, h: 180 },
+    { id: "g-moe", x: 1105, y: 590, w: 405, h: 215 },
   ];
   const edges = [
     "main-token-embed", "main-embed-decoder", "main-decoder-norm", "main-norm-head", "main-mtp",
@@ -350,11 +369,44 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
     "mhc-pre-f", "mhc-f-post", "kda-1", "kda-2", "dsa-1", "dsa-2", "dsa-3", "moe-1", "moe-2", "moe-3", "moe-4",
   ];
   const edgeRoutes: NonNullable<EditorialPosterBlueprint["edgeRoutes"]> = {
-    "callout-mhc": [{ x: 650, y: 148 }, { x: 650, y: 185 }, { x: 730.5, y: 185 }, { x: 730.5, y: 195 }],
-    "callout-lenses": [{ x: 690, y: 148 }, { x: 690, y: 169 }, { x: 935, y: 169 }],
-    "callout-kda": [{ x: 1030, y: 169 }, { x: 1045, y: 169 }, { x: 1045, y: 277.5 }, { x: 1070, y: 277.5 }],
-    "callout-dsa": [{ x: 1030, y: 169 }, { x: 1045, y: 169 }, { x: 1045, y: 475 }, { x: 1070, y: 475 }],
-    "callout-moe": [{ x: 1030, y: 169 }, { x: 1045, y: 169 }, { x: 1045, y: 697.5 }, { x: 1070, y: 697.5 }],
+    "callout-mhc": [{ x: 575, y: 148 }, { x: 575, y: 185 }, { x: 741.5, y: 185 }, { x: 741.5, y: 195 }],
+    "callout-lenses": [{ x: 685, y: 148 }, { x: 685, y: 169 }, { x: 915, y: 169 }],
+    "callout-kda": [{ x: 1060, y: 162 }, { x: 1101, y: 162 }, { x: 1101, y: 277.5 }, { x: 1105, y: 277.5 }],
+    "callout-dsa": [{ x: 1060, y: 169 }, { x: 1102, y: 169 }, { x: 1102, y: 475 }, { x: 1105, y: 475 }],
+    "callout-moe": [{ x: 1060, y: 176 }, { x: 1103, y: 176 }, { x: 1103, y: 697.5 }, { x: 1105, y: 697.5 }],
   };
-  return { id: "glm-anatomy-desktop", size: { w: 1440, h: 860 }, nodes, groups, edges, edgeRoutes };
+  for (const [index, stream] of SID.entries()) {
+    const groupY = 195 + (610 * stream) / 5;
+    const sourceY = 445 + (130 * stream) / 5;
+    const splitY = 330 + index * 105;
+    const sumY = 382 + index * 105;
+    const entryLane = 448 + index * 2.5;
+    const preLane = 555 + index * 5;
+    const postLane = 850 - index * 5;
+    const boundLane = 1021 + index;
+    const exitLane = 1026 + index;
+
+    edgeRoutes[`mhc-enter-${stream}`] = [
+      { x: 455, y: sourceY }, { x: entryLane, y: sourceY }, { x: entryLane, y: groupY }, { x: 458, y: groupY },
+    ];
+    edgeRoutes[`mhc-pre-${stream}`] = [
+      { x: 547, y: splitY + 52 / 3 }, { x: 550, y: splitY + 52 / 3 },
+      { x: 550, y: splitY + 10 }, { x: preLane, y: splitY + 10 },
+      { x: preLane, y: 250 + (82 * stream) / 5 }, { x: 572, y: 250 + (82 * stream) / 5 },
+    ];
+    edgeRoutes[`mhc-post-${stream}`] = [
+      { x: 900 + (120 * stream) / 5, y: 332 }, { x: 900 + (120 * stream) / 5, y: 340 + index * 5 },
+      { x: postLane, y: 340 + index * 5 }, { x: postLane, y: sumY + (58 * 2) / 3 },
+      { x: 875, y: sumY + (58 * 2) / 3 },
+    ];
+    edgeRoutes[`mhc-bound-out-${stream}`] = [
+      { x: 959, y: sumY + 29 }, { x: boundLane, y: sumY + 29 },
+      { x: boundLane, y: groupY }, { x: 1025, y: groupY },
+    ];
+    edgeRoutes[`mhc-exit-${stream}`] = [
+      { x: 1025, y: groupY }, { x: exitLane, y: groupY },
+      { x: exitLane, y: sourceY }, { x: 1030, y: sourceY },
+    ];
+  }
+  return { id: "glm-anatomy-desktop", size: { w: 1520, h: 860 }, nodes, groups, edges, edgeRoutes };
 }

@@ -35,7 +35,7 @@ function nodePorts(node: SemanticNode, box: PosterBox): Record<string, Point> {
     out: { x: box.x + box.w, y: box.y + box.h / 2 },
   };
   const defs = resolveSidePorts(node);
-  for (const side of ["left", "right"] as const) {
+  for (const side of ["left", "right", "top", "bottom"] as const) {
     const onSide = defs.filter((port) => port.side === side);
     onSide.forEach((port, index) => {
       ports[port.name] = distribute(box, side, index, onSide.length);
@@ -64,6 +64,10 @@ function route(a: Point, b: Point): Point[] {
   if (Math.abs(a.x - b.x) < 0.5 || Math.abs(a.y - b.y) < 0.5) return [a, b];
   const midX = (a.x + b.x) / 2;
   return [a, { x: midX, y: a.y }, { x: midX, y: b.y }, b];
+}
+
+function samePoint(a: Point | undefined, b: Point, epsilon = 0.01): boolean {
+  return !!a && Math.abs(a.x - b.x) <= epsilon && Math.abs(a.y - b.y) <= epsilon;
 }
 
 /**
@@ -127,12 +131,21 @@ export function composeEditorialPoster(scene: DiagramScene, blueprint: Editorial
   const edges: PositionedEdge[] = blueprint.edges.map((id) => {
     const edge = edgeById.get(id);
     if (!edge) throw new Error(`poster ${blueprint.id}: unknown edge ${id}`);
+    const from = anchor(edge.from, true);
+    const to = anchor(edge.to, false);
+    const explicit = blueprint.edgeRoutes?.[id];
+    if (explicit && !samePoint(explicit[0], from)) {
+      throw new Error(`poster ${blueprint.id}: edge ${id} route is detached from its source anchor`);
+    }
+    if (explicit && !samePoint(explicit.at(-1), to)) {
+      throw new Error(`poster ${blueprint.id}: edge ${id} route is detached from its target anchor`);
+    }
     return {
       id: edge.id,
       kind: edge.kind,
       label: edge.label,
       claimPath: edge.claimPath,
-      points: blueprint.edgeRoutes?.[id] ?? route(anchor(edge.from, true), anchor(edge.to, false)),
+      points: explicit ?? route(from, to),
     };
   });
 
@@ -142,5 +155,5 @@ export function composeEditorialPoster(scene: DiagramScene, blueprint: Editorial
       throw new Error(`poster ${blueprint.id}: ${box.id} falls outside ${blueprint.size.w}x${blueprint.size.h}`);
     }
   }
-  return { scene, size: blueprint.size, nodes, edges, groups };
+  return { scene, composition: "editorial-poster", size: blueprint.size, nodes, edges, groups };
 }
