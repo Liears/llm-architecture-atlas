@@ -23,7 +23,7 @@ updated: 2026-11-25
 |---|---|---|
 | Main Spine | `Token ids -> Token embedding (2,304d) -> Decoder stack (27L) -> Final RMSNorm -> LM head (163,840 vocab)` | `facts.hidden_size`, `facts.num_hidden_layers`, `facts.vocab_size` |
 | Layer Schedule | `L0–3 (K,K,K,M · Dense→MoE)`, `L4–23 ((K,K,K,M) ×5 · MoE)`, `L24–26 (K,K,M · MoE tail)` | `$.linear_attn_config`, `$.first_k_dense_replace=1`, `modeling_kimi.py:799-805` |
-| KDA Subtopology | 4-node recurrence pipeline: `Q/K/V ShortConv (k=4)` -> `Fisher Decay (A_log/dt)` -> `Delta State (20L)` -> `Output Gate (32 Q, d=72)` | `$.linear_attn_config`, `modeling_kimi.py:444-504`, Paper §4/Fig.3 |
+| KDA Subtopology | 4-node recurrence pipeline: `Q/K/V ShortConv (k=4)` -> `KDA Decay Gate (A_log/dt)` -> `Delta State (20L)` -> `Output Gate (32 heads · d=128 · o_norm)` | `$.linear_attn_config`, `modeling_kimi.py:444-504`, Paper §4/Fig.3 |
 | MLA Subtopology | 3-node compressed latent bypass: `Latent KV (512d)` -> `RoPE/NoPE` -> `MLA Attention (7L)` + bypass rail | `$.kv_lora_rank=512`, `$.qk_rope_head_dim=64`, `$.mla_use_nope=true`, `modeling_kimi.py:344-379` |
 | Sparse MoE | `Router (top-8)` -> `Routed Experts (256 total, top-8)` + `Shared Expert (1 always-on)` -> `⊕ Merge` | `$.num_experts`, `$.num_experts_per_token`, `$.num_shared_experts=1` |
 

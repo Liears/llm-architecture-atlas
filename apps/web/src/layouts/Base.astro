@@ -164,6 +164,11 @@ interface Props {
       html[data-theme="dark"] .btn-primary {
         color: #0b1220;
       }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .btn-primary {
+          color: #0b1220;
+        }
+      }
 
       [hidden] {
         display: none !important;
@@ -243,7 +248,7 @@ interface Props {
         <nav class="nav" aria-label="Primary">
           <a href="/llm-architecture-atlas/" class={active === "catalog" ? "active" : ""} data-i18n="nav.catalog">Catalog</a>
           <a href="/llm-architecture-atlas/concepts/" class={active === "concepts" ? "active" : ""} data-i18n="nav.concepts">Concepts</a>
-          <a href="/llm-architecture-atlas/compare/convaiinnovations-laya--vs--zai-org-glm-5-3-flash/" class={active === "compare" ? "active" : ""} data-i18n="nav.compare">Compare</a>
+          <a href="/llm-architecture-atlas/compare/zai-org-glm-5-3-flash--vs--convaiinnovations-laya/" class={active === "compare" ? "active" : ""} data-i18n="nav.compare">Compare</a>
           <a href="/llm-architecture-atlas/changes.xml" data-i18n="nav.changes">RSS</a>
           <a href="https://github.com/Liears/llm-architecture-atlas" rel="noopener noreferrer" data-i18n="nav.source">GitHub</a>
         </nav>

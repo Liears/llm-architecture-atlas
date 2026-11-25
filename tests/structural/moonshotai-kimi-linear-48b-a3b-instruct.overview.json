@@ -75,7 +75,7 @@
     },
     {
       "id": "kda-decay",
-      "label": "Fisher Decay",
+      "label": "KDA Decay Gate",
       "detail": "A_log · dt gate",
       "claimPath": "topology.attention_groups[0]"
     },
@@ -88,7 +88,7 @@
     {
       "id": "kda-gate",
       "label": "Output Gate",
-      "detail": "32 Q · d=72",
+      "detail": "32h · d=128 · o_norm",
       "claimPath": "facts.num_attention_heads"
     },
     {
@@ -398,7 +398,7 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.head_dim",
+      "claimPath": "topology.attention_groups[0]",
       "target": "kda-gate",
       "status": "reported"
     },

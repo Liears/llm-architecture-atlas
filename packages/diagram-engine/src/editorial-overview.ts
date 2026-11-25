@@ -275,15 +275,19 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
       : ["lin-qkv", "lin-decay", "lin-state", "lin-gate"];
     nodes.push(
       safeNode(linIds[0]!, "state", isKda ? "Q/K/V ShortConv" : "Q/K/V + Conv", [{ label: isKda ? "kernel 4 · silu" : "short conv" }], undefined, primaryAttnClaim),
-      safeNode(linIds[1]!, "state", isKda ? "Fisher Decay" : "Delta Decay", [{ label: isKda ? "A_log · dt gate" : "alpha / beta gate" }], undefined, primaryAttnClaim),
+      safeNode(linIds[1]!, "state", isKda ? "KDA Decay Gate" : "Delta Decay", [{ label: isKda ? "A_log · dt gate" : "alpha / beta gate" }], undefined, primaryAttnClaim),
       safeNode(linIds[2]!, "state", "Delta State", [{ label: `${linGrp.layers.length} linear layers` }], undefined, primaryAttnClaim),
       safeNode(
         linIds[3]!,
         "state",
         "Output Gate",
         [
-          { claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` },
-          ...(facts.head_dim ? [{ claimPath: "facts.head_dim", label: `d=${facts.head_dim}` }] : []),
+          { claimPath: "facts.num_attention_heads", label: isKda ? `${facts.num_attention_heads}h` : `${facts.num_attention_heads} heads` },
+          ...(isKda
+            ? [{ claimPath: primaryAttnClaim, label: "d=128 · o_norm" }]
+            : facts.head_dim
+              ? [{ claimPath: "facts.head_dim", label: `d=${facts.head_dim}` }]
+              : []),
         ],
         undefined,
         primaryAttnClaim,

@@ -42,6 +42,9 @@ describe("Kimi Linear hybrid KDA + MLA + MoE template reuse (#39)", () => {
     expect(tail?.label).toBe("L24–26");
     expect(tail?.detail).toContain("K,K,M");
 
+    const kdaOut = scene.nodes.find((n) => n.id === "kda-gate");
+    expect(kdaOut?.detail).toContain("d=128");
+    expect(scene.nodes.find((n) => n.id === "kda-decay")?.label).toBe("KDA Decay Gate");
     // MoE includes router fan-out, 256 routed top-8, 1 shared, and weighted merge
     expect(scene.nodes.find((n) => n.id === "moe-router")?.detail).toContain("top-8");
     expect(scene.nodes.find((n) => n.id === "moe-routed")?.detail).toContain("256 total");

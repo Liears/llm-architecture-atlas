@@ -76,7 +76,7 @@
     {
       "id": "lin-gate",
       "label": "Output Gate",
-      "detail": "16 Q · d=256",
+      "detail": "16 heads · d=256",
       "claimPath": "facts.num_attention_heads"
     },
     {

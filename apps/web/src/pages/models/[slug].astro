@@ -76,6 +76,7 @@ const { positioned: overviewPos } = positionForModel(overviewScene);
 
 interface OverviewHotspot {
   id: string;
+  kind: "node" | "edge";
   label: string;
   detail?: string;
   claimPaths: string[];
@@ -85,9 +86,34 @@ interface OverviewHotspot {
   hPct: number;
 }
 
-const overviewHotspots: OverviewHotspot[] = overviewPos.nodes
-  .map((box) => {
-    const sem = overviewScene.nodes.find((n) => n.id === box.id);
+const clampPct = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+function polylineMidpoint(pts: Array<{ x: number; y: number }>): { x: number; y: number } {
+  if (pts.length === 1) return pts[0]!;
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    total += Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y);
+  }
+  if (total === 0) return pts[0]!;
+  let target = total / 2;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    const seg = Math.hypot(b.x - a.x, b.y - a.y);
+    if (target <= seg) {
+      const t = seg === 0 ? 0 : target / seg;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    target -= seg;
+  }
+  return pts[pts.length - 1]!;
+}
+
+const overviewNodeById = new Map(overviewScene.nodes.map((n) => [n.id, n]));
+const overviewEdgeById = new Map(overviewScene.edges.map((e) => [e.id, e]));
+
+const overviewNodeHotspots: OverviewHotspot[] = overviewPos.nodes
+  .map((box): OverviewHotspot | null => {
+    const sem = overviewNodeById.get(box.id);
     if (!sem) return null;
     const paths = new Set<string>();
     if (sem.claimPath) paths.add(sem.claimPath);
@@ -95,6 +121,7 @@ const overviewHotspots: OverviewHotspot[] = overviewPos.nodes
     if (paths.size === 0) return null;
     return {
       id: sem.id,
+      kind: "node",
       label: sem.label,
       ...(sem.detail ? { detail: sem.detail } : {}),
       claimPaths: [...paths],
@@ -105,6 +132,34 @@ const overviewHotspots: OverviewHotspot[] = overviewPos.nodes
     };
   })
   .filter((x): x is OverviewHotspot => x !== null);
+
+const overviewEdgeHotspots: OverviewHotspot[] = overviewPos.edges
+  .map((edge): OverviewHotspot | null => {
+    if (!edge.claimPath || edge.points.length < 2) return null;
+    const sem = overviewEdgeById.get(edge.id);
+    const fromLabel = sem ? (overviewNodeById.get(sem.from)?.label ?? sem.from) : "";
+    const toLabel = sem ? (overviewNodeById.get(sem.to)?.label ?? sem.to) : "";
+    const label =
+      edge.label && fromLabel && toLabel
+        ? `${fromLabel} → ${toLabel} (${edge.label})`
+        : fromLabel && toLabel
+          ? `${fromLabel} → ${toLabel}`
+          : (edge.label ?? edge.id);
+    const mid = polylineMidpoint(edge.points);
+    return {
+      id: edge.id,
+      kind: "edge",
+      label,
+      claimPaths: [edge.claimPath],
+      xPct: Number(clampPct((mid.x / overviewPos.size.w) * 100, 2, 98).toFixed(3)),
+      yPct: Number(clampPct((mid.y / overviewPos.size.h) * 100, 3, 97).toFixed(3)),
+      wPct: 2.4,
+      hPct: 3.4,
+    };
+  })
+  .filter((x): x is OverviewHotspot => x !== null);
+
+const overviewHotspots: OverviewHotspot[] = [...overviewEdgeHotspots, ...overviewNodeHotspots];
 
 const subviews: Record<string, { title: string; subtitle: string; svg: string }> = {};
 const layerToSubviewKey: Record<string, string> = {};
@@ -217,13 +272,14 @@ const evidencePayload = {
               src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
               alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
             />
-            <div class="hotspot-layer" aria-label="Interactive diagram node claims">
+            <div class="hotspot-layer" aria-label="Interactive diagram node and edge claims">
               {overviewHotspots.map((hs) => (
                 <button
                   type="button"
-                  class="hotspot"
+                  class={`hotspot${hs.kind === "edge" ? " hotspot-edge" : ""}`}
                   style={`left:${hs.xPct}%;top:${hs.yPct}%;width:${hs.wPct}%;height:${hs.hPct}%`}
-                  data-node-id={hs.id}
+                  data-node-id={hs.kind === "node" ? hs.id : undefined}
+                  data-edge-id={hs.kind === "edge" ? hs.id : undefined}
                   data-claim-paths={hs.claimPaths.join(",")}
                   data-label={hs.label}
                   data-detail={hs.detail ?? ""}
@@ -608,24 +664,46 @@ const evidencePayload = {
       });
     }
 
+    const STATUS_GLYPHS: Record<string, string> = {
+      verified: "✓",
+      reported: "•",
+      derived: "=",
+      inferred: "?",
+      conflict: "!",
+      unknown: "?",
+    };
+    const STATUS_ZH: Record<string, string> = {
+      verified: "已验证",
+      reported: "文献报告",
+      derived: "推导",
+      inferred: "推断",
+      conflict: "冲突",
+      unknown: "未知",
+    };
+
     function renderCitations(label: string, paths: string[]) {
       currentClaims = paths.filter((p) => claimByPath.has(p));
       applyEvidenceFilter();
 
       document.querySelectorAll<HTMLElement>(".hotspot").forEach((hs) => {
-        const hsPaths = (hs.dataset.claimPaths ?? "").split(",");
+        const hsPaths = (hs.dataset.claimPaths ?? "").split(",").filter(Boolean);
         hs.classList.toggle("active", Boolean(label) && hsPaths.some((p) => currentClaims.includes(p)));
       });
 
+      const isZh = document.documentElement.lang.startsWith("zh");
       if (!currentClaims.length) {
-        citSubtitle.textContent = defaultCitSubtitle;
+        citSubtitle.textContent = isZh
+          ? "点击任意架构图节点、连线、规格卡或层序列，可查看精确源码或机制论文。"
+          : defaultCitSubtitle;
         citCards.innerHTML = defaultCitationHtml;
         if (clearCitBtn) clearCitBtn.hidden = true;
         return;
       }
 
       if (clearCitBtn) clearCitBtn.hidden = false;
-      citSubtitle.textContent = `Showing ${currentClaims.length} evidence claim(s) linked to "${label}":`;
+      citSubtitle.textContent = isZh
+        ? `当前展示与「${label}」关联的 ${currentClaims.length} 条溯源证据：`
+        : `Showing ${currentClaims.length} evidence claim(s) linked to "${label}":`;
       const html = currentClaims
         .map((p) => {
           const c = claimByPath.get(p)!;
@@ -634,11 +712,17 @@ const evidencePayload = {
           const rev = c.source?.revision ? c.source.revision.slice(0, 10) : payload.model.revision;
           const loc = c.source?.locator ?? "source definition";
           const url = c.source?.url;
+          const glyph = STATUS_GLYPHS[c.status] ?? "?";
+          const statusLabel = isZh ? (STATUS_ZH[c.status] ?? c.status) : c.status;
+          const scopeLabel = isExact
+            ? (isZh ? "✓ 精确模型" : "✓ exact model")
+            : (isZh ? "◐ 仅机制" : "◐ mechanism-only");
+          const ledgerBtnLabel = isZh ? "台账 ↗" : "Ledger ↗";
           return `
             <article class="cit-card">
               <div class="cit-top">
-                <span class="chip chip-${esc(c.status)}">${esc(c.status)}</span>
-                <span class="scope-pill ${isExact ? "scope-exact" : "scope-mech"}">${isExact ? "✓ exact model" : "◐ mechanism-only"}</span>
+                <span class="chip chip-${esc(c.status)}">${glyph} ${esc(statusLabel)}</span>
+                <span class="scope-pill ${isExact ? "scope-exact" : "scope-mech"}">${scopeLabel}</span>
                 <code class="rev-chip">${esc(rev)}</code>
               </div>
               <div class="cit-val mono">${esc(val)}</div>
@@ -648,7 +732,7 @@ const evidencePayload = {
               </div>
               <div class="cit-foot">
                 <code class="cit-path">${esc(c.path)}</code>
-                <button type="button" class="btn-mini ledger-jump" data-jump-path="${esc(c.path)}">Ledger ↗</button>
+                <button type="button" class="btn-mini ledger-jump" data-jump-path="${esc(c.path)}">${ledgerBtnLabel}</button>
               </div>
             </article>
           `;
@@ -665,25 +749,73 @@ const evidencePayload = {
     }
 
     function attachSvgInteractivity(container: HTMLElement) {
-      container.querySelectorAll<SVGGElement>(".node[data-claim-path], .node[data-node-id], .group[data-claim-path]").forEach((el) => {
-        const cp = el.dataset.claimPath;
-        if (!cp) return;
-        el.setAttribute("tabindex", "0");
-        el.setAttribute("role", "button");
-        el.style.cursor = "pointer";
-        const label = el.querySelector("text")?.textContent ?? cp;
-        const trigger = () => {
-          renderCitations(label, [cp]);
-          syncUrl(false);
-        };
-        el.addEventListener("click", trigger);
-        el.addEventListener("keydown", (ev) => {
-          if (ev.key === "Enter" || ev.key === " ") {
-            ev.preventDefault();
-            trigger();
+      const svg = container.querySelector<SVGSVGElement>("svg");
+      const hsLayer = container.querySelector<HTMLElement>(".hotspot-layer");
+      const vb = svg?.viewBox.baseVal;
+      const clampVal = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+      container
+        .querySelectorAll<SVGGElement | SVGPathElement>(
+          ".node[data-claim-path], .node[data-claims], .grp[data-claim-path], path[data-edge-id][data-claim-path]",
+        )
+        .forEach((el) => {
+          const cp = el.dataset.claimPath ?? "";
+          const paths: string[] = [];
+          let label = el.querySelector("text")?.textContent?.trim() ?? "";
+          if (el.dataset.claims) {
+            try {
+              const parsed = JSON.parse(el.dataset.claims) as Array<{ claimPath?: string; label?: string }>;
+              for (const item of parsed) {
+                if (item.claimPath && !paths.includes(item.claimPath)) paths.push(item.claimPath);
+              }
+              if (!label && parsed[0]?.label) label = parsed[0].label;
+            } catch {
+              // ignore malformed claims JSON
+            }
+          }
+          if (cp && !paths.includes(cp)) paths.unshift(cp);
+          if (paths.length === 0) return;
+          if (!label) label = el.dataset.edgeId ?? paths[0]!;
+
+          el.setAttribute("tabindex", "0");
+          el.setAttribute("role", "button");
+          el.style.cursor = "pointer";
+          const trigger = () => {
+            renderCitations(label, paths);
+            syncUrl(false);
+          };
+          el.addEventListener("click", trigger);
+          el.addEventListener("keydown", (ev) => {
+            if (!(ev instanceof KeyboardEvent)) return;
+            if (ev.key === "Enter" || ev.key === " ") {
+              ev.preventDefault();
+              trigger();
+            }
+          });
+
+          if (el instanceof SVGPathElement && el.dataset.edgeId && hsLayer && vb && vb.width > 0 && vb.height > 0) {
+            try {
+              const len = el.getTotalLength();
+              const pt = el.getPointAtLength(len / 2);
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "hotspot hotspot-edge";
+              btn.style.left = `${clampVal((pt.x / vb.width) * 100, 2, 98).toFixed(3)}%`;
+              btn.style.top = `${clampVal((pt.y / vb.height) * 100, 3, 97).toFixed(3)}%`;
+              btn.style.width = "2.4%";
+              btn.style.height = "3.6%";
+              btn.dataset.edgeId = el.dataset.edgeId;
+              btn.dataset.claimPaths = paths.join(",");
+              btn.dataset.label = label;
+              btn.setAttribute("aria-label", `${label} — inspect citation`);
+              btn.title = label;
+              btn.addEventListener("click", trigger);
+              hsLayer.appendChild(btn);
+            } catch {
+              // ignore if path geometry unavailable
+            }
           }
         });
-      });
     }
 
     function activateSubview(view: string, layerIdx: number | null, push = true) {
@@ -719,7 +851,7 @@ const evidencePayload = {
       subviewStage.hidden = false;
       subTitle.textContent = view === "block" && currentLayer !== null ? `Layer ${currentLayer} Block` : sub.title;
       subSubtitle.textContent = sub.subtitle;
-      subviewCanvas!.innerHTML = sub.svg;
+      subviewCanvas!.innerHTML = `<div class="figure-inner">${sub.svg}<div class="hotspot-layer" aria-label="Interactive subview edge claims"></div></div>`;
       attachSvgInteractivity(subviewCanvas!);
       if (push) syncUrl(true);
     }
@@ -837,7 +969,8 @@ const evidencePayload = {
     // URL restore on initial load & browser back/forward (popstate)
     function restoreFromUrl() {
       const params = new URLSearchParams(location.search);
-      const qView = params.get("view") ?? "overview";
+      const rawView = params.get("view") ?? "overview";
+      const qView = rawView === "moe" ? "ffn" : rawView;
       const qLayer = params.get("layer");
       const qClaim = params.get("claim");
 
@@ -1148,11 +1281,23 @@ const evidencePayload = {
     .hotspot {
       position: absolute;
       pointer-events: auto;
+      min-width: 24px;
+      min-height: 24px;
+      z-index: 2;
       background: transparent;
       border: 2px solid transparent;
       border-radius: 8px;
       cursor: pointer;
       padding: 0;
+    }
+    .hotspot-edge {
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+    }
+    #subview-canvas :global(svg path[data-edge-id][data-claim-path]) {
+      cursor: pointer;
+      pointer-events: all;
     }
     .hotspot:hover {
       border-color: color-mix(in srgb, var(--attention) 55%, transparent);
@@ -1299,9 +1444,12 @@ const evidencePayload = {
     .col {
       display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
       gap: 3px;
-      padding: 2px;
-      min-height: 28px;
+      padding: 4px 7px;
+      min-width: 24px;
+      min-height: 36px;
       border: 0;
       border-radius: 4px;
       background: transparent;
@@ -1578,6 +1726,23 @@ const evidencePayload = {
     :global(.chip-conflict) { background: var(--conflict); color: #ffffff; }
     :global(.chip-unknown) { background: var(--line); color: var(--ink); }
 
+    :global(html[data-theme="dark"]) .vtab.active,
+    :global(html[data-theme="dark"]) :global(.chip-verified),
+    :global(html[data-theme="dark"]) :global(.chip-reported),
+    :global(html[data-theme="dark"]) :global(.chip-inferred),
+    :global(html[data-theme="dark"]) :global(.chip-conflict) {
+      color: #0b1220;
+    }
+    @media (prefers-color-scheme: dark) {
+      :global(:root:not([data-theme="light"])) .vtab.active,
+      :global(:root:not([data-theme="light"])) :global(.chip-verified),
+      :global(:root:not([data-theme="light"])) :global(.chip-reported),
+      :global(:root:not([data-theme="light"])) :global(.chip-inferred),
+      :global(:root:not([data-theme="light"])) :global(.chip-conflict) {
+        color: #0b1220;
+      }
+    }
+
     .compare-chips {
       display: flex;
       gap: 0.5rem;
@@ -1599,16 +1764,19 @@ const evidencePayload = {
       }
     }
 
-    @media (max-width: 640px) {
-      /* #36 mobile readability: put readable vertical cards FIRST and keep full blueprint scrollable at >=12px font */
+    @media (max-width: 900px) {
+      /* #36 tablet/mobile readability: put readable vertical cards FIRST and keep full blueprint scrollable at >=12px font */
       .mobile-cards {
         order: -1;
       }
       .figure-wrap.mode-fit .figure-inner,
       .figure-wrap.mode-fit svg {
-        width: 68rem;
-        min-width: 68rem;
+        width: 78rem;
+        min-width: 78rem;
       }
+    }
+
+    @media (max-width: 640px) {
       /* #38 mobile citation table: stack each row cleanly with zero horizontal scroll */
       .evidence thead {
         display: none;

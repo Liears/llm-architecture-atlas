@@ -302,7 +302,7 @@ function buildAttentionSubgraphNodes(
       ctx.safeNode(
         `${prefix}-state`,
         "state",
-        isKda ? "Fisher Decay State" : "DeltaNet State",
+        isKda ? "KDA Decay & State" : "DeltaNet State",
         [{ label: `${grp.layers.length} layers · constant mem` }],
         undefined,
         claim,
@@ -312,8 +312,12 @@ function buildAttentionSubgraphNodes(
         "state",
         "Output Gate",
         [
-          { claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` },
-          ...(facts.head_dim && ctx.hasClaim("facts.head_dim") ? [{ claimPath: "facts.head_dim", label: `d=${facts.head_dim}` }] : []),
+          { claimPath: "facts.num_attention_heads", label: isKda ? `${facts.num_attention_heads}h` : `${facts.num_attention_heads} heads` },
+          ...(isKda
+            ? [{ claimPath: claim, label: "d=128 · o_norm" }]
+            : facts.head_dim && ctx.hasClaim("facts.head_dim")
+              ? [{ claimPath: "facts.head_dim", label: `d=${facts.head_dim}` }]
+              : []),
         ],
         undefined,
         claim,
@@ -709,11 +713,142 @@ export function compileModuleSubview(
     });
     bands.push({ groupId: "g-sub-dec", rows: [["dec-pack", "dec-head", "dec-cal"]], bandY: 140, bandH: 410 });
   } else {
-    const isMhc = topology.residual?.scheme === "mhc";
+    const isMhc = topology.residual?.scheme === "mhc" && topology.residual.streams === 4;
+    if (isMhc) {
+      const SID = [1, 2, 3, 4] as const;
+      const streamPorts = (p: string, side: "left" | "right" | "top" | "bottom", role: "ingress" | "egress") =>
+        SID.map((i) => ({ name: `${p}${i}`, side, stream: `s${i}`, role }));
+      const mhcNodes: SemanticNode[] = [
+        {
+          id: "mhc-source",
+          kind: "split",
+          label: "4×",
+          detail: "streams",
+          claimPath: "topology.residual.streams",
+          ports: [...streamPorts("s", "right", "egress"), { name: "read", side: "top" }],
+          claims: [{ claimPath: "topology.residual.streams", label: "4 streams" }],
+        },
+        {
+          id: "mhc-hpre",
+          kind: "mix",
+          label: "H-pre",
+          detail: "4 → 1 read",
+          claimPath: "topology.residual.streams",
+          ports: [{ name: "in", side: "bottom" }, { name: "out", side: "right" }],
+        },
+        {
+          id: "mhc-f",
+          kind: "attention",
+          label: "ONE sublayer F",
+          detail: "attention or FFN",
+          claimPath: "topology.residual.scheme",
+          ports: ["in", "out"],
+        },
+        {
+          id: "mhc-hpost",
+          kind: "mix",
+          label: "H-post",
+          detail: "1 → 4 write",
+          claimPath: "topology.residual.streams",
+          ports: [{ name: "in", side: "left" }, ...streamPorts("out", "bottom", "egress")],
+        },
+        {
+          id: "mhc-hres",
+          kind: "mix",
+          label: "H-res",
+          detail: "manifold mix",
+          claimPath: "topology.residual.scheme",
+          ports: [...streamPorts("in", "left", "ingress"), ...streamPorts("out", "right", "egress")],
+        },
+        {
+          id: "mhc-add",
+          kind: "mix",
+          label: "⊕ ×4",
+          detail: "per-stream add",
+          claimPath: "topology.residual.scheme",
+          ports: [
+            ...streamPorts("res", "left", "ingress"),
+            ...streamPorts("post", "top", "ingress"),
+            ...streamPorts("out", "right", "egress"),
+          ],
+        },
+        {
+          id: "mhc-sink",
+          kind: "merge",
+          label: "→",
+          detail: "write",
+          claimPath: "topology.residual.streams",
+          ports: streamPorts("w", "left", "ingress"),
+        },
+      ];
+      const mhcEdges: SemanticEdge[] = [
+        ...SID.flatMap((i) => [
+          { id: `mhc-res-in-${i}`, from: `mhc-source.s${i}`, to: `mhc-hres.in${i}`, kind: "residual" as const, claimPath: "topology.residual.streams" },
+          { id: `mhc-res-out-${i}`, from: `mhc-hres.out${i}`, to: `mhc-add.res${i}`, kind: "residual" as const, claimPath: "topology.residual.scheme" },
+          { id: `mhc-post-${i}`, from: `mhc-hpost.out${i}`, to: `mhc-add.post${i}`, kind: "flow" as const, claimPath: "topology.residual.scheme" },
+          { id: `mhc-exit-${i}`, from: `mhc-add.out${i}`, to: `mhc-sink.w${i}`, kind: "residual" as const, claimPath: "topology.residual.streams" },
+        ]),
+        { id: "mhc-pre", from: "mhc-source.read", to: "mhc-hpre.in", kind: "flow", claimPath: "topology.residual.scheme" },
+        { id: "mhc-pre-f", from: "mhc-hpre.out", to: "mhc-f.in", kind: "flow", claimPath: "topology.residual.scheme" },
+        { id: "mhc-f-post", from: "mhc-f.out", to: "mhc-hpost.in", kind: "flow", claimPath: "topology.residual.scheme" },
+      ];
+      const mhcScene = appendAnnotations(
+        {
+          irVersion: arch.ir_version,
+          view: "block",
+          modelId: arch.model.id,
+          nodes: mhcNodes,
+          edges: mhcEdges,
+          groups: [
+            {
+              id: "g-sub-res",
+              label: "mHC Multi-Stream Residual · Figure 1(c) / Eq. 3",
+              kind: "inset",
+              members: mhcNodes.map((n) => n.id),
+              claimPath: "topology.residual.scheme",
+            },
+          ],
+          streams: SID.map((i) => ({
+            id: `s${i}`,
+            path: [`mhc-source.s${i}`, `mhc-hres.in${i}`, `mhc-hres.out${i}`, `mhc-add.res${i}`, `mhc-add.out${i}`, `mhc-sink.w${i}`],
+          })),
+          annotations: [],
+          constraints: [{ type: "direction", value: "left-to-right" }],
+        },
+        ctx,
+      );
+      const positioned = composeEditorialPoster(mhcScene, {
+        id: "sub-mhc-residual",
+        size: { w: SUB_W, h: SUB_H },
+        nodes: [
+          { id: "mhc-source", x: 80, y: 210, w: 140, h: 420 },
+          { id: "mhc-hpre", x: 280, y: 106, w: 150, h: 82 },
+          { id: "mhc-f", x: 495, y: 106, w: 230, h: 82 },
+          { id: "mhc-hpost", x: 790, y: 106, w: 200, h: 82 },
+          { id: "mhc-hres", x: 330, y: 210, w: 230, h: 420 },
+          { id: "mhc-add", x: 790, y: 210, w: 200, h: 420 },
+          { id: "mhc-sink", x: 1050, y: 210, w: 100, h: 420 },
+        ],
+        groups: [{ id: "g-sub-res", x: 36, y: 60, w: 1148, h: 600 }],
+        edges: mhcEdges.map((e) => e.id),
+        edgeRoutes: {
+          "mhc-pre": [{ x: 150, y: 210 }, { x: 150, y: 199 }, { x: 355, y: 199 }, { x: 355, y: 188 }],
+        },
+      });
+      return {
+        key: "module:residual",
+        kind: "residual",
+        title: "mHC Multi-Stream Residual",
+        subtitle: `${arch.model.label} · 4-stream manifold-constrained residual`,
+        scene: mhcScene,
+        positioned,
+      };
+    }
+
     nodes.push(
-      ctx.safeNode("res-read", "split", isMhc ? "4-Stream Read" : "Residual Fork", isMhc ? [{ claimPath: "topology.residual.streams", label: `${topology.residual?.streams ?? 4} parallel rails` }] : [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }], [{ name: "skip", side: "bottom" }], "topology.residual.scheme"),
-      ctx.safeNode("res-sub", isMhc ? "residual" : "attention", isMhc ? "H-pre -> Sublayer -> H-post" : "Attention / FFN Block", [{ label: isMhc ? "H-res residual mix" : "pre-norm residual" }], undefined, "facts.num_hidden_layers"),
-      ctx.safeNode("res-write", "merge", isMhc ? "⊕ Per-Stream Write" : "⊕ Residual Add", [{ claimPath: "topology.position_encoding.type", label: topology.position_encoding?.type?.toUpperCase() ?? "RoPE" }], [{ name: "skip", side: "bottom" }], "topology.position_encoding.type"),
+      ctx.safeNode("res-read", "split", "Residual Fork", [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }], [{ name: "skip", side: "bottom" }], "topology.residual.scheme"),
+      ctx.safeNode("res-sub", "attention", "Attention / FFN Block", [{ label: "pre-norm residual" }], undefined, "facts.num_hidden_layers"),
+      ctx.safeNode("res-write", "merge", "⊕ Residual Add", [{ claimPath: "topology.position_encoding.type", label: topology.position_encoding?.type?.toUpperCase() ?? "RoPE" }], [{ name: "skip", side: "bottom" }], "topology.position_encoding.type"),
     );
     edges.push(
       { id: "e-r1", from: "res-read", to: "res-sub", kind: "flow" },
@@ -722,7 +857,7 @@ export function compileModuleSubview(
     );
     groups.push({
       id: "g-sub-res",
-      label: isMhc ? "mHC Multi-Stream Residual & Pos" : "Residual Stream & Positional Encoding",
+      label: "Residual Stream & Positional Encoding",
       kind: "inset",
       members: ["res-read", "res-sub", "res-write"],
     });

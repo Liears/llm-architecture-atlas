@@ -80,6 +80,13 @@ test("GLM detail page: hierarchy, citation panel, real layer 0/3/4/44 drill-down
   await expect(page.locator("#overview-stage")).toBeVisible();
 });
 
+test("top navbar Compare link opens a valid comparison route without 404", async ({ page }) => {
+  await page.goto("/llm-architecture-atlas/");
+  await page.click('.topbar .nav a[data-i18n="nav.compare"]');
+  await expect(page.locator("h1")).toContainText("vs");
+  await expect(page.locator("table.diff tbody tr")).toHaveCount(5);
+});
+
 test("Kimi Linear reuses hybrid KDA + MLA + MoE template without model-id hacks (#39)", async ({ page }) => {
   const svgRes = await page.request.get(
     "/llm-architecture-atlas/figures/moonshotai-kimi-linear-48b-a3b-instruct-generated.svg",
@@ -87,18 +94,30 @@ test("Kimi Linear reuses hybrid KDA + MLA + MoE template without model-id hacks 
   expect(svgRes.ok()).toBeTruthy();
   const svg = await svgRes.text();
   expect(svg).toContain("Q/K/V ShortConv");
-  expect(svg).toContain("Fisher Decay");
+  expect(svg).toContain("KDA Decay Gate");
+  expect(svg).toContain("d=128 · o_norm");
   expect(svg).toContain("Latent KV");
   expect(svg).toContain("Shared Expert");
   expect(svg).toContain("1 always-on");
   expect(svg).toContain("Dense→MoE");
 
-  // L0 = KDA + Dense SwiGLU, L26 = Tail MLA + MoE
+  // L0 = KDA + Dense SwiGLU, L26 = Tail MLA + MoE, plus clickable edge citation & ?view=moe alias
   await page.goto("/llm-architecture-atlas/models/moonshotai-kimi-linear-48b-a3b-instruct/?view=block&layer=0");
   await expect(page.locator("#subview-canvas svg")).toContainText("Dense SwiGLU");
   await page.click('.genome .col[data-layer="26"]');
   await expect(page.locator("#subview-canvas svg")).toContainText("Latent KV");
   await expect(page.locator("#subview-canvas svg")).toContainText("256 total");
+  await expect(page.locator('#subview-canvas svg path[data-edge-id="e-blk-f-route"]')).toHaveAttribute(
+    "data-claim-path",
+    "topology.experts.active_routed",
+  );
+  await page.click('#subview-canvas .hotspot[data-edge-id="e-blk-f-route"]');
+  await expect(page.locator("#citation-cards")).toContainText("topology.experts.active_routed");
+
+  // ?view=moe alias opens the MoE/FFN subview (#36, #37)
+  await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/?view=moe&layer=3");
+  await expect(page.getByTestId("subview-stage")).toBeVisible();
+  await expect(page.locator("#subview-title")).toContainText("FFN & Expert Routing");
 });
 
 test("mobile 390x844 shows readable structured overview cards and >=24px controls (#36)", async ({ page }) => {
@@ -112,16 +131,42 @@ test("mobile 390x844 shows readable structured overview cards and >=24px control
   const metrics = await page.evaluate(() => {
     const chain = document.querySelector(".spine-chain")!;
     const tab = document.querySelector(".vtab")!;
+    const col = document.querySelector(".genome .col")!;
     const tabBox = tab.getBoundingClientRect();
+    const colBox = col.getBoundingClientRect();
     return {
       fontSize: parseFloat(getComputedStyle(chain).fontSize),
       tabW: tabBox.width,
       tabH: tabBox.height,
+      colW: colBox.width,
+      colH: colBox.height,
     };
   });
   expect(metrics.fontSize).toBeGreaterThanOrEqual(12);
   expect(metrics.tabW).toBeGreaterThanOrEqual(24);
   expect(metrics.tabH).toBeGreaterThanOrEqual(24);
+  expect(metrics.colW).toBeGreaterThanOrEqual(24);
+  expect(metrics.colH).toBeGreaterThanOrEqual(24);
+});
+
+test("overview edge hotspot and dark-mode contrast meet accessibility guarantees (#36, #38)", async ({ page }) => {
+  await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/");
+  await page.click('.hotspot[data-edge-id="dsa-2"]');
+  await expect(page.locator("#citation-cards")).toContainText("topology.attention.dsa_topk");
+
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  const darkColors = await page.evaluate(() => {
+    const vtab = document.querySelector<HTMLElement>(".vtab.active")!;
+    const reportedChip = document.querySelector<HTMLElement>("#citation-cards .chip-reported")!;
+    return {
+      vtabInk: getComputedStyle(vtab).color,
+      chipInk: getComputedStyle(reportedChip).color,
+    };
+  });
+  expect(darkColors.vtabInk).toBe("rgb(11, 18, 32)");
+  expect(darkColors.chipInk).toBe("rgb(11, 18, 32)");
 });
 
 test("System-1 model pages render decision contract and non-autoregressive SVG plates", async ({ page }) => {

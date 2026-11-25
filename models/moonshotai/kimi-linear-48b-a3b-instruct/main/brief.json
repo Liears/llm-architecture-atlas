@@ -16,7 +16,7 @@
   "papers": [
     {
       "url": "https://arxiv.org/abs/2510.26692",
-      "title": "Kimi Linear: An Hybrid Fisher-Decay Linear Attention Model",
+      "title": "Kimi Linear: An Expressive, Efficient Attention Architecture",
       "role": "model-specific",
       "verifies": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
       "locators": [
@@ -34,7 +34,7 @@
       "status": "verified"
     },
     {
-      "element": "KDA Q/K/V ShortConv (k=4, 32 heads, head_dim=128) -> Fisher-decay delta state -> sigmoid O-norm gate",
+      "element": "KDA Q/K/V ShortConv (k=4, 32 heads, head_dim=128) -> KDA decay gate -> delta state -> sigmoid o_norm gate",
       "locator": "config $.linear_attn_config + modeling_kimi.py:444-504 (rev e1df551a44); Kimi Linear §4/Fig.3",
       "status": "verified"
     },

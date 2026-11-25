@@ -82,6 +82,10 @@ describe("layer block and module drill-down subviews (#37)", () => {
       expect(validateScene(sub.scene)).toEqual([]);
       expect(auditCoverage(sub.scene, glm.evidence.claims, sub.scene.groups)).toEqual([]);
       expect([...runSceneGates(sub.positioned), ...fontGates(sub.positioned, { referenceWidth: 1150 })]).toEqual([]);
+      if (kind === "residual") {
+        expect(sub.scene.streams).toHaveLength(4);
+        expect(sub.scene.nodes.some((n) => n.id === "mhc-hres")).toBe(true);
+      }
     }
 
     const dec = compileModuleSubview(openjev.arch, openjev.evidence, "decision");
