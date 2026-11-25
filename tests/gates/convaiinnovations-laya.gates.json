@@ -1,0 +1,7 @@
+{
+  "modelId": "convaiinnovations/laya",
+  "generatedBy": "pnpm export:golden",
+  "note": "Persistent-red baseline (#35). Each entry is a known, owned debt; CI fails on new reds and on entries that clear without being removed here.",
+  "correctionRounds": 0,
+  "findings": []
+}

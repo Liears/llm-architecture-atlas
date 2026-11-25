@@ -1,0 +1,410 @@
+{
+  "modelId": "convaiinnovations/laya",
+  "view": "overview",
+  "irVersion": "0.1.0",
+  "size": {
+    "w": 1360,
+    "h": 856
+  },
+  "nodes": [
+    {
+      "id": "input",
+      "label": "State + Typed Q",
+      "detail": "choice · score · noul",
+      "claimPath": "topology.decision_head.primitives"
+    },
+    {
+      "id": "embed",
+      "label": "Token + Type Emb",
+      "detail": "hidden 1,024",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "backbone",
+      "label": "Bidirectional Encoder",
+      "detail": "28 layers · full + sliding",
+      "claimPath": "facts.num_hidden_layers"
+    },
+    {
+      "id": "dhead",
+      "label": "Decision Head",
+      "detail": "2L Transformer",
+      "claimPath": "topology.decision_head.head_layers"
+    },
+    {
+      "id": "cal",
+      "label": "Calibrated Scorer",
+      "detail": "[MASK] -> T_q Softmax",
+      "claimPath": "topology.decision_head.calibration"
+    },
+    {
+      "id": "out",
+      "label": "Typed JSON",
+      "detail": "probs + act/abstain",
+      "claimPath": "topology.paradigm"
+    },
+    {
+      "id": "sched-0",
+      "label": "L0–26",
+      "detail": "(F,S,S) ×9 · Dense",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "sched-1",
+      "label": "L27",
+      "detail": "F · Dense",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "sched-grp-0",
+      "label": "Full Attention",
+      "detail": "10 / 28 layers (F)",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "sched-grp-1",
+      "label": "Sliding Window (w=128)",
+      "detail": "18 / 28 layers (S)",
+      "claimPath": "topology.attention_groups[1]"
+    },
+    {
+      "id": "sched-dhead",
+      "label": "+ Decision Head",
+      "detail": "2L head + scorer + act",
+      "claimPath": "topology.decision_head.head_layers"
+    },
+    {
+      "id": "r-pack",
+      "label": "Prompt + [MASK] Pack",
+      "detail": "[CLS] q [MASK] opts [SEP] state",
+      "claimPath": "topology.decision_head.readout_mode"
+    },
+    {
+      "id": "r-gather",
+      "label": "[MASK] Gather & MLP",
+      "detail": "LN -> Linear -> GELU -> 1",
+      "claimPath": "topology.decision_head.readout_mode"
+    },
+    {
+      "id": "r-act",
+      "label": "Abstain Act Head",
+      "detail": "[CLS]+entropy -> act/escalate",
+      "claimPath": "topology.decision_head.action_head"
+    },
+    {
+      "id": "a-g0",
+      "label": "Full Attention",
+      "detail": "10 layers",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "a-g1",
+      "label": "Sliding Window (w=128)",
+      "detail": "18 layers",
+      "claimPath": "topology.attention_groups[1]"
+    },
+    {
+      "id": "a-ffn",
+      "label": "Dense GeGLU",
+      "detail": "16 Q · 16 KV · d=64",
+      "claimPath": "facts.num_attention_heads"
+    },
+    {
+      "id": "c-obj",
+      "label": "RLCD Proper Scoring",
+      "detail": "Log + 0.5·Sph - RPS",
+      "claimPath": "topology.decision_head.calibration"
+    },
+    {
+      "id": "c-scale",
+      "label": "Model Scale",
+      "detail": "421.3M dense · 512 tok ctx",
+      "claimPath": "facts.total_params"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-spine-0",
+      "kind": "flow",
+      "from": "input",
+      "to": "embed"
+    },
+    {
+      "id": "e-spine-1",
+      "kind": "flow",
+      "from": "embed",
+      "to": "backbone"
+    },
+    {
+      "id": "e-spine-2",
+      "kind": "flow",
+      "from": "backbone",
+      "to": "dhead"
+    },
+    {
+      "id": "e-spine-3",
+      "kind": "flow",
+      "from": "dhead",
+      "to": "cal"
+    },
+    {
+      "id": "e-spine-4",
+      "kind": "flow",
+      "from": "cal",
+      "to": "out"
+    },
+    {
+      "id": "c-sched",
+      "kind": "control",
+      "from": "backbone.sched",
+      "to": "g-schedule.in"
+    },
+    {
+      "id": "c-readout",
+      "kind": "control",
+      "from": "backbone.readout",
+      "to": "g-readout.in"
+    },
+    {
+      "id": "c-attn",
+      "kind": "control",
+      "from": "backbone.attn",
+      "to": "g-attn.in"
+    },
+    {
+      "id": "c-cal",
+      "kind": "control",
+      "from": "backbone.cal",
+      "to": "g-cal.in"
+    },
+    {
+      "id": "e-read-1",
+      "kind": "flow",
+      "from": "r-pack",
+      "to": "r-gather"
+    },
+    {
+      "id": "e-read-2",
+      "kind": "control",
+      "from": "r-gather",
+      "to": "r-act"
+    }
+  ],
+  "groups": [
+    {
+      "id": "g-schedule",
+      "label": "Backbone Schedule · 28L",
+      "kind": "inset",
+      "members": [
+        "sched-0",
+        "sched-1",
+        "sched-grp-0",
+        "sched-grp-1",
+        "sched-dhead"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "right",
+          "inner": "sched-0"
+        }
+      ],
+      "claimPath": "facts.num_hidden_layers"
+    },
+    {
+      "id": "g-readout",
+      "label": "System-1 Marker & Act Readout",
+      "kind": "inset",
+      "members": [
+        "r-pack",
+        "r-gather",
+        "r-act"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "r-pack"
+        }
+      ],
+      "claimPath": "topology.decision_head.readout_mode"
+    },
+    {
+      "id": "g-attn",
+      "label": "Backbone Mix · 10 Full Attention + 18 Sliding Window (w=128)",
+      "kind": "inset",
+      "members": [
+        "a-g0",
+        "a-g1",
+        "a-ffn"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "a-g0"
+        }
+      ],
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "g-cal",
+      "label": "Calibration & Scale",
+      "kind": "inset",
+      "members": [
+        "c-obj",
+        "c-scale"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "c-obj"
+        }
+      ],
+      "claimPath": "topology.decision_head.calibration"
+    }
+  ],
+  "annotations": [
+    {
+      "claimPath": "topology.decision_head.primitives",
+      "target": "input",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "embed",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_hidden_layers",
+      "target": "backbone",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.head_layers",
+      "target": "dhead",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.calibration",
+      "target": "cal",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.paradigm",
+      "target": "out",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "sched-0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "sched-1",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "sched-grp-0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[1]",
+      "target": "sched-grp-1",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.head_layers",
+      "target": "sched-dhead",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.readout_mode",
+      "target": "r-pack",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.readout_mode",
+      "target": "r-gather",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.action_head",
+      "target": "r-act",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "a-g0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[1]",
+      "target": "a-g1",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_attention_heads",
+      "target": "a-ffn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_key_value_heads",
+      "target": "a-ffn",
+      "status": "derived"
+    },
+    {
+      "claimPath": "facts.head_dim",
+      "target": "a-ffn",
+      "status": "derived"
+    },
+    {
+      "claimPath": "topology.decision_head.calibration",
+      "target": "c-obj",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.total_params",
+      "target": "c-scale",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.context_tokens",
+      "target": "c-scale",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_hidden_layers",
+      "target": "c-sched",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.readout_mode",
+      "target": "c-readout",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "c-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.calibration",
+      "target": "c-cal",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.readout_mode",
+      "target": "e-read-1",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.action_head",
+      "target": "e-read-2",
+      "status": "reported"
+    }
+  ]
+}

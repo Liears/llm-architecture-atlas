@@ -3,23 +3,25 @@
  * parameter/context strings across catalog, detail, compare and compiler.
  */
 
-/** 8_030_000_000 -> "8B"; 320_000_000_000 -> "320B"; 1_200_000_000_000 -> "1.2T"; null -> "—" */
+/** 421_293_830 -> "421.3M"; 8_030_000_000 -> "8B"; 320_000_000_000 -> "320B"; 1_200_000_000_000 -> "1.2T"; null -> "—" */
 export function formatParams(n: number | null): string {
   if (n === null) return "—";
-  if (n >= 1e12) {
-    const t = Math.round((n / 1e12) * 10) / 10;
-    return `${Number.isInteger(t) ? t.toFixed(0) : t.toFixed(1)}T`;
-  }
-  const b = Math.round((n / 1e9) * 10) / 10;
-  return `${Number.isInteger(b) ? b.toFixed(0) : b.toFixed(1)}B`;
+  const trim = (v: number) => {
+    const r = Math.round(v * 10) / 10;
+    return Number.isInteger(r) ? r.toFixed(0) : r.toFixed(1);
+  };
+  if (n >= 1e12) return `${trim(n / 1e12)}T`;
+  if (n >= 1e9) return `${trim(n / 1e9)}B`;
+  return `${trim(n / 1e6)}M`;
 }
 
-/** 1_048_576 -> "1M"; 262_144 -> "256K"; 8_192 -> "8K"; null -> "—" */
+/** 512 -> "512"; 8_192 -> "8K"; 262_144 -> "256K"; 1_048_576 -> "1M"; null -> "—" */
 export function formatContext(n: number | null): string {
   if (n === null) return "—";
   if (n >= 1e6) {
     const m = Math.round((n / 1e6) * 10) / 10;
     return `${Number.isInteger(m) ? m.toFixed(0) : m.toFixed(1)}M`;
   }
+  if (n < 1024) return String(n);
   return `${Math.round(n / 1024)}K`;
 }

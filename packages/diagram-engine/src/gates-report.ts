@@ -8,33 +8,49 @@
  */
 
 import type { DiagramScene } from "./types.js";
-import type { ModelDocument } from "@atlas/architecture-ir";
+import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import type { PositionedScene } from "./positioned.js";
 import { layoutWithCorrection, runSceneGates, fontGates, HARD_GATES, type CorrectionResult, type GateFinding } from "./gates.js";
 import { assertGlmStructure } from "./structural-assertions.js";
-import { compileOverviewScene } from "./compile.js";
 import { compileGlmAnatomyScene, glmAnatomyBlueprint } from "./glm-anatomy.js";
-import { composeEditorialPoster } from "./poster.js";
+import { compileAutoregressivePoster } from "./editorial-overview.js";
+import { compileSystemOnePoster } from "./system-one-anatomy.js";
+import { composeEditorialPoster, type EditorialPosterBlueprint } from "./poster.js";
+
+const compiledBlueprints = new WeakMap<DiagramScene, EditorialPosterBlueprint>();
 
 /**
- * Round-3 review: the specialized-compiler choice lived in three places
- * (baseline test, gates test, export pipeline). One entry point here so a new
- * model-specific compiler cannot be added to only one of them.
+ * Single compiler dispatch shared by baseline tests, gate checks, and the
+ * export pipeline. Routes GLM-5.3-Flash to its multi-stream mHC anatomy,
+ * System-1 decision models to the non-autoregressive decision compiler, and
+ * all other models to the general autoregressive editorial poster compiler.
  */
-export function compileForModel(arch: ModelDocument, evidence: Parameters<typeof compileOverviewScene>[1]): DiagramScene {
-  return arch.model.id === "zai-org/glm-5.3-flash"
-    ? compileGlmAnatomyScene(arch, evidence)
-    : compileOverviewScene(arch, evidence);
+export function compileForModel(arch: ModelDocument, evidence: EvidenceFile): DiagramScene {
+  if (arch.model.id === "zai-org/glm-5.3-flash") {
+    return compileGlmAnatomyScene(arch, evidence);
+  }
+  const poster =
+    arch.topology.paradigm === "system_one_decision"
+      ? compileSystemOnePoster(arch, evidence)
+      : compileAutoregressivePoster(arch, evidence);
+  compiledBlueprints.set(poster.scene, poster.blueprint);
+  return poster.scene;
 }
 
 /**
- * Keep the reviewed model-specific composition choice beside the compiler
- * choice. Editorial posters are fixed review artifacts, so they are checked
- * as-is; generic layouts retain the two-round bounded correction policy.
+ * Keep the reviewed composition choice beside the compiler choice.
+ * Editorial posters (GLM, autoregressive editorial overviews, and System-1
+ * posters) use deterministic blueprint composition; fallback generic scenes
+ * retain bounded layout correction.
  */
 export function positionForModel(scene: DiagramScene): CorrectionResult {
   if (scene.modelId === "zai-org/glm-5.3-flash") {
     const positioned = composeEditorialPoster(scene, glmAnatomyBlueprint());
+    return { positioned, rounds: 0, hard: hardFindings(positioned) };
+  }
+  const blueprint = compiledBlueprints.get(scene);
+  if (blueprint) {
+    const positioned = composeEditorialPoster(scene, blueprint);
     return { positioned, rounds: 0, hard: hardFindings(positioned) };
   }
   return layoutWithCorrection(scene);
@@ -47,13 +63,6 @@ export interface BaselineFinding extends GateFinding {
   note?: string;
 }
 
-/**
- * Round-2 review: owners must be the issues that will ACTUALLY clear each
- * red, per model — not one blanket issue. GLM composition/topology debt is
- * cleared by the #34 redraw; Kimi by the #39 golden; the remaining catalog
- * models have no per-model migration issue yet, so the roadmap #32 owns
- * their debt until such issues are opened (stated in the note).
- */
 function ownerFor(modelId: string): { owner: string; note?: string } {
   if (modelId === "zai-org/glm-5.3-flash") return { owner: "#34" };
   if (modelId === "moonshotai/kimi-linear-48b-a3b-instruct") return { owner: "#39" };

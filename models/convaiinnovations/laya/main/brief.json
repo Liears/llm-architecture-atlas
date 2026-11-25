@@ -1,0 +1,59 @@
+{
+  "model_id": "convaiinnovations/laya",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+      "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+      "sha256": "bf3ab80598fdccf414855a2ce80f22859e4492d06ca8a62ddd1cfb63972f8979"
+    },
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_agent_config.json",
+      "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+      "sha256": "ae287b56bbcf5f8c4f4541ae9dfd00c914c4c48b940b8398c3058af37ba92bbd"
+    },
+    {
+      "kind": "code",
+      "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_common.py",
+      "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+      "sha256": "8d83611d480c971d640a7b7d3aa2f2219c5e8455e9cc2329fd073681bd8be23e"
+    },
+    {
+      "kind": "code",
+      "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_agent_api.py",
+      "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+      "sha256": "be3b46819c9999c3ef88e0f2ecf6d3ab1cdfed1d9a8b466fc89811e34d44031b"
+    }
+  ],
+  "papers": [],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "28-layer ModernBERT-large encoder (10 full + 18 sliding w=128)",
+      "locator": "encoder/config.json $.layer_types, $.global_attn_every_n_layers=3, $.local_attention=128 (rev fd4f9dbcf4)",
+      "status": "verified"
+    },
+    {
+      "element": "Input packing [CLS] q [SEP] [MASK] opt_i [SEP] state [SEP] + type_emb",
+      "locator": "rl_common.py build_sequence() & DecisionModel.type_emb (rev fd4f9dbcf4)",
+      "status": "verified"
+    },
+    {
+      "element": "2-layer Decision Transformer Head + [MASK] gather -> LN/Linear/GELU/Linear scorer -> T_q Softmax",
+      "locator": "rl_agent_config.json $.head_layers=2; rl_common.py DecisionModel.forward (rev fd4f9dbcf4)",
+      "status": "verified"
+    },
+    {
+      "element": "Action / abstain head ([CLS] + [top1, margin, entropy, k/255] -> act / escalate)",
+      "locator": "rl_common.py DecisionModel.act_head (rev fd4f9dbcf4)",
+      "status": "verified"
+    },
+    {
+      "element": "RLCD training objective (log + 0.5*spherical - RPS)",
+      "locator": "rl_common.py proper_reward() (rev fd4f9dbcf4)",
+      "status": "verified"
+    }
+  ],
+  "notes": "Open-weight Apache-2.0 System-1 non-autoregressive decision model (Jev-compatible wire protocol). Exact facts rest on pinned HuggingFace commit fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1 (encoder/config.json, rl_agent_config.json, rl_common.py, rl_agent_api.py). Accompanying preprint: doi:10.20944/preprints202611.0781.v1 (PDF not fetched from this network, so no unverified PDF page locators are claimed)."
+}

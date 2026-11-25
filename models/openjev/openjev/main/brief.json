@@ -1,0 +1,48 @@
+{
+  "model_id": "openjev/openjev",
+  "primary_sources": [
+    {
+      "kind": "config",
+      "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+      "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+      "sha256": "265d68ba406ad07b27b391a42e3d40c48973a5dfe9574b90ddfb6a9acbd7e401"
+    },
+    {
+      "kind": "code",
+      "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/helper/shim.py",
+      "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+      "sha256": "81a22f1b1b8912a465059207ef9f60b7c6c16b4de6372305d867efbe38a1987a"
+    },
+    {
+      "kind": "model_card",
+      "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/README.md",
+      "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+      "sha256": "bff7f9971c9c8f4c5a7ef346640b1c242060ef92f06d41f49c3e37e74b930bd5"
+    }
+  ],
+  "papers": [],
+  "visual_references": [],
+  "paper_to_diagram": [
+    {
+      "element": "64-layer hybrid Qwen3.5 backbone (48 Gated DeltaNet + 16 Gated GQA, 3:1 schedule)",
+      "locator": "config.json $.text_config.layer_types & $.text_config.full_attention_interval=4 (rev b4a89f5884)",
+      "status": "verified"
+    },
+    {
+      "element": "27-layer multimodal vision encoder (qwen3_5_vision, d=1152 -> 5120)",
+      "locator": "config.json $.vision_config (rev b4a89f5884)",
+      "status": "verified"
+    },
+    {
+      "element": "Single-pass prefill (no decode loop) reading first-position option-letter logits (<=52 options)",
+      "locator": "helper/shim.py & README.md 'How it works, in one paragraph' (rev b4a89f5884)",
+      "status": "verified"
+    },
+    {
+      "element": "Shared State prefix KV caching (page_first + block-aligned padding) & fixed calibration temperatures",
+      "locator": "helper/shim.py prefix_text()/pad_prefix()/prewarm(); README.md READOUT_T=0.85, READOUT_NOUL_T=1.829074 (rev b4a89f5884)",
+      "status": "verified"
+    }
+  ],
+  "notes": "Open-weights (CC-BY-NC-4.0) System-1 decision model built on a 27.4B hybrid Qwen3.5 backbone, implementing the TypeSafe Jev /v1/systemone wire protocol via single-step prefill letter-logit readout rather than autoregressive generation. No separate arXiv paper exists; pinned HuggingFace commit b4a89f5884f3482a5e894b2e7ff01db8ea033726 (config.json, model.safetensors.index.json, helper/shim.py, README.md) is the source of truth."
+}

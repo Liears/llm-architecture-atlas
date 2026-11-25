@@ -1,7 +1,8 @@
 ---
-const { title = "LLM Architecture Atlas" } = Astro.props;
+const { title = "LLM Architecture Atlas", active = "catalog" } = Astro.props;
 interface Props {
   title?: string;
+  active?: "catalog" | "concepts" | "compare" | "detail";
 }
 ---
 
@@ -12,66 +13,403 @@ interface Props {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <script is:inline>
+      try {
+        const savedTheme = localStorage.getItem("atlas-theme");
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.dataset.theme = savedTheme;
+        }
+      } catch {}
+    </script>
     <style is:global>
       :root {
         --paper: #f5f7fa;
         --ink: #172033;
-        --muted: #5d6778;
-        --line: rgb(145 157 177 / 26%);
-        --attention: #1769e0;
-        --state: #008c8c;
-        --compute: #d9822b;
-        --conflict: #c94f5c;
+        --muted: #586377;
         --panel: #ffffff;
+        --surface: #edf1f7;
+        --grid: #d7dfec;
+        --line: #cfd7e5;
+        --line-soft: rgb(145 157 177 / 24%);
+        --attention: #1769e0;
+        --state: #007a7a;
+        --compute: #b45309;
+        --decision: #6d28d9;
+        --conflict: #b3383f;
+        --focus: #1769e0;
+        --shadow-sm: 0 1px 2px rgb(23 32 51 / 5%);
+        --shadow-md: 0 10px 26px rgb(23 32 51 / 7%);
+        --font-sans: "Source Sans 3", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
       }
+
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --paper: #0b1220;
+          --ink: #e6ebf4;
+          --muted: #97a3b8;
+          --panel: #111b2e;
+          --surface: #17243c;
+          --grid: #1e2d4a;
+          --line: #2f3e59;
+          --line-soft: rgb(148 163 184 / 20%);
+          --attention: #6ea8ff;
+          --state: #2dd4bf;
+          --compute: #f5a623;
+          --decision: #b89aff;
+          --conflict: #ff8a96;
+          --focus: #9ec1ff;
+          --shadow-sm: 0 1px 3px rgb(0 0 0 / 28%);
+          --shadow-md: 0 12px 30px rgb(0 0 0 / 36%);
+        }
+      }
+
+      html[data-theme="dark"] {
+        --paper: #0b1220;
+        --ink: #e6ebf4;
+        --muted: #97a3b8;
+        --panel: #111b2e;
+        --surface: #17243c;
+        --grid: #1e2d4a;
+        --line: #2f3e59;
+        --line-soft: rgb(148 163 184 / 20%);
+        --attention: #6ea8ff;
+        --state: #2dd4bf;
+        --compute: #f5a623;
+        --decision: #b89aff;
+        --conflict: #ff8a96;
+        --focus: #9ec1ff;
+        --shadow-sm: 0 1px 3px rgb(0 0 0 / 28%);
+        --shadow-md: 0 12px 30px rgb(0 0 0 / 36%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
       body {
         margin: 0;
-        background: var(--paper);
+        background-color: var(--paper);
+        background-image: radial-gradient(var(--grid) 1px, transparent 1px);
+        background-size: 24px 24px;
         color: var(--ink);
-        font-family: "Source Sans 3", "Noto Sans SC", system-ui, sans-serif;
-        line-height: 1.6;
+        font-family: var(--font-sans);
+        line-height: 1.58;
+        -webkit-font-smoothing: antialiased;
       }
-      main {
-        max-width: 72rem;
-        margin: 0 auto;
-        padding: 2rem 1.25rem 4rem;
-      }
+
       a {
         color: var(--attention);
+        text-decoration-thickness: 1.5px;
+        text-underline-offset: 2px;
       }
+
+      :focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      code,
+      .mono {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
       .eyebrow {
+        margin: 0 0 0.35rem;
+        font-family: var(--font-mono);
         font-size: 0.74rem;
-        font-weight: 700;
+        font-weight: 600;
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--muted);
       }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.42rem 0.78rem;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.86rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+      }
+      .btn:hover {
+        border-color: var(--attention);
+      }
+      .btn-primary {
+        background: var(--attention);
+        border-color: var(--attention);
+        color: #ffffff;
+      }
+      html[data-theme="dark"] .btn-primary {
+        color: #0b1220;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.14rem 0.56rem;
+        border-radius: 999px;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        font-weight: 600;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      .pill-ar {
+        border-color: color-mix(in srgb, var(--attention) 35%, transparent);
+        background: color-mix(in srgb, var(--attention) 10%, var(--panel));
+        color: var(--attention);
+      }
+      .pill-s1 {
+        border-color: color-mix(in srgb, var(--decision) 40%, transparent);
+        background: color-mix(in srgb, var(--decision) 12%, var(--panel));
+        color: var(--decision);
+      }
+      .pill-moe {
+        border-color: color-mix(in srgb, var(--compute) 38%, transparent);
+        background: color-mix(in srgb, var(--compute) 11%, var(--panel));
+        color: var(--compute);
+      }
+      .pill-state {
+        border-color: color-mix(in srgb, var(--state) 38%, transparent);
+        background: color-mix(in srgb, var(--state) 10%, var(--panel));
+        color: var(--state);
+      }
+
+      /* When user forces dark theme over a light OS preference, adapt rasterized SVG imgs cleanly */
+      html[data-theme="dark"] img.diagram-img {
+        filter: invert(0.93) hue-rotate(180deg);
+      }
       @media (prefers-color-scheme: dark) {
-        body {
-          background: #0b1220;
-          color: #e6ebf4;
+        html[data-theme="dark"] img.diagram-img {
+          filter: none;
         }
+        html[data-theme="light"] img.diagram-img {
+          filter: invert(0.93) hue-rotate(180deg);
+        }
+      }
+
+      main.shell {
+        max-width: 78rem;
+        margin: 0 auto;
+        padding: 1.8rem 1.25rem 4.5rem;
       }
     </style>
   </head>
   <body>
-    <div class="langbar">
-      <button id="lang-toggle" type="button" aria-label="切换语言 / switch language">中文</button>
-    </div>
-    <main>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/llm-architecture-atlas/">
+          <svg class="brand-mark" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <rect x="6" y="6" width="5" height="12" rx="1.5" fill="var(--attention)" />
+            <rect x="13" y="6" width="5" height="5" rx="1.5" fill="var(--state)" />
+            <rect x="13" y="13" width="5" height="5" rx="1.5" fill="var(--decision)" />
+          </svg>
+          <span class="brand-text">
+            <strong>LLM Architecture Atlas</strong>
+            <span class="brand-tag">IR v0.1</span>
+          </span>
+        </a>
+
+        <nav class="nav" aria-label="Primary">
+          <a href="/llm-architecture-atlas/" class={active === "catalog" ? "active" : ""} data-i18n="nav.catalog">Catalog</a>
+          <a href="/llm-architecture-atlas/concepts/" class={active === "concepts" ? "active" : ""} data-i18n="nav.concepts">Concepts</a>
+          <a href="/llm-architecture-atlas/compare/convaiinnovations-laya--vs--zai-org-glm-5-3-flash/" class={active === "compare" ? "active" : ""} data-i18n="nav.compare">Compare</a>
+          <a href="/llm-architecture-atlas/changes.xml" data-i18n="nav.changes">RSS</a>
+          <a href="https://github.com/Liears/llm-architecture-atlas" rel="noopener noreferrer" data-i18n="nav.source">GitHub</a>
+        </nav>
+
+        <div class="utils">
+          <button id="theme-toggle" type="button" class="util-btn" aria-label="Toggle color theme">
+            <span id="theme-icon" aria-hidden="true">◐</span>
+          </button>
+          <button id="lang-toggle" type="button" class="util-btn" aria-label="切换语言 / switch language">中文</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
       <slot />
     </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span>LLM Architecture Atlas · Deterministic SVGs compiled from evidence-backed Architecture IR</span>
+        <span class="mono">MIT / Apache-2.0</span>
+      </div>
+    </footer>
+
     <script>
       import "../scripts/i18n";
-    </script>
-    <style>
-      .langbar { max-width: 72rem; margin: 0 auto; padding: 0.8rem 1.25rem 0; display: flex; justify-content: flex-end; }
-      #lang-toggle {
-        font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-        border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: inherit;
-        padding: 0.3rem 0.8rem;
+
+      const themeBtn = document.getElementById("theme-toggle");
+      const themeIcon = document.getElementById("theme-icon");
+
+      function effectiveTheme(): "light" | "dark" {
+        const explicit = document.documentElement.dataset.theme;
+        if (explicit === "light" || explicit === "dark") return explicit;
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       }
-      #lang-toggle:hover { border-color: var(--attention); }
+
+      function syncThemeUI() {
+        const cur = effectiveTheme();
+        if (themeIcon) themeIcon.textContent = cur === "dark" ? "☀" : "☾";
+        if (themeBtn) themeBtn.title = cur === "dark" ? "Switch to light theme" : "Switch to dark theme";
+      }
+
+      themeBtn?.addEventListener("click", () => {
+        const next = effectiveTheme() === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem("atlas-theme", next);
+        } catch {}
+        syncThemeUI();
+      });
+
+      syncThemeUI();
+    </script>
+
+    <style>
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: color-mix(in srgb, var(--paper) 88%, transparent);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--line);
+      }
+      .topbar-inner {
+        max-width: 78rem;
+        margin: 0 auto;
+        padding: 0.65rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.9rem;
+        flex-wrap: wrap;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .brand-mark {
+        flex-shrink: 0;
+      }
+      .brand-text {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.45rem;
+      }
+      .brand-text strong {
+        font-size: 1rem;
+        letter-spacing: -0.015em;
+      }
+      .brand-tag {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        padding: 0.08rem 0.38rem;
+        border-radius: 5px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+      }
+      .nav a {
+        padding: 0.3rem 0.62rem;
+        border-radius: 7px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 600;
+      }
+      .nav a:hover {
+        color: var(--ink);
+        background: var(--surface);
+      }
+      .nav a.active {
+        color: var(--ink);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow-sm);
+      }
+      .utils {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .util-btn {
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--ink);
+        padding: 0.3rem 0.68rem;
+      }
+      .util-btn:hover {
+        border-color: var(--attention);
+      }
+      .site-footer {
+        border-top: 1px solid var(--line);
+        background: color-mix(in srgb, var(--panel) 65%, transparent);
+      }
+      .footer-inner {
+        max-width: 78rem;
+        margin: 0 auto;
+        padding: 1.1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+      @media (max-width: 640px) {
+        .topbar-inner {
+          padding: 0.55rem 0.9rem;
+        }
+        main.shell {
+          padding: 1.25rem 0.9rem 3.5rem;
+        }
+        .brand-tag {
+          display: none;
+        }
+      }
     </style>
   </body>
 </html>

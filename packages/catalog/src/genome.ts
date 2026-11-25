@@ -38,7 +38,7 @@ export function buildGenome(arch: Arch): Genome {
 /** Token colors for the strip (resolved by the page from @atlas/ui tokens). */
 export function genomeCellRole(layer: GenomeLayer): "attention" | "state" | "compute" | "muted" {
   if (layer.ffnKind === "moe") return "compute";
-  if (layer.attentionKind === "linear_attention") return "state";
+  if (layer.attentionKind === "linear_attention" || layer.attentionKind === "sliding_window") return "state";
   if (layer.attentionKind === "unknown") return "muted";
   return "attention";
 }

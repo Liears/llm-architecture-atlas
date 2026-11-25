@@ -1,9 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { loadModels } from "../../lib/atlas.js";
-import { buildCatalog } from "@atlas/catalog";
-import { buildGenome, genomeCellRole } from "@atlas/catalog";
-import { compareModels } from "@atlas/catalog";
+import { loadModels, type ModelData } from "../../lib/atlas.js";
+import { buildCatalog, buildGenome, compareModels } from "@atlas/catalog";
 
 export function getStaticPaths() {
   const models = loadModels();
@@ -12,91 +10,358 @@ export function getStaticPaths() {
     for (let j = i + 1; j < models.length; j++) {
       pairs.push({
         params: { pair: `${models[i]!.slug}--vs--${models[j]!.slug}` },
-        props: { a: models[i]!, b: models[j]! },
+        props: { a: models[i]!, b: models[j]!, allModels: models },
       });
     }
   }
   return pairs;
 }
 
-const { a, b } = Astro.props;
+interface Props {
+  a: ModelData;
+  b: ModelData;
+  allModels: ModelData[];
+}
+
+const { a, b, allModels } = Astro.props;
 const entries = buildCatalog([a.arch, b.arch]);
 const [ea, eb] = entries;
 const genomeA = buildGenome(a.arch);
 const genomeB = buildGenome(b.arch);
 const result = compareModels({ entry: ea!, genome: genomeA }, { entry: eb!, genome: genomeB });
 
-const roleColor: Record<string, string> = {
-  attention: "var(--attention)",
-  state: "var(--state)",
-  compute: "var(--compute)",
-  muted: "var(--line)",
+const orderedSlugs = allModels.map((m) => m.slug);
+
+const fieldI18n: Record<string, string> = {
+  "Total params": "compare.totalParams",
+  "Active params": "compare.activeParams",
+  Layers: "compare.layers",
+  Context: "compare.context",
+  Decoder: "compare.decoder",
 };
-const cell = (c: { label: string; role: string } | null) =>
-  c
-    ? `<span class="gcell" style="background:${roleColor[c.role] ?? "var(--line)"}" title="${c.label}"></span>`
+
+const attnColor = (kind: string) => {
+  if (kind === "linear_attention" || kind === "sliding_window") return "var(--state)";
+  if (kind === "unknown") return "var(--line)";
+  return "var(--attention)";
+};
+
+const paddedLayers = (layers: typeof genomeA.layers) =>
+  Array.from({ length: result.genome.numLayers }, (_, i) => layers[i] ?? null);
+
+const attnCell = (l: (typeof genomeA.layers)[number] | null, idx: number) =>
+  l
+    ? `<span class="gcell" style="background:${attnColor(l.attentionKind)}" title="L${idx} · ${l.attention}"></span>`
     : `<span class="gcell pad">—</span>`;
 
-const ffnCell = (c: { label: string; role: string } | null) =>
-  c
-    ? `<span class="gcell ffn" style="background:${c.role === "moe" ? "var(--compute)" : "var(--line)"}" title="${c.label} FFN"></span>`
+const ffnCell = (l: (typeof genomeA.layers)[number] | null, idx: number, isS1: boolean) =>
+  l
+    ? `<span class="gcell ffn" style="background:${l.ffnKind === "moe" ? "var(--compute)" : isS1 ? "var(--decision)" : "var(--line)"}" title="L${idx} · ${l.ffn} FFN"></span>`
     : `<span class="gcell pad">—</span>`;
+
+const alignedA = paddedLayers(genomeA.layers);
+const alignedB = paddedLayers(genomeB.layers);
 ---
 
-<Base title={`${ea!.label} vs ${eb!.label} — LLM Architecture Atlas`}>
-  <p class="eyebrow">Two-model comparison</p>
-  <h1>{ea!.label} <span class="vs">vs</span> {eb!.label}</h1>
-  <p><a href="/llm-architecture-atlas/">← catalog</a></p>
-
-  <h2 data-i18n="compare.fields">Fields</h2>
-  <table class="diff">
-    <thead><tr>
-        <th data-i18n="compare.fields">Field</th>
-        <th>{ea!.label}</th>
-        <th>{eb!.label}</th>
-      </tr></thead>
-    <tbody>
-      {result.fieldRows.map((r) => (
-        <tr class={r.shared ? "shared" : ""}>
-          <td data-i18n={r.field}>{r.field.replace("compare.", "")}</td><td>{r.a}</td><td>{r.b}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-  <p class="muted" data-i18n="compare.sharedNote">Gray rows: same value in both models.</p>
-
-  <h2 data-i18n="compare.genome">Layer Genome alignment</h2>
-  <p class="muted" data-i18n="compare.genomeNote" data-n={String(result.genome.attentionDiffer)}>
-    Columns align by layer index; the shorter model pads with —.
-    {result.genome.attentionDiffer} aligned column(s) differ in attention type.
-  </p>
-  <div class="tracks" data-atlas-scroll="x" data-testid="genome-tracks">
-    <div class="track">
-      <span class="track-label">{ea!.label}</span>
-      <div class="cells" set:html={result.genome.aLayers.map(cell).join("")} />
-      <div class="cells ffn" set:html={result.genome.aLayers.map(ffnCell).join("")} />
-    </div>
-    <div class="track">
-      <span class="track-label">{eb!.label}</span>
-      <div class="cells" set:html={result.genome.bLayers.map(cell).join("")} />
-      <div class="cells ffn" set:html={result.genome.bLayers.map(ffnCell).join("")} />
-    </div>
+<Base title={`${ea!.label} vs ${eb!.label} — LLM Architecture Atlas`} active="compare">
+  <div class="compare-top">
+    <a class="crumb-back" href="/llm-architecture-atlas/" data-i18n="compare.back">← Back to catalog</a>
   </div>
 
+  <header class="compare-head">
+    <p class="eyebrow" data-i18n="compare.eyebrow">Two-model structural diff</p>
+    <h1>{ea!.label} <span class="vs">vs</span> {eb!.label}</h1>
+
+    <div class="pair-switcher" aria-label="Switch models to compare">
+      <select id="pick-a" aria-label="Model A">
+        {allModels.map((m) => <option value={m.slug} selected={m.slug === a.slug}>{m.arch.model.label}</option>)}
+      </select>
+      <span class="mono muted">vs</span>
+      <select id="pick-b" aria-label="Model B">
+        {allModels.map((m) => <option value={m.slug} selected={m.slug === b.slug}>{m.arch.model.label}</option>)}
+      </select>
+      <button type="button" id="switch-pair" class="btn btn-primary" data-i18n="compare.switchBtn">Compare pair</button>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2 data-i18n="compare.paradigmCard">Paradigm & Readout Comparison</h2>
+    <div class="side-cards">
+      <article class="side-card side-a">
+        <div class="side-head">
+          <span class={`pill ${ea!.paradigm === "system_one_decision" ? "pill-s1" : "pill-ar"}`}>
+            {ea!.paradigm === "system_one_decision" ? "System-1 · Decision" : "System-2 · Autoregressive"}
+          </span>
+          <a href={`/llm-architecture-atlas/models/${a.slug}/`}>{ea!.label} →</a>
+        </div>
+        <dl class="side-meta">
+          <div><dt>Readout / Output</dt><dd class="mono">{ea!.readoutMode ?? "Autoregressive LM head"}</dd></div>
+          <div><dt>Primitives</dt><dd class="mono">{ea!.primitives.length ? ea!.primitives.join(", ") : "Free-form text / code"}</dd></div>
+          <div><dt>Attention mix</dt><dd>{ea!.attentionTypes.join(" + ")}</dd></div>
+        </dl>
+      </article>
+
+      <article class="side-card side-b">
+        <div class="side-head">
+          <span class={`pill ${eb!.paradigm === "system_one_decision" ? "pill-s1" : "pill-ar"}`}>
+            {eb!.paradigm === "system_one_decision" ? "System-1 · Decision" : "System-2 · Autoregressive"}
+          </span>
+          <a href={`/llm-architecture-atlas/models/${b.slug}/`}>{eb!.label} →</a>
+        </div>
+        <dl class="side-meta">
+          <div><dt>Readout / Output</dt><dd class="mono">{eb!.readoutMode ?? "Autoregressive LM head"}</dd></div>
+          <div><dt>Primitives</dt><dd class="mono">{eb!.primitives.length ? eb!.primitives.join(", ") : "Free-form text / code"}</dd></div>
+          <div><dt>Attention mix</dt><dd>{eb!.attentionTypes.join(" + ")}</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 data-i18n="compare.fields">Specification Diff</h2>
+    <div class="table-wrap" data-atlas-scroll="x">
+      <table class="diff">
+        <thead>
+          <tr>
+            <th data-i18n="compare.fields">Field</th>
+            <th class="col-a">{ea!.label}</th>
+            <th class="col-b">{eb!.label}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {result.fieldRows.map((r) => (
+            <tr class={r.shared ? "shared" : ""}>
+              <td data-i18n={fieldI18n[r.field] ?? ""}>{r.field}</td>
+              <td class="mono">{r.a}</td>
+              <td class="mono">{r.b}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small-note" data-i18n="compare.sharedNote">Muted rows share identical values across both models.</p>
+  </section>
+
+  <section class="section">
+    <h2 data-i18n="compare.genome">Layer Genome Alignment</h2>
+    <p class="muted small-note" data-i18n="compare.genomeNote" data-n={String(result.genome.attentionDiffer)}>
+      Columns align by layer index; shorter models pad with —.
+      {result.genome.attentionDiffer} aligned column(s) differ in attention type.
+    </p>
+    <div class="tracks" data-atlas-scroll="x" data-testid="genome-tracks">
+      <div class="track">
+        <span class="track-label">{ea!.label}</span>
+        <div>
+          <div class="cells" set:html={alignedA.map((l, idx) => attnCell(l, idx)).join("")} />
+          <div class="cells ffn" set:html={alignedA.map((l, idx) => ffnCell(l, idx, ea!.paradigm === "system_one_decision")).join("")} />
+        </div>
+      </div>
+      <div class="track">
+        <span class="track-label">{eb!.label}</span>
+        <div>
+          <div class="cells" set:html={alignedB.map((l, idx) => attnCell(l, idx)).join("")} />
+          <div class="cells ffn" set:html={alignedB.map((l, idx) => ffnCell(l, idx, eb!.paradigm === "system_one_decision")).join("")} />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="application/json" is:inline id="compare-order" set:html={JSON.stringify(orderedSlugs)}></script>
+
+  <script>
+    const order = JSON.parse(document.getElementById("compare-order")!.textContent!) as string[];
+    const pickA = document.getElementById("pick-a") as HTMLSelectElement;
+    const pickB = document.getElementById("pick-b") as HTMLSelectElement;
+    document.getElementById("switch-pair")?.addEventListener("click", () => {
+      const a = pickA.value;
+      const b = pickB.value;
+      if (!a || !b || a === b) return;
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      const [first, second] = ia < ib ? [a, b] : [b, a];
+      location.href = `/llm-architecture-atlas/compare/${first}--vs--${second}/`;
+    });
+  </script>
+
   <style>
-    .vs { color: var(--muted); font-weight: 400; }
-    .diff { border-collapse: collapse; width: 100%; max-width: 46rem; }
-    .diff th, .diff td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); }
-    .diff th:first-child, .diff td:first-child { width: 10rem; }
-    tr.shared td { color: var(--muted); }
-    .tracks { display: grid; gap: 0.5rem; overflow-x: auto; }
-    .track { display: grid; grid-template-columns: 14rem 1fr; align-items: center; gap: 0.8rem; }
-    .track-label { font-size: 0.85rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    /* set:html content is not scoped — these must be global */
+    .compare-top {
+      margin-bottom: 0.6rem;
+    }
+    .crumb-back {
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .compare-head {
+      padding-bottom: 1.1rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.4rem;
+    }
+    .compare-head h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+    }
+    .vs {
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .pair-switcher {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .pair-switcher select {
+      padding: 0.42rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.88rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+    .section h2 {
+      margin: 0 0 0.65rem;
+      font-size: 1.2rem;
+      letter-spacing: -0.015em;
+    }
+    .small-note {
+      margin: 0.45rem 0 0;
+      font-size: 0.86rem;
+    }
+
+    .side-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.85rem;
+    }
+    .side-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 0.9rem 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .side-a {
+      border-top: 3px solid var(--state);
+    }
+    .side-b {
+      border-top: 3px solid var(--compute);
+    }
+    .side-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.65rem;
+    }
+    .side-head a {
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .side-head a:hover {
+      text-decoration: underline;
+    }
+    .side-meta {
+      margin: 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+    .side-meta dt {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .side-meta dd {
+      margin: 0.05rem 0 0;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow-sm);
+    }
+    .diff {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 30rem;
+    }
+    .diff th {
+      background: var(--surface);
+      font-size: 0.8rem;
+    }
+    .diff th.col-a {
+      border-bottom: 2px solid var(--state);
+    }
+    .diff th.col-b {
+      border-bottom: 2px solid var(--compute);
+    }
+    .diff th,
+    .diff td {
+      text-align: left;
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .diff th:first-child,
+    .diff td:first-child {
+      width: 11rem;
+      font-weight: 600;
+    }
+    tr.shared td {
+      color: var(--muted);
+    }
+
+    .tracks {
+      display: grid;
+      gap: 0.65rem;
+      overflow-x: auto;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      margin-top: 0.65rem;
+    }
+    .track {
+      display: grid;
+      grid-template-columns: 14rem 1fr;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .track-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     :global(.cells) { display: flex; gap: 2px; flex-shrink: 0; }
     :global(.cells.ffn) { margin-top: 2px; }
     :global(.gcell) { width: 10px; height: 18px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
     :global(.gcell.pad) { background: none; color: var(--muted); text-align: center; }
-    :global(.gcell.ffn) { height: 6px; }
+    :global(.gcell.ffn) { height: 7px; }
+
+    @media (max-width: 720px) {
+      .side-cards {
+        grid-template-columns: 1fr;
+      }
+      .track {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+      }
+    }
   </style>
 </Base>

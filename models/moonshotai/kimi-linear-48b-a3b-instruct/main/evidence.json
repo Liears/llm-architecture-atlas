@@ -7,9 +7,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.num_hidden_layers"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.num_hidden_layers"
       }
     },
     {
@@ -18,9 +18,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.hidden_size"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.hidden_size"
       }
     },
     {
@@ -29,9 +29,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.num_attention_heads"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.num_attention_heads"
       }
     },
     {
@@ -40,9 +40,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.num_key_value_heads"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.num_key_value_heads"
       }
     },
     {
@@ -51,9 +51,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.head_dim"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.head_dim"
       }
     },
     {
@@ -62,9 +62,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.vocab_size"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.vocab_size"
       }
     },
     {
@@ -72,10 +72,10 @@
       "value": 1048576,
       "status": "reported",
       "source": {
-        "kind": "model_card",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct",
-        "revision": "69e2a71feb",
-        "locator": "context window"
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.model_max_length"
       }
     },
     {
@@ -84,8 +84,8 @@
       "status": "reported",
       "source": {
         "kind": "model_card",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct",
-        "revision": "69e2a71feb",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/blob/e1df551a447157d4658b573f9a695d57658590e9/README.md",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
         "locator": "parameter count"
       }
     },
@@ -95,32 +95,54 @@
       "status": "derived",
       "source": {
         "kind": "derived",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct",
-        "revision": "69e2a71feb",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/blob/e1df551a447157d4658b573f9a695d57658590e9/README.md",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
         "locator": "activated experts + attention params"
       },
       "extractor": "facts.active-params@1"
     },
     {
       "path": "topology.attention_groups[0]",
-      "value": "20 KDA layers (3 of every 4, shortconv kernel 4)",
+      "value": "20 KDA layers (3 of every 4, short_conv_kernel_size=4, head_dim=128)",
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.linear_attn_config.kda_layers"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.linear_attn_config"
       }
     },
     {
       "path": "topology.attention_groups[1]",
-      "value": "7 MLA layers (1 of every 4, kv_lora_rank 512)",
+      "value": "7 MLA layers (1 of every 4 including layer 26, kv_lora_rank=512, mla_use_nope=true)",
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.linear_attn_config.full_attn_layers"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.linear_attn_config.full_attn_layers + $.kv_lora_rank + $.mla_use_nope"
+      }
+    },
+    {
+      "path": "topology.ffn_groups[0]",
+      "value": "1 Dense SwiGLU layer (layer 0, first_k_dense_replace=1)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.first_k_dense_replace + modeling_kimi.py:799-805"
+      }
+    },
+    {
+      "path": "topology.ffn_groups[1]",
+      "value": "26 Sparse MoE layers (layers 1..26)",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/modeling_kimi.py",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "KimiDecoderLayer:799-805"
       }
     },
     {
@@ -129,9 +151,9 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.num_experts"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.num_experts"
       }
     },
     {
@@ -140,20 +162,31 @@
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.num_experts_per_token"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.num_experts_per_token"
       }
     },
     {
       "path": "topology.experts.shared",
-      "value": null,
+      "value": 1,
       "status": "reported",
       "source": {
         "kind": "hf_config",
-        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-        "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
-        "locator": "$.text_config.n_shared_experts"
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.num_shared_experts"
+      }
+    },
+    {
+      "path": "topology.position_encoding.type",
+      "value": "rope",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+        "revision": "e1df551a447157d4658b573f9a695d57658590e9",
+        "locator": "$.qk_rope_head_dim + $.mla_use_nope"
       }
     }
   ]

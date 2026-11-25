@@ -90,12 +90,28 @@ export interface PositionEncoding {
   note?: string | null;
 }
 
+export type ExecutionParadigm = "autoregressive_lm" | "system_one_decision";
+
+export interface DecisionHeadConfig {
+  readout_mode: string;
+  primitives?: string[];
+  head_layers?: number | null;
+  calibration?: string | null;
+  action_head?: string | null;
+  max_options?: number | null;
+  prefix_cache?: boolean | null;
+  vision_encoder?: string | null;
+  note?: string | null;
+}
+
 export interface ModelTopology {
   attention_groups: LayerGroup[];
   ffn_groups: LayerGroup[];
   experts?: ExpertConfig | null;
   residual?: ResidualScheme | null;
   position_encoding?: PositionEncoding | null;
+  paradigm?: ExecutionParadigm | null;
+  decision_head?: DecisionHeadConfig | null;
 }
 
 export interface ModelDocument {

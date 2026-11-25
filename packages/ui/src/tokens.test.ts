@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { contrast, fontStacks, themes, strokeWidths } from "./tokens.js";
 
 /** Text-bearing accents must reach WCAG AA (4.5:1) on their theme's paper. */
-const ACCENTS = ["attention", "state", "compute", "conflict"] as const;
+const ACCENTS = ["attention", "state", "compute", "decision", "conflict"] as const;
 
 describe("design tokens", () => {
   it("provides light and dark themes with the same token set", () => {

@@ -445,7 +445,7 @@
   "groups": [
     {
       "id": "g-pattern",
-      "label": "45-layer genome · K,K,K,D ×11 + K",
+      "label": "45-layer genome",
       "kind": "stack",
       "members": [
         "pattern-0",
