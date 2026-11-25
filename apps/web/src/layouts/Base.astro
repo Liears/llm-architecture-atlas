@@ -91,6 +91,10 @@ interface Props {
         scroll-behavior: smooth;
       }
 
+      html {
+        scroll-padding-top: 4.5rem;
+      }
+
       body {
         margin: 0;
         background-color: var(--paper);
@@ -400,6 +404,9 @@ interface Props {
         color: var(--muted);
       }
       @media (max-width: 640px) {
+        .topbar {
+          position: static;
+        }
         .topbar-inner {
           padding: 0.55rem 0.9rem;
         }
