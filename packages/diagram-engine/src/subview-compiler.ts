@@ -164,19 +164,53 @@ function composeSubviewGrid(id: string, scene: DiagramScene, bands: SubGroupLayo
     return null;
   };
 
-  for (const edge of scene.edges) {
-    const from = resolveEnd(edge.from, true);
-    const to = resolveEnd(edge.to, false);
+  const resolvedEnds = scene.edges.map((edge) => ({
+    edge,
+    from: resolveEnd(edge.from, true),
+    to: resolveEnd(edge.to, false),
+  }));
+
+  // Stagger same-side bypass rails (e.g., inner MLA latent skip vs outer residual bridge)
+  // by ascending span width so inner channels nest inside outer channels with zero overlap.
+  const assignTracks = (matchSide: "bottom" | "top") => {
+    const items = resolvedEnds
+      .filter((r): r is { edge: SemanticEdge; from: { point: Point; side: typeof matchSide }; to: { point: Point; side: typeof matchSide } } =>
+        Boolean(r.from && r.to && r.from.side === matchSide && r.to.side === matchSide),
+      )
+      .map((r) => ({
+        id: r.edge.id,
+        rowBucket: Math.round(Math.max(r.from.point.y, r.to.point.y) / 20),
+        span: Math.abs(r.to.point.x - r.from.point.x),
+      }));
+    const trackMap = new Map<string, number>();
+    const byBucket = new Map<number, typeof items>();
+    for (const item of items) {
+      const list = byBucket.get(item.rowBucket) ?? [];
+      list.push(item);
+      byBucket.set(item.rowBucket, list);
+    }
+    for (const list of byBucket.values()) {
+      list.sort((a, b) => a.span - b.span);
+      list.forEach((item, idx) => trackMap.set(item.id, idx));
+    }
+    return trackMap;
+  };
+  const bottomTracks = assignTracks("bottom");
+  const topTracks = assignTracks("top");
+
+  for (const { edge, from, to } of resolvedEnds) {
     if (!from || !to) continue;
     if ((from.side === "bottom" || from.side === "top") && (to.side === "left" || to.side === "right")) {
       edgeRoutes[edge.id] = [from.point, { x: from.point.x, y: to.point.y }, to.point];
     } else if ((from.side === "left" || from.side === "right") && (to.side === "top" || to.side === "bottom")) {
       edgeRoutes[edge.id] = [from.point, { x: to.point.x, y: from.point.y }, to.point];
     } else if (from.side === "bottom" && to.side === "bottom") {
-      const dy = Math.max(from.point.y, to.point.y) + 11;
+      const track = bottomTracks.get(edge.id) ?? 0;
+      const dy = Math.max(from.point.y, to.point.y) + 11 + track * 12;
       edgeRoutes[edge.id] = [from.point, { x: from.point.x, y: dy }, { x: to.point.x, y: dy }, to.point];
     } else if (from.side === "top" && to.side === "top") {
-      const ry = Math.min(from.point.y, to.point.y) - 11;
+      const track = topTracks.get(edge.id) ?? 0;
+      const ry = Math.min(from.point.y, to.point.y) - 11 - track * 12;
       edgeRoutes[edge.id] = [from.point, { x: from.point.x, y: ry }, { x: to.point.x, y: ry }, to.point];
     } else if (from.side === "bottom" && to.side === "top") {
       const midY = Math.round((from.point.y + to.point.y) / 2);

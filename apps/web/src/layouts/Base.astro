@@ -89,10 +89,19 @@ interface Props {
 
       html {
         scroll-behavior: smooth;
+        scroll-padding-top: 4.5rem;
       }
 
-      html {
-        scroll-padding-top: 4.5rem;
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
       }
 
       body {

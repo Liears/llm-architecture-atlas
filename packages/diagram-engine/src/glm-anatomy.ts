@@ -313,7 +313,7 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
     { id: "norm", x: 842, y: 74, w: 165, h: 60 },
     { id: "head", x: 1054, y: 74, w: 165, h: 60 },
     { id: "mtp", x: 1325, y: 64, w: 165, h: 80 },
-    { id: "lens-bus", x: 1125, y: 152, w: 170, h: 28 },
+    { id: "lens-bus", x: 1125, y: 138, w: 170, h: 24 },
     ...Array.from({ length: 11 }, (_, i) => ({ id: `pattern-${i}`, x: 48, y: 238 + i * 42, w: 254, h: 36 })),
     { id: "pattern-tail", x: 48, y: 700, w: 254, h: 44 },
     { id: "mhc-source", x: 365, y: 364, w: 120, h: 376 },
@@ -351,8 +351,8 @@ export function glmAnatomyBlueprint(): EditorialPosterBlueprint {
     "mhc-pre", "mhc-pre-f", "mhc-f-post", "kda-1", "kda-2", "dsa-1", "dsa-2", "dsa-3", "moe-1", "moe-2", "moe-3", "moe-4",
   ];
   const edgeRoutes: NonNullable<EditorialPosterBlueprint["edgeRoutes"]> = {
-    "callout-mhc": [{ x: 566, y: 144 }, { x: 566, y: 180 }, { x: 724, y: 180 }, { x: 724, y: 192 }],
-    "callout-lenses": [{ x: 678, y: 144 }, { x: 678, y: 166 }, { x: 1125, y: 166 }],
+    "callout-mhc": [{ x: 566, y: 144 }, { x: 566, y: 182 }, { x: 724, y: 182 }, { x: 724, y: 192 }],
+    "callout-lenses": [{ x: 678, y: 144 }, { x: 678, y: 150 }, { x: 1125, y: 150 }],
     "mhc-pre": [{ x: 425, y: 364 }, { x: 425, y: 347 }, { x: 586, y: 347 }, { x: 586, y: 330 }],
   };
   return { id: "glm-anatomy-desktop", size: { w: 1528, h: 850 }, nodes, groups, edges, edgeRoutes };

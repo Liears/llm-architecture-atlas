@@ -143,10 +143,12 @@ test("mobile 390x844 shows readable structured overview cards and >=24px control
     const sched = document.querySelector(".schedule-pills")!;
     const tab = document.querySelector(".vtab")!;
     const col = document.querySelector(".genome .col")!;
+    const crumb = document.querySelector(".crumb-back")!;
     const chainBox = chain.getBoundingClientRect();
     const schedBox = sched.getBoundingClientRect();
     const tabBox = tab.getBoundingClientRect();
     const colBox = col.getBoundingClientRect();
+    const crumbBox = crumb.getBoundingClientRect();
     return {
       fontSize: parseFloat(getComputedStyle(chain).fontSize),
       chainBottom: chainBox.bottom,
@@ -155,6 +157,7 @@ test("mobile 390x844 shows readable structured overview cards and >=24px control
       tabH: tabBox.height,
       colW: colBox.width,
       colH: colBox.height,
+      crumbH: crumbBox.height,
     };
   });
   expect(metrics.fontSize).toBeGreaterThanOrEqual(12);
@@ -164,6 +167,11 @@ test("mobile 390x844 shows readable structured overview cards and >=24px control
   expect(metrics.tabH).toBeGreaterThanOrEqual(24);
   expect(metrics.colW).toBeGreaterThanOrEqual(24);
   expect(metrics.colH).toBeGreaterThanOrEqual(24);
+  expect(metrics.crumbH).toBeGreaterThanOrEqual(24);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const reducedScroll = await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior);
+  expect(reducedScroll).toBe("auto");
 });
 
 test("overview edge hotspot and dark-mode contrast meet accessibility guarantees (#36, #38)", async ({ page }) => {

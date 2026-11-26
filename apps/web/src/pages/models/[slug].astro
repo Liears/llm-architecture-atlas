@@ -747,7 +747,8 @@ const evidencePayload = {
         btn.addEventListener("click", () => {
           if (ledgerDetails) ledgerDetails.open = true;
           const targetRow = evidenceRows.find((r) => r.dataset.claimRow === btn.dataset.jumpPath);
-          targetRow?.scrollIntoView({ block: "center", behavior: "smooth" });
+          const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+          targetRow?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
         });
       });
     }
@@ -1066,6 +1067,9 @@ const evidencePayload = {
       margin-bottom: 0.75rem;
     }
     .crumb-back {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
       font-weight: 700;
       text-decoration: none;
       font-size: 0.9rem;
@@ -1995,9 +1999,10 @@ const evidencePayload = {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
+      :global(html),
+      :global(*),
+      :global(*::before),
+      :global(*::after) {
         scroll-behavior: auto !important;
         transition: none !important;
         animation: none !important;
