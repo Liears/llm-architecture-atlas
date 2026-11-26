@@ -562,7 +562,7 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
       label: "Context & Footprint",
       kind: "inset",
       members: scaleLensIds,
-      ports: [{ id: "in", side: "left", inner: scaleLensIds[0]! }],
+      ports: [{ id: "in", side: "right", inner: scaleLensIds[0]! }],
       claimPath: "facts.total_params",
     },
   ];
@@ -595,7 +595,6 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
   const lenses: LensSpec[] = [
     { groupId: "g-attn", rows: attnRows },
     { groupId: "g-ffn", rows: ffnRows },
-    { groupId: "g-scale", rows: [scaleLensIds] },
   ];
 
   const blueprint = buildPosterGridBlueprint({
@@ -604,12 +603,13 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
     spine: ["tok", "embed", "decoder", "norm", "head"],
     scheduleGroupId: "g-schedule",
     scheduleNodes: scheduleIds,
+    leftBottomGroup: { groupId: "g-scale", rows: scaleLensIds.map((id) => [id]) },
     lenses,
     callouts: [
-      { edgeId: "c-sched", sourceNodeId: "decoder", sourcePort: "sched", targetGroupId: "g-schedule", targetPort: "in", busY: 158, corridorX: 452 },
-      { edgeId: "c-scale", sourceNodeId: "decoder", sourcePort: "scale", targetGroupId: "g-scale", targetPort: "in", busY: 170, corridorX: 462 },
-      { edgeId: "c-ffn", sourceNodeId: "decoder", sourcePort: "ffn", targetGroupId: "g-ffn", targetPort: "in", busY: 182, corridorX: 472 },
-      { edgeId: "c-attn", sourceNodeId: "decoder", sourcePort: "attn", targetGroupId: "g-attn", targetPort: "in", busY: 194, corridorX: 482 },
+      { edgeId: "c-sched", sourceNodeId: "decoder", sourcePort: "sched", targetGroupId: "g-schedule", targetPort: "in", busY: 148, corridorX: 446 },
+      { edgeId: "c-scale", sourceNodeId: "decoder", sourcePort: "scale", targetGroupId: "g-scale", targetPort: "in", busY: 160, corridorX: 456 },
+      { edgeId: "c-ffn", sourceNodeId: "decoder", sourcePort: "ffn", targetGroupId: "g-ffn", targetPort: "in", busY: 172, corridorX: 468 },
+      { edgeId: "c-attn", sourceNodeId: "decoder", sourcePort: "attn", targetGroupId: "g-attn", targetPort: "in", busY: 184, corridorX: 478 },
     ],
   });
 

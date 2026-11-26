@@ -308,7 +308,7 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
       label: "Calibration & Scale",
       kind: "inset",
       members: calIds,
-      ports: [{ id: "in", side: "left", inner: calIds[0]! }],
+      ports: [{ id: "in", side: "right", inner: calIds[0]! }],
       claimPath: "topology.decision_head.calibration",
     },
   ];
@@ -341,7 +341,6 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
   const lenses: LensSpec[] = [
     { groupId: "g-readout", rows: [readoutIds] },
     { groupId: "g-attn", rows: [attnIds] },
-    { groupId: "g-cal", rows: [calIds] },
   ];
 
   const blueprint = buildPosterGridBlueprint({
@@ -350,12 +349,13 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
     spine: spineIds,
     scheduleGroupId: "g-schedule",
     scheduleNodes: scheduleIds,
+    leftBottomGroup: { groupId: "g-cal", rows: calIds.map((id) => [id]) },
     lenses,
     callouts: [
-      { edgeId: "c-sched", sourceNodeId: "backbone", sourcePort: "sched", targetGroupId: "g-schedule", targetPort: "in", busY: 158, corridorX: 452 },
-      { edgeId: "c-cal", sourceNodeId: "backbone", sourcePort: "cal", targetGroupId: "g-cal", targetPort: "in", busY: 170, corridorX: 462 },
-      { edgeId: "c-attn", sourceNodeId: "backbone", sourcePort: "attn", targetGroupId: "g-attn", targetPort: "in", busY: 182, corridorX: 472 },
-      { edgeId: "c-readout", sourceNodeId: "backbone", sourcePort: "readout", targetGroupId: "g-readout", targetPort: "in", busY: 194, corridorX: 482 },
+      { edgeId: "c-sched", sourceNodeId: "backbone", sourcePort: "sched", targetGroupId: "g-schedule", targetPort: "in", busY: 148, corridorX: 446 },
+      { edgeId: "c-cal", sourceNodeId: "backbone", sourcePort: "cal", targetGroupId: "g-cal", targetPort: "in", busY: 160, corridorX: 456 },
+      { edgeId: "c-attn", sourceNodeId: "backbone", sourcePort: "attn", targetGroupId: "g-attn", targetPort: "in", busY: 172, corridorX: 468 },
+      { edgeId: "c-readout", sourceNodeId: "backbone", sourcePort: "readout", targetGroupId: "g-readout", targetPort: "in", busY: 184, corridorX: 478 },
     ],
   });
 

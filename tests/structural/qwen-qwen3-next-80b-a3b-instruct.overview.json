@@ -3,8 +3,8 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1360,
-    "h": 856
+    "w": 1380,
+    "h": 780
   },
   "nodes": [
     {
@@ -302,7 +302,7 @@
       "ports": [
         {
           "id": "in",
-          "side": "left",
+          "side": "right",
           "inner": "scale-ctx"
         }
       ],

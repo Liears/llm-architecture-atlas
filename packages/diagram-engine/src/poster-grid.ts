@@ -27,19 +27,21 @@ export interface PosterGridSpec {
   spine: string[];
   scheduleGroupId: string;
   scheduleNodes: string[];
+  /** Optional compact secondary group anchored below schedule in the left column. */
+  leftBottomGroup?: LensSpec;
   lenses: LensSpec[];
   callouts: CalloutSpec[];
 }
 
-const CANVAS_W = 1360;
-const CANVAS_H = 856;
-const MARGIN_X = 44;
-const SPINE_Y = 72;
-const SPINE_H = 72;
-const BODY_Y = 204;
-const BODY_BOTTOM = 818;
+const CANVAS_W = 1380;
+const CANVAS_H = 780;
+const MARGIN_X = 40;
+const SPINE_Y = 66;
+const SPINE_H = 68;
+const BODY_Y = 198;
+const BODY_BOTTOM = 750;
 const SCHED_W = 396;
-const CORRIDOR_W = 50;
+const CORRIDOR_W = 54;
 const LENS_X = MARGIN_X + SCHED_W + CORRIDOR_W;
 const LENS_W = CANVAS_W - MARGIN_X - LENS_X;
 
@@ -93,18 +95,18 @@ export function buildPosterGridBlueprint(spec: PosterGridSpec): EditorialPosterB
     return n;
   });
   const availSpineW = CANVAS_W - MARGIN_X * 2;
-  const gapSpine = spineNodes.length >= 6 ? 20 : 28;
+  const gapSpine = spineNodes.length >= 6 ? 16 : 24;
   const minWidths = spineNodes.map((n) => requiredNodeWidth(n, 102));
   const totalMin = minWidths.reduce((a, b) => a + b, 0) + gapSpine * (spineNodes.length - 1);
   const extra = Math.max(0, availSpineW - totalMin);
   const weightSum = spineNodes.reduce(
-    (s, n) => s + (n.kind === "stack" || n.kind === "decision" || n.kind === "readout" ? 2 : 1),
+    (s, n) => s + (n.kind === "stack" || n.kind === "decision" || n.kind === "readout" ? 2.2 : 1),
     0,
   );
 
   let curX = MARGIN_X;
   spineNodes.forEach((n, i) => {
-    const wShare = n.kind === "stack" || n.kind === "decision" || n.kind === "readout" ? 2 : 1;
+    const wShare = n.kind === "stack" || n.kind === "decision" || n.kind === "readout" ? 2.2 : 1;
     const bonus = Math.floor((extra * wShare) / weightSum);
     const w = minWidths[i]! + bonus;
     const box: PosterBox = { id: n.id, x: curX, y: SPINE_Y, w, h: SPINE_H };
@@ -120,23 +122,99 @@ export function buildPosterGridBlueprint(spec: PosterGridSpec): EditorialPosterB
     }
   }
 
-  // 2. Left column: Layer Schedule / Genome inset.
+  // Helper to place rows evenly inside a bounded group inset.
+  const placeRowsInGroup = (groupId: string, rows: Array<Array<string | null>>, gx: number, gy: number, gw: number, gh: number) => {
+    const gBox: PosterBox = { id: groupId, x: gx, y: gy, w: gw, h: gh };
+    groups.push(gBox);
+    groupBoxById.set(groupId, gBox);
+
+    const padTop = 36;
+    const padSide = 20;
+    const padBottom = rows.length > 1 ? 20 : 16;
+    const innerH = gh - padTop - padBottom;
+    const rowCount = rows.length;
+    const rowGap = 14;
+    const nodeH = Math.max(44, Math.min(74, Math.floor((innerH - rowGap * (rowCount - 1)) / rowCount)));
+    const totalRowsH = rowCount * nodeH + (rowCount - 1) * rowGap;
+    const firstRowY = gy + padTop + Math.max(0, Math.floor((innerH - totalRowsH) / 2));
+
+    const maxCols = Math.max(...rows.map((r) => r.length));
+    const colGap = 20;
+    const availRowW = gw - padSide * 2 - colGap * (maxCols - 1);
+    const colMinW = Array.from({ length: maxCols }, (_, ci) => {
+      let min = 104;
+      for (const row of rows) {
+        const id = row[ci];
+        if (id) min = Math.max(min, requiredNodeWidth(nodeMap.get(id)!, 104));
+      }
+      return min;
+    });
+    const colMinSum = colMinW.reduce((a, b) => a + b, 0);
+    const colExtra = Math.max(0, availRowW - colMinSum);
+    const perColBonus = Math.floor(colExtra / maxCols);
+    const colWidths = colMinW.map((w, ci) =>
+      ci === maxCols - 1
+        ? gw - padSide * 2 - colGap * (maxCols - 1) - colMinW.slice(0, -1).reduce((a, b) => a + b + perColBonus, 0)
+        : w + perColBonus,
+    );
+    const colXs: number[] = [];
+    let cx = gx + padSide;
+    for (let ci = 0; ci < maxCols; ci++) {
+      colXs.push(cx);
+      cx += colWidths[ci]! + colGap;
+    }
+
+    rows.forEach((rowIds, ri) => {
+      const ny = firstRowY + ri * (nodeH + rowGap);
+      const hasNull = rowIds.some((id) => id === null);
+      if (!hasNull && rowIds.length !== maxCols) {
+        const rGap = 20;
+        const rAvail = gw - padSide * 2 - rGap * (rowIds.length - 1);
+        const rMins = rowIds.map((id) => requiredNodeWidth(nodeMap.get(id!)!, 104));
+        const rExtra = Math.max(0, rAvail - rMins.reduce((a, b) => a + b, 0));
+        const rBonus = Math.floor(rExtra / rowIds.length);
+        let rx = gx + padSide;
+        rowIds.forEach((id, ci) => {
+          const nw = ci === rowIds.length - 1 ? gx + gw - padSide - rx : rMins[ci]! + rBonus;
+          const nBox: PosterBox = { id: id!, x: rx, y: ny, w: nw, h: nodeH };
+          nodes.push(nBox);
+          boxById.set(id!, nBox);
+          rx += nw + rGap;
+        });
+      } else {
+        rowIds.forEach((id, ci) => {
+          if (!id) return;
+          const nBox: PosterBox = { id, x: colXs[ci]!, y: ny, w: colWidths[ci]!, h: nodeH };
+          nodes.push(nBox);
+          boxById.set(id, nBox);
+        });
+      }
+    });
+  };
+
+  // 2. Left column: Layer Schedule / Genome inset + optional secondary footer group.
+  const schedCount = Math.max(1, spec.scheduleNodes.length);
+  const schedPadTop = 36;
+  const schedPadBottom = 16;
+  const schedGap = 10;
+  const maxLeftH = BODY_BOTTOM - BODY_Y;
+  const leftSplitGap = 16;
+  const schedDesiredH = spec.leftBottomGroup
+    ? Math.max(198, Math.min(maxLeftH - 188 - leftSplitGap, schedPadTop + schedPadBottom + schedCount * 58 + (schedCount - 1) * schedGap))
+    : maxLeftH;
+
   const schedGroupBox: PosterBox = {
     id: spec.scheduleGroupId,
     x: MARGIN_X,
     y: BODY_Y,
     w: SCHED_W,
-    h: BODY_BOTTOM - BODY_Y,
+    h: schedDesiredH,
   };
   groups.push(schedGroupBox);
   groupBoxById.set(spec.scheduleGroupId, schedGroupBox);
 
-  const schedPadTop = 38;
-  const schedPadBottom = 16;
   const schedInnerW = SCHED_W - 32;
-  const schedCount = Math.max(1, spec.scheduleNodes.length);
-  const schedGap = 10;
-  const maxRowH = 74;
+  const maxRowH = 68;
   const rawRowH = Math.floor(
     (schedGroupBox.h - schedPadTop - schedPadBottom - schedGap * (schedCount - 1)) / schedCount,
   );
@@ -157,6 +235,12 @@ export function buildPosterGridBlueprint(spec: PosterGridSpec): EditorialPosterB
     boxById.set(id, box);
   });
 
+  if (spec.leftBottomGroup) {
+    const botY = BODY_Y + schedDesiredH + leftSplitGap;
+    const botH = BODY_BOTTOM - botY;
+    placeRowsInGroup(spec.leftBottomGroup.groupId, spec.leftBottomGroup.rows, MARGIN_X, botY, SCHED_W, botH);
+  }
+
   // 3. Right column: Stacked Mechanism Lenses (proportional height by row count).
   const lensGap = 18;
   const lensCount = Math.max(1, spec.lenses.length);
@@ -172,72 +256,7 @@ export function buildPosterGridBlueprint(spec: PosterGridSpec): EditorialPosterB
         ? BODY_BOTTOM - gy
         : Math.floor((availLensH * lensWeights[li]!) / totalLensWeight);
     curLensY = gy + gh + lensGap;
-    const gBox: PosterBox = { id: lens.groupId, x: LENS_X, y: gy, w: LENS_W, h: gh };
-    groups.push(gBox);
-    groupBoxById.set(lens.groupId, gBox);
-
-    const padTop = 36;
-    const padSide = 22;
-    const padBottom = lens.rows.length > 1 ? 22 : 16;
-    const innerH = gh - padTop - padBottom;
-    const rowCount = lens.rows.length;
-    const rowGap = 14;
-    const nodeH = Math.max(44, Math.min(72, Math.floor((innerH - rowGap * (rowCount - 1)) / rowCount)));
-    const totalRowsH = rowCount * nodeH + (rowCount - 1) * rowGap;
-    const firstRowY = gy + padTop + Math.max(0, Math.floor((innerH - totalRowsH) / 2));
-
-    // Compute per-column widths across all rows when columns align (supports null spacers).
-    const maxCols = Math.max(...lens.rows.map((r) => r.length));
-    const colGap = 24;
-    const availRowW = LENS_W - padSide * 2 - colGap * (maxCols - 1);
-    const colMinW = Array.from({ length: maxCols }, (_, ci) => {
-      let min = 110;
-      for (const row of lens.rows) {
-        const id = row[ci];
-        if (id) min = Math.max(min, requiredNodeWidth(nodeMap.get(id)!, 110));
-      }
-      return min;
-    });
-    const colMinSum = colMinW.reduce((a, b) => a + b, 0);
-    const colExtra = Math.max(0, availRowW - colMinSum);
-    const perColBonus = Math.floor(colExtra / maxCols);
-    const colWidths = colMinW.map((w, ci) =>
-      ci === maxCols - 1 ? LENS_W - padSide * 2 - colGap * (maxCols - 1) - colMinW.slice(0, -1).reduce((a, b) => a + b + perColBonus, 0) : w + perColBonus,
-    );
-    const colXs: number[] = [];
-    let cx = LENS_X + padSide;
-    for (let ci = 0; ci < maxCols; ci++) {
-      colXs.push(cx);
-      cx += colWidths[ci]! + colGap;
-    }
-
-    lens.rows.forEach((rowIds, ri) => {
-      const ny = firstRowY + ri * (nodeH + rowGap);
-      // If a row has fewer columns than maxCols and no null spacers, stretch evenly across full lens width.
-      const hasNull = rowIds.some((id) => id === null);
-      if (!hasNull && rowIds.length !== maxCols) {
-        const rGap = 24;
-        const rAvail = LENS_W - padSide * 2 - rGap * (rowIds.length - 1);
-        const rMins = rowIds.map((id) => requiredNodeWidth(nodeMap.get(id!)!, 110));
-        const rExtra = Math.max(0, rAvail - rMins.reduce((a, b) => a + b, 0));
-        const rBonus = Math.floor(rExtra / rowIds.length);
-        let rx = LENS_X + padSide;
-        rowIds.forEach((id, ci) => {
-          const nw = ci === rowIds.length - 1 ? LENS_X + LENS_W - padSide - rx : rMins[ci]! + rBonus;
-          const nBox: PosterBox = { id: id!, x: rx, y: ny, w: nw, h: nodeH };
-          nodes.push(nBox);
-          boxById.set(id!, nBox);
-          rx += nw + rGap;
-        });
-      } else {
-        rowIds.forEach((id, ci) => {
-          if (!id) return;
-          const nBox: PosterBox = { id, x: colXs[ci]!, y: ny, w: colWidths[ci]!, h: nodeH };
-          nodes.push(nBox);
-          boxById.set(id, nBox);
-        });
-      }
-    });
+    placeRowsInGroup(lens.groupId, lens.rows, LENS_X, gy, LENS_W, gh);
   });
 
   // 4. Orthogonal non-overlapping callout routes + L-bend internal lens edges.
