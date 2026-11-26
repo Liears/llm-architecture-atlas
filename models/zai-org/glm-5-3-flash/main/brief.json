@@ -22,7 +22,7 @@
     },
     {
       "url": "https://arxiv.org/abs/2510.26692",
-      "title": "Kimi Linear: An Hybrid Fisher-Decay Linear Attention Model",
+      "title": "Kimi Linear: An Expressive, Efficient Attention Architecture",
       "role": "mechanism-only",
       "verifies": null,
       "locators": [

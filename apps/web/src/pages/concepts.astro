@@ -1,34 +1,184 @@
 ---
 import Base from "../layouts/Base.astro";
 
-const concepts = [
-  { slug: "gqa", name: "GQA — Grouped-Query Attention", text: "Several query heads share one key/value head. Shrinks the KV cache by the grouping factor while staying close to MHA quality." },
-  { slug: "mla", name: "MLA — Multi-head Latent Attention", text: "Projects keys and values into a shared low-rank latent that is cached instead of the full KV. Cache per token drops far below GQA at the same context." },
-  { slug: "dsa", name: "DSA — DeepSeek Sparse Attention", text: "A sparse attention stage on top of MLA: a lightning indexer selects a small token subset per query, so long-context cost grows sub-linearly." },
-  { slug: "kda", name: "KDA — Kimi Delta Attention", text: "A gated delta-rule linear attention: recurrent per-channel state updated with a gated delta rule. Constant-memory per-token cost, no KV cache." },
-  { slug: "moe", name: "MoE — Mixture of Experts", text: "The FFN is replaced by many expert FFNs; a router activates a small top-k subset per token. Total parameters grow, per-token compute does not." },
-  { slug: "mhc", name: "mHC — Manifold-constrained Hyper-Connections", text: "Replaces the plain residual add with several parallel residual streams mixed through a constrained combiner, improving gradient flow." },
-  { slug: "nope", name: "NoPE", text: "No positional encoding on some attention paths (e.g. MLA Q/K in GLM-5.3-Flash): position information is not injected there." },
-  { slug: "mtp", name: "MTP — Multi-Token Prediction", text: "An extra prediction layer trains the model to emit several future tokens per step; used for training signal and speculative decoding." },
+const groups = [
+  {
+    key: "concepts.groupSystemOne",
+    title: "System-1 / Jev-Class Decision Paradigm",
+    badgeClass: "pill-s1",
+    badge: "Non-Autoregressive",
+    items: [
+      {
+        slug: "system-one",
+        name: "System-1 Decision Model (Jev-class)",
+        text: "A non-autoregressive model that replaces token-by-token generation with a single forward pass over state and typed questions, returning calibrated probabilities directly consumable by code.",
+      },
+      {
+        slug: "primitives",
+        name: "Typed Decision Primitives (Noul / Choice / Score / Box)",
+        text: "Structured query contracts: Noul returns a Bernoulli true/false probability; Choice selects from discrete labels; Score maps onto an ordered rubric; Box localizes visual bounding coordinates.",
+      },
+      {
+        slug: "rlcd",
+        name: "RLCD — Reinforcement Learning for Calibrated Decisions",
+        text: "Post-training with strictly proper scoring rules (bounded log, spherical, and ranked probability scores) so reported probabilities match empirical correctness instead of overconfident classifier logits.",
+      },
+      {
+        slug: "readout",
+        name: "Marker Head vs. First-Token Logit Readout",
+        text: "Two open System-1 readout designs: Laya packs [MASK] option markers inside a bidirectional ModernBERT encoder with a 2-layer head + act/abstain head; OpenJev reuses a shared State prefix KV cache on a causal hybrid backbone and slices Pos-0 option-letter logits in one pass.",
+      },
+    ],
+  },
+  {
+    key: "concepts.groupAttention",
+    title: "Attention & Sequence State",
+    badgeClass: "pill-ar",
+    badge: "Sequence Core",
+    items: [
+      {
+        slug: "gqa",
+        name: "GQA — Grouped-Query Attention",
+        text: "Several query heads share one key/value head. Shrinks the KV cache by the grouping factor while staying close to MHA quality.",
+      },
+      {
+        slug: "mla",
+        name: "MLA — Multi-head Latent Attention",
+        text: "Projects keys and values into a shared low-rank latent that is cached instead of the full KV. Cache per token drops far below GQA at the same context.",
+      },
+      {
+        slug: "dsa",
+        name: "DSA — DeepSeek Sparse Attention",
+        text: "A sparse attention stage on top of MLA: a lightning indexer selects a small token subset per query, so long-context cost grows sub-linearly.",
+      },
+      {
+        slug: "kda",
+        name: "KDA — Kimi Delta Attention",
+        text: "A gated delta-rule linear attention: recurrent per-channel state updated with a gated delta rule. Constant-memory per-token cost, no KV cache.",
+      },
+      {
+        slug: "sliding-window",
+        name: "Sliding Window + Global Alternating Attention",
+        text: "Alternates local fixed-window attention layers (e.g. w=128 in ModernBERT/Laya) with periodic global full-attention layers to bound compute while preserving document-wide context.",
+      },
+    ],
+  },
+  {
+    key: "concepts.groupCompute",
+    title: "FFN, Residual & Auxiliary Heads",
+    badgeClass: "pill-moe",
+    badge: "Compute & Flow",
+    items: [
+      {
+        slug: "moe",
+        name: "MoE — Mixture of Experts",
+        text: "The FFN is replaced by many expert FFNs; a router activates a small top-k subset per token. Total parameters grow, per-token compute does not.",
+      },
+      {
+        slug: "mhc",
+        name: "mHC — Manifold-constrained Hyper-Connections",
+        text: "Replaces the plain residual add with several parallel residual streams mixed through a constrained combiner, improving gradient flow.",
+      },
+      {
+        slug: "nope",
+        name: "NoPE",
+        text: "No positional encoding on some attention paths (e.g. MLA Q/K in GLM-5.3-Flash): position information is not injected there.",
+      },
+      {
+        slug: "mtp",
+        name: "MTP — Multi-Token Prediction",
+        text: "An extra prediction layer trains the model to emit several future tokens per step; used for training signal and speculative decoding.",
+      },
+    ],
+  },
 ];
-
-const termBySlug = { gqa: "gqa", mla: "mla", dsa: "dsa", kda: "kda", moe: "moe", mhc: "mhc", nope: "nope", mtp: "mtp" };
 ---
 
-<Base title="Concepts — LLM Architecture Atlas">
-  <p class="eyebrow">Glossary</p>
-  <h1 data-i18n="concepts.title">Concepts</h1>
-  <dl>
-    {concepts.map((c) => (
-      <div id={termBySlug[c.slug as keyof typeof termBySlug]}>
-        <dt data-i18n={`concept.${c.slug}.name`}>{c.name}</dt>
-        <dd data-i18n={`concept.${c.slug}.text`}>{c.text}</dd>
-      </div>
-    ))}
-  </dl>
+<Base title="Concepts — LLM Architecture Atlas" active="concepts">
+  <header class="page-head">
+    <p class="eyebrow" data-i18n="concepts.eyebrow">Architectural Taxonomy</p>
+    <h1 data-i18n="concepts.title">Concepts</h1>
+    <p class="lead muted" data-i18n="concepts.subtitle">
+      Core mechanisms across autoregressive LLMs and non-autoregressive System-1 decision models.
+    </p>
+  </header>
+
+  {
+    groups.map((grp) => (
+      <section class="concept-section">
+        <div class="section-head">
+          <h2 data-i18n={grp.key}>{grp.title}</h2>
+          <span class={`pill ${grp.badgeClass}`}>{grp.badge}</span>
+        </div>
+        <dl class="concept-grid">
+          {grp.items.map((c) => (
+            <div class="concept-card" id={c.slug}>
+              <dt data-i18n={`concept.${c.slug}.name`}>{c.name}</dt>
+              <dd data-i18n={`concept.${c.slug}.text`}>{c.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    ))
+  }
+
   <style>
-    dl > div { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 0.7rem 1rem; margin-bottom: 0.7rem; max-width: 46rem; }
-    dt { font-weight: 700; }
-    dd { margin: 0.2rem 0 0; color: var(--ink); }
+    .page-head {
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.5rem;
+    }
+    .page-head h1 {
+      margin: 0 0 0.35rem;
+      font-size: clamp(1.9rem, 3.6vw, 2.5rem);
+      letter-spacing: -0.025em;
+    }
+    .lead {
+      margin: 0;
+      max-width: 44rem;
+    }
+    .concept-section {
+      margin-bottom: 2.2rem;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.9rem;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      letter-spacing: -0.015em;
+    }
+    .concept-grid {
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(21rem, 1fr));
+      gap: 0.85rem;
+    }
+    .concept-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 0.95rem 1.05rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .concept-card:target {
+      border-color: var(--attention);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--attention) 25%, transparent);
+    }
+    dt {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.3rem;
+    }
+    dd {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
   </style>
 </Base>

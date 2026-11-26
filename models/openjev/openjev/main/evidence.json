@@ -1,0 +1,231 @@
+{
+  "model_id": "openjev/openjev",
+  "claims": [
+    {
+      "path": "facts.num_hidden_layers",
+      "value": 64,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.num_hidden_layers"
+      }
+    },
+    {
+      "path": "facts.hidden_size",
+      "value": 5120,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.hidden_size"
+      }
+    },
+    {
+      "path": "facts.num_attention_heads",
+      "value": 24,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.num_attention_heads"
+      }
+    },
+    {
+      "path": "facts.num_key_value_heads",
+      "value": 4,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.num_key_value_heads"
+      }
+    },
+    {
+      "path": "facts.head_dim",
+      "value": 256,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.head_dim"
+      }
+    },
+    {
+      "path": "facts.vocab_size",
+      "value": 248320,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.vocab_size"
+      }
+    },
+    {
+      "path": "facts.context_tokens",
+      "value": 262144,
+      "status": "reported",
+      "note": "Native config max_position_embeddings=262144; primary measured vLLM serving recipe uses --max-model-len 16384",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.max_position_embeddings"
+      }
+    },
+    {
+      "path": "facts.total_params",
+      "value": 27356728560,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/model.safetensors.index.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.metadata.total_parameters"
+      }
+    },
+    {
+      "path": "facts.active_params",
+      "value": 27356728560,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "Dense Qwen3_5MLP across all 64 layers (no sparse MoE routing)"
+      }
+    },
+    {
+      "path": "topology.paradigm",
+      "value": "system_one_decision",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/helper/shim.py",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "/v1/systemone single-prefill endpoint (max_tokens=1, no autoregressive generation)"
+      }
+    },
+    {
+      "path": "topology.decision_head.readout_mode",
+      "value": "first_token_letter_logits",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/helper/shim.py",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "First output-position logprobs over option letters A-Z/a-z -> softmax"
+      }
+    },
+    {
+      "path": "topology.decision_head.primitives",
+      "value": [
+        "choice",
+        "noul",
+        "score"
+      ],
+      "status": "reported",
+      "source": {
+        "kind": "model_card",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/README.md",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "Quick example: choice, noul, and score question schemas"
+      }
+    },
+    {
+      "path": "topology.decision_head.max_options",
+      "value": 52,
+      "status": "reported",
+      "source": {
+        "kind": "model_card",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/README.md",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "Request limits: Up to 52 options per question in a single pass (A-Z, a-z)"
+      }
+    },
+    {
+      "path": "topology.decision_head.calibration",
+      "value": "READOUT_T=0.85, READOUT_NOUL_T=1.829074 fixed post-hoc logit temperature scaling",
+      "status": "reported",
+      "source": {
+        "kind": "model_card",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/README.md",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "Quick start serving flags: READOUT_T=0.85, READOUT_NOUL_T=1.829074"
+      }
+    },
+    {
+      "path": "topology.decision_head.prefix_cache",
+      "value": true,
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/helper/shim.py",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "prefix_text() + pad_prefix(SHIM_PAD) + prewarm() with --enable-prefix-caching"
+      }
+    },
+    {
+      "path": "topology.decision_head.vision_encoder",
+      "value": "qwen3_5_vision (27 depth, 1152 hidden_size, 16 heads)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.vision_config (depth=27, hidden_size=1152, num_heads=16)"
+      }
+    },
+    {
+      "path": "topology.attention_groups[0]",
+      "value": "48 Gated DeltaNet layers (linear_attention, 3:1 schedule)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.layer_types & $.text_config.linear_*"
+      }
+    },
+    {
+      "path": "topology.attention_groups[1]",
+      "value": "16 Gated Attention (GQA) layers (every 4th layer)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.layer_types & $.text_config.full_attention_interval = 4"
+      }
+    },
+    {
+      "path": "topology.ffn_groups[0]",
+      "value": "64 Dense SwiGLU layers (intermediate_size=17408)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.intermediate_size & $.text_config.hidden_act = silu"
+      }
+    },
+    {
+      "path": "topology.position_encoding.type",
+      "value": "rope",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/openjev/openjev/raw/b4a89f5884f3482a5e894b2e7ff01db8ea033726/config.json",
+        "revision": "b4a89f5884f3482a5e894b2e7ff01db8ea033726",
+        "locator": "$.text_config.rope_parameters (mrope_interleaved, partial_rotary_factor=0.25)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "ir_version": "0.1.0",
+  "model": {
+    "id": "convaiinnovations/laya",
+    "label": "Laya (421M · System-1)",
+    "family": "Laya",
+    "revision": "fd4f9dbcf4",
+    "license": "apache-2.0"
+  },
+  "facts": {
+    "num_hidden_layers": 28,
+    "hidden_size": 1024,
+    "num_attention_heads": 16,
+    "num_key_value_heads": 16,
+    "head_dim": 64,
+    "vocab_size": 50368,
+    "context_tokens": 512,
+    "total_params": 421293830,
+    "active_params": 421293830
+  },
+  "topology": {
+    "paradigm": "system_one_decision",
+    "decision_head": {
+      "readout_mode": "mask_marker_mlp",
+      "primitives": [
+        "choice",
+        "score",
+        "noul"
+      ],
+      "head_layers": 2,
+      "calibration": "rlcd_proper_scoring_temp",
+      "action_head": "act_head (act / escalate)",
+      "max_options": null,
+      "prefix_cache": false,
+      "vision_encoder": null,
+      "note": "Packs [CLS] type+instructions [SEP] [MASK] opt_i ... [SEP] state [SEP]; adds 3-way type_emb + 2-layer pre-norm TransformerEncoder head + LN/Linear/GELU/Linear scorer + per-qtype temperature + act_head"
+    },
+    "attention_groups": [
+      {
+        "label": "Full Attention",
+        "kind": "mha",
+        "module": "ModernBertAttention (global)",
+        "layers": [
+          0,
+          3,
+          6,
+          9,
+          12,
+          15,
+          18,
+          21,
+          24,
+          27
+        ]
+      },
+      {
+        "label": "Sliding Window (w=128)",
+        "kind": "sliding_window",
+        "module": "ModernBertAttention (local=128)",
+        "layers": [
+          1,
+          2,
+          4,
+          5,
+          7,
+          8,
+          10,
+          11,
+          13,
+          14,
+          16,
+          17,
+          19,
+          20,
+          22,
+          23,
+          25,
+          26
+        ]
+      }
+    ],
+    "ffn_groups": [
+      {
+        "label": "Dense GeGLU",
+        "kind": "dense_ffn",
+        "module": "ModernBertMLP (GeGLU)",
+        "layers": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27
+        ]
+      }
+    ],
+    "experts": null,
+    "residual": {
+      "scheme": "plain",
+      "streams": null,
+      "note": "Bidirectional pre-norm residual connections across 28 encoder layers and 2 decision-head layers"
+    },
+    "position_encoding": {
+      "type": "rope",
+      "note": "ModernBERT RoPE: theta=160,000 on full_attention layers, theta=10,000 on sliding_attention layers"
+    }
+  }
+}

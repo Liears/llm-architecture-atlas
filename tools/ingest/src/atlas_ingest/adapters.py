@@ -68,13 +68,16 @@ def claims_from_hf_config(config: dict[str, Any], url: str, revision: str = "mai
     if ctx is not None:
         out.append(c("facts.context_tokens", ctx, "$.max_position_embeddings"))
 
-    routed = get("n_routed_experts", "num_local_experts")
-    active = get("num_experts_per_tok")
-    shared = get("n_shared_experts")
+    routed = get("n_routed_experts", "num_local_experts", "num_experts")
+    active = get("num_experts_per_tok", "num_experts_per_token")
+    shared = get("n_shared_experts", "num_shared_experts")
     if routed is not None:
-        out.append(c("topology.experts.routed_total", routed, "$.n_routed_experts|$.num_local_experts"))
-        out.append(c("topology.experts.active_routed", active, "$.num_experts_per_tok"))
-        out.append(c("topology.experts.shared", shared, "$.n_shared_experts"))
+        routed_loc = "$.n_routed_experts" if "n_routed_experts" in config else "$.num_local_experts" if "num_local_experts" in config else "$.num_experts"
+        active_loc = "$.num_experts_per_tok" if "num_experts_per_tok" in config else "$.num_experts_per_token"
+        shared_loc = "$.n_shared_experts" if "n_shared_experts" in config else "$.num_shared_experts"
+        out.append(c("topology.experts.routed_total", routed, routed_loc))
+        out.append(c("topology.experts.active_routed", active, active_loc))
+        out.append(c("topology.experts.shared", shared, shared_loc))
 
     # attention family classification
     if family == "deepseek" or get("kv_lora_rank") is not None:

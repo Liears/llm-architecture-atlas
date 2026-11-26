@@ -1,0 +1,222 @@
+{
+  "model_id": "convaiinnovations/laya",
+  "claims": [
+    {
+      "path": "facts.num_hidden_layers",
+      "value": 28,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.num_hidden_layers"
+      }
+    },
+    {
+      "path": "facts.hidden_size",
+      "value": 1024,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.hidden_size"
+      }
+    },
+    {
+      "path": "facts.num_attention_heads",
+      "value": 16,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.num_attention_heads"
+      }
+    },
+    {
+      "path": "facts.num_key_value_heads",
+      "value": 16,
+      "status": "derived",
+      "extractor": "facts.mha-kv-heads@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "ModernBertForMaskedLM uses standard multi-head attention (kv_heads == num_attention_heads = 16)"
+      }
+    },
+    {
+      "path": "facts.head_dim",
+      "value": 64,
+      "status": "derived",
+      "extractor": "facts.head-dim@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "hidden_size (1024) / num_attention_heads (16) = 64"
+      }
+    },
+    {
+      "path": "facts.vocab_size",
+      "value": 50368,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.vocab_size"
+      }
+    },
+    {
+      "path": "facts.context_tokens",
+      "value": 512,
+      "status": "reported",
+      "note": "Operational sequence budget max_len=512 (head_max_len=192) in rl_agent_config.json; ModernBERT encoder supports max_position_embeddings=8192",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_agent_config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.max_len"
+      }
+    },
+    {
+      "path": "facts.total_params",
+      "value": 421293830,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/api/models/convaiinnovations/laya?blobs=true",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.safetensors.total (421,293,830 params across model.safetensors)"
+      }
+    },
+    {
+      "path": "facts.active_params",
+      "value": 421293830,
+      "status": "derived",
+      "extractor": "facts.active-params@1",
+      "source": {
+        "kind": "derived",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_common.py",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "Dense bidirectional encoder + decision head execute all weights in one forward pass"
+      }
+    },
+    {
+      "path": "topology.paradigm",
+      "value": "system_one_decision",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_agent_api.py",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "RLAgent.system_one: non-autoregressive single forward pass returning typed probabilities"
+      }
+    },
+    {
+      "path": "topology.decision_head.readout_mode",
+      "value": "mask_marker_mlp",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_common.py",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "DecisionModel.forward: gather hidden states at [MASK] marker_pos -> scorer MLP"
+      }
+    },
+    {
+      "path": "topology.decision_head.primitives",
+      "value": [
+        "choice",
+        "score",
+        "noul"
+      ],
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_common.py",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "QTYPES = {\"choice\": 0, \"score\": 1, \"noul\": 2}"
+      }
+    },
+    {
+      "path": "topology.decision_head.head_layers",
+      "value": 2,
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_agent_config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.head_layers"
+      }
+    },
+    {
+      "path": "topology.decision_head.calibration",
+      "value": "RLCD proper scoring (log + 0.5*spherical - RPS) + per-qtype temperature",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_common.py",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "proper_reward() and DecisionModel.temperature buffer"
+      }
+    },
+    {
+      "path": "topology.decision_head.action_head",
+      "value": "act_head: pooled [CLS] + 4 distribution features -> act / escalate",
+      "status": "reported",
+      "source": {
+        "kind": "source_code",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/rl_common.py",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "DecisionModel.act_head (Linear(d+4, 256) -> GELU -> Linear(256, n_act))"
+      }
+    },
+    {
+      "path": "topology.attention_groups[0]",
+      "value": "10 Full Attention (global) layers (every 3rd layer)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.layer_types & $.global_attn_every_n_layers = 3"
+      }
+    },
+    {
+      "path": "topology.attention_groups[1]",
+      "value": "18 Sliding Window (local=128) layers",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.layer_types & $.local_attention = 128"
+      }
+    },
+    {
+      "path": "topology.ffn_groups[0]",
+      "value": "28 Dense GeGLU layers (intermediate_size=2624)",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.intermediate_size & $.hidden_activation = gelu"
+      }
+    },
+    {
+      "path": "topology.position_encoding.type",
+      "value": "rope",
+      "status": "reported",
+      "source": {
+        "kind": "hf_config",
+        "url": "https://huggingface.co/convaiinnovations/laya/raw/fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1/encoder/config.json",
+        "revision": "fd4f9dbcf4fde222fd43174bdd4c3b08b789e4e1",
+        "locator": "$.rope_parameters (full=160000.0, sliding=10000.0)"
+      }
+    }
+  ]
+}

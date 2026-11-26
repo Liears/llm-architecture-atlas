@@ -155,6 +155,29 @@ class PositionEncoding(BaseModel):
     note: str | None = None
 
 
+class ExecutionParadigm(str, Enum):
+    """High-level execution family: generative decoding vs non-autoregressive System-1 decision."""
+
+    autoregressive_lm = "autoregressive_lm"
+    system_one_decision = "system_one_decision"
+
+
+class DecisionHeadConfig(BaseModel):
+    """Typed decision readout and calibration structure for System-1 models."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    readout_mode: str  # e.g. "mask_marker_mlp" | "first_token_letter_logits"
+    primitives: list[str] = Field(default_factory=list)
+    head_layers: int | None = None
+    calibration: str | None = None
+    action_head: str | None = None
+    max_options: int | None = None
+    prefix_cache: bool | None = None
+    vision_encoder: str | None = None
+    note: str | None = None
+
+
 class ModelTopology(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -163,6 +186,8 @@ class ModelTopology(BaseModel):
     experts: ExpertConfig | None = None
     residual: ResidualScheme | None = None
     position_encoding: PositionEncoding | None = None
+    paradigm: ExecutionParadigm | None = None
+    decision_head: DecisionHeadConfig | None = None
 
 
 class ModelDocument(BaseModel):

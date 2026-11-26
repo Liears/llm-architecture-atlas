@@ -1,7 +1,7 @@
 /**
  * Semantic design tokens (issue #4, docs/development-plan.md §7.2).
  *
- * Direction: "logic analyzer + engineering blueprint" without neon-on-black.
+ * Direction: "logic analyzer + Swiss engineering monograph" without neon-on-black.
  * Every token is semantic (role-based); light and dark are equally
  * first-class, and the test suite enforces WCAG AA contrast for the pairs a
  * UI may combine. Colors never carry meaning alone — pair with shape, line
@@ -19,6 +19,10 @@ export interface ThemeTokens {
   muted: string;
   /** Raised surface (cards, insets). */
   panel: string;
+  /** Recessed surface well (inset header bands, secondary wells). */
+  surface: string;
+  /** Subtle drafting micro-grid dot/line color. */
+  grid: string;
   /** Hairlines and separators. */
   line: string;
   /** Attention / primary data flow. */
@@ -27,6 +31,8 @@ export interface ThemeTokens {
   state: string;
   /** FFN / MoE compute. */
   compute: string;
+  /** System-1 decision head, typed readout, probability calibration. */
+  decision: string;
   /** Conflict, unknown, warning. */
   conflict: string;
   /** Keyboard focus ring. */
@@ -37,12 +43,15 @@ export const themes: Record<ThemeName, ThemeTokens> = {
   light: {
     paper: "#F5F7FA",
     ink: "#172033",
-    muted: "#5D6778",
+    muted: "#586377",
     panel: "#FFFFFF",
+    surface: "#EDF1F7",
+    grid: "#D7DFEC",
     line: "#B9C2D2",
     attention: "#1769E0",
     state: "#007A7A",
     compute: "#B45309",
+    decision: "#6D28D9",
     conflict: "#B3383F",
     focus: "#1769E0",
   },
@@ -50,18 +59,21 @@ export const themes: Record<ThemeName, ThemeTokens> = {
     paper: "#0B1220",
     ink: "#E6EBF4",
     muted: "#97A3B8",
-    panel: "#101A2E",
+    panel: "#111B2E",
+    surface: "#17243C",
+    grid: "#1E2D4A",
     line: "#3A465C",
     attention: "#6EA8FF",
     state: "#2DD4BF",
     compute: "#F5A623",
+    decision: "#B89AFF",
     conflict: "#FF8A96",
     focus: "#9EC1FF",
   },
 };
 
 /** Shape and stroke tokens: semantic role -> value (renderer consumes these). */
-export const radii = { node: 10, container: 28, chip: 8 } as const;
+export const radii = { node: 10, container: 16, chip: 6 } as const;
 
 export const strokeWidths = {
   hairline: 1,

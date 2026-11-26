@@ -1,16 +1,29 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { loadModels } from "../../lib/atlas.js";
-import { buildGenome, genomeCellRole, formatParams, formatContext } from "@atlas/catalog";
+import { buildCatalog, buildGenome, genomeCellRole, formatParams, formatContext } from "@atlas/catalog";
+import {
+  buildScheduleRuns,
+  compileForModel,
+  compileLayerBlockSubview,
+  compileModuleSubview,
+  positionForModel,
+  type CompiledSubview,
+} from "@atlas/diagram-engine";
+import { renderSvg } from "@atlas/renderer-svg";
 
 export function getStaticPaths() {
-  return loadModels().map((m) => ({ params: { slug: m.slug }, props: { model: m } }));
+  const all = loadModels();
+  return all.map((m, idx) => ({ params: { slug: m.slug }, props: { model: m, index: idx, allModels: all } }));
 }
 
-const { model } = Astro.props;
-const { arch, evidence } = model;
+const { model, index, allModels } = Astro.props;
+const { arch, evidence, brief } = model;
 const facts = arch.facts;
 const genome = buildGenome(arch);
+const [entry] = buildCatalog([arch]);
+const isSystemOne = entry!.paradigm === "system_one_decision";
+const dh = arch.topology.decision_head;
 
 const roleColor: Record<string, string> = {
   attention: "var(--attention)",
@@ -19,163 +32,981 @@ const roleColor: Record<string, string> = {
   muted: "var(--line)",
 };
 
-const attnLabels = arch.topology.attention_groups.map((g) => g.label);
-const ffnLabels = arch.topology.ffn_groups.map((g) => g.label);
+const attnGroups = arch.topology.attention_groups;
+const ffnGroups = arch.topology.ffn_groups;
+const attnLabels = attnGroups.map((g) => g.label);
+const ffnLabels = ffnGroups.map((g) => g.label);
 
 const statusSymbol = (s: string) =>
   s === "verified" ? "✓" : s === "reported" ? "•" : s === "derived" ? "=" : s === "inferred" ? "?" : s === "conflict" ? "!" : "?";
+
+const otherOptions = allModels
+  .map((m, i) => ({
+    slug: m.slug,
+    label: m.arch.model.label,
+    pairUrl:
+      i < index
+        ? `/llm-architecture-atlas/compare/${m.slug}--vs--${model.slug}/`
+        : `/llm-architecture-atlas/compare/${model.slug}--vs--${m.slug}/`,
+  }))
+  .filter((o) => o.slug !== model.slug);
+
+const statusCounts = evidence.claims.reduce<Record<string, number>>((acc, c) => {
+  acc[c.status] = (acc[c.status] ?? 0) + 1;
+  return acc;
+}, {});
+
+const scheduleRuns = buildScheduleRuns(facts.num_hidden_layers, attnGroups, ffnGroups);
+
+const spineSummary = isSystemOne
+  ? dh?.readout_mode === "mask_marker_mlp"
+    ? ["State + Typed Q", "Token + Type Emb", `${facts.num_hidden_layers}L Encoder`, `${dh.head_layers ?? 2}L Decision Head`, "Calibrated Scorer", "Typed JSON"]
+    : ["State + Image + Q", "Embed + Vision", `${facts.num_hidden_layers}L Hybrid`, "1-Step Prefill", "Letter Logits + T", "Typed JSON"]
+  : ["Token ids", "Token embedding", `${facts.num_hidden_layers}L Decoder`, "Final RMSNorm", "LM head"];
+
+const attnSummaryStr = attnGroups.map((g) => `${g.layers.length} ${g.label}`).join(" + ");
+const ffnSummaryStr = ffnGroups.map((g) => `${g.layers.length} ${g.label}`).join(" → ");
+const archSummaryLine = isSystemOne
+  ? `${facts.num_hidden_layers}-layer non-autoregressive System-1 encoder (${attnSummaryStr}; readout: ${dh?.readout_mode ?? "decision head"}) · ${formatParams(facts.total_params)} params.`
+  : `${facts.num_hidden_layers}-layer autoregressive decoder (${attnSummaryStr}; ${ffnSummaryStr}${arch.topology.residual?.scheme === "mhc" ? `; ${arch.topology.residual.streams}-stream mHC` : ""}) · ${formatParams(facts.total_params)}${facts.active_params && facts.active_params !== facts.total_params ? ` / ${formatParams(facts.active_params)} active` : ""}.`;
+
+// Build-time overview hotspot boxes + real compiled per-layer & module subviews (#36, #37)
+const overviewScene = compileForModel(arch, evidence);
+const { positioned: overviewPos } = positionForModel(overviewScene);
+
+interface OverviewHotspot {
+  id: string;
+  kind: "node" | "edge";
+  label: string;
+  detail?: string;
+  claimPaths: string[];
+  xPct: number;
+  yPct: number;
+  wPct: number;
+  hPct: number;
+}
+
+const clampPct = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+function polylineMidpoint(pts: Array<{ x: number; y: number }>): { x: number; y: number } {
+  if (pts.length === 1) return pts[0]!;
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    total += Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y);
+  }
+  if (total === 0) return pts[0]!;
+  let target = total / 2;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    const seg = Math.hypot(b.x - a.x, b.y - a.y);
+    if (target <= seg) {
+      const t = seg === 0 ? 0 : target / seg;
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    }
+    target -= seg;
+  }
+  return pts[pts.length - 1]!;
+}
+
+const overviewNodeById = new Map(overviewScene.nodes.map((n) => [n.id, n]));
+const overviewEdgeById = new Map(overviewScene.edges.map((e) => [e.id, e]));
+
+const overviewNodeHotspots: OverviewHotspot[] = overviewPos.nodes
+  .map((box): OverviewHotspot | null => {
+    const sem = overviewNodeById.get(box.id);
+    if (!sem) return null;
+    const paths = new Set<string>();
+    if (sem.claimPath) paths.add(sem.claimPath);
+    for (const c of sem.claims ?? []) paths.add(c.claimPath);
+    if (paths.size === 0) return null;
+    return {
+      id: sem.id,
+      kind: "node",
+      label: sem.label,
+      ...(sem.detail ? { detail: sem.detail } : {}),
+      claimPaths: [...paths],
+      xPct: Number(((box.x / overviewPos.size.w) * 100).toFixed(3)),
+      yPct: Number(((box.y / overviewPos.size.h) * 100).toFixed(3)),
+      wPct: Number(((box.w / overviewPos.size.w) * 100).toFixed(3)),
+      hPct: Number(((box.h / overviewPos.size.h) * 100).toFixed(3)),
+    };
+  })
+  .filter((x): x is OverviewHotspot => x !== null);
+
+const overviewEdgeHotspots: OverviewHotspot[] = overviewPos.edges
+  .map((edge): OverviewHotspot | null => {
+    if (!edge.claimPath || edge.points.length < 2) return null;
+    const sem = overviewEdgeById.get(edge.id);
+    const fromLabel = sem ? (overviewNodeById.get(sem.from)?.label ?? sem.from) : "";
+    const toLabel = sem ? (overviewNodeById.get(sem.to)?.label ?? sem.to) : "";
+    const label =
+      edge.label && fromLabel && toLabel
+        ? `${fromLabel} → ${toLabel} (${edge.label})`
+        : fromLabel && toLabel
+          ? `${fromLabel} → ${toLabel}`
+          : (edge.label ?? edge.id);
+    const mid = polylineMidpoint(edge.points);
+    return {
+      id: edge.id,
+      kind: "edge",
+      label,
+      claimPaths: [edge.claimPath],
+      xPct: Number(clampPct((mid.x / overviewPos.size.w) * 100, 2, 98).toFixed(3)),
+      yPct: Number(clampPct((mid.y / overviewPos.size.h) * 100, 3, 97).toFixed(3)),
+      wPct: 2.4,
+      hPct: 3.4,
+    };
+  })
+  .filter((x): x is OverviewHotspot => x !== null);
+
+const overviewHotspots: OverviewHotspot[] = [...overviewEdgeHotspots, ...overviewNodeHotspots];
+
+const subviews: Record<string, { title: string; subtitle: string; svg: string }> = {};
+const layerToSubviewKey: Record<string, string> = {};
+
+const renderSub = (sub: CompiledSubview) => {
+  subviews[sub.key] = {
+    title: sub.title,
+    subtitle: sub.subtitle,
+    svg: renderSvg(sub.positioned, { title: `${arch.model.label} — ${sub.title}`, showTitle: true }),
+  };
+};
+
+// Module subviews
+for (const modKind of ["attention", "ffn", "residual"] as const) {
+  renderSub(compileModuleSubview(arch, evidence, modKind));
+}
+if (isSystemOne && dh) {
+  renderSub(compileModuleSubview(arch, evidence, "decision"));
+}
+
+// Per-layer block subviews compiled once per distinct (attention, ffn, tail) class
+for (let i = 0; i < facts.num_hidden_layers; i++) {
+  const blockSub = compileLayerBlockSubview(arch, evidence, i);
+  layerToSubviewKey[String(i)] = blockSub.key;
+  if (!subviews[blockSub.key]) {
+    renderSub(blockSub);
+  }
+}
+
+const evidencePayload = {
+  model: arch.model,
+  ir_version: arch.ir_version,
+  paradigm: entry!.paradigm,
+  claims: evidence.claims,
+  brief: brief ?? null,
+};
 ---
 
-<Base title={`${arch.model.label} — LLM Architecture Atlas`}>
-  <p class="eyebrow">Model overview · {arch.model.family}</p>
-  <h1>{arch.model.label}</h1>
-  <p class="muted">
-    <span data-i18n="detail.generatedFrom">Generated from Architecture IR</span> {arch.ir_version} · <span data-i18n="detail.revision">revision</span> <code>{arch.model.revision}</code>
-    · <a href="https://github.com/Liears/llm-architecture-atlas/issues" data-i18n="detail.reportCorrection">report a correction</a>
-  </p>
-
-  <h2 data-i18n="detail.overview">Overview</h2>
-  <div class="figure-wrap" data-atlas-scroll="x" tabindex="0" aria-label="Scrollable architecture figure">
-    <img
-      src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
-      alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
-    />
-  </div>
-  <p>
-    <a href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download data-i18n="detail.downloadSvg">Download SVG</a>
-    <button type="button" class="png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={`${model.slug}`} data-i18n="detail.downloadPng">Download PNG</button>
-  </p>
-
-  <h2 data-i18n="detail.factSheet">Fact sheet</h2>
-  <dl class="facts">
-    <div><dt data-i18n="fact.layers">Layers</dt><dd>{facts.num_hidden_layers}</dd></div>
-    <div><dt data-i18n="fact.hiddenSize">Hidden size</dt><dd>{facts.hidden_size}</dd></div>
-    <div><dt data-i18n="fact.heads">Attention heads</dt><dd>{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}</dd></div>
-    <div><dt data-i18n="fact.vocab">Vocab</dt><dd>{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></div>
-    <div><dt data-i18n="fact.context">Context</dt><dd>{formatContext(facts.context_tokens)}</dd></div>
-    <div><dt data-i18n="fact.params">Params</dt><dd>{facts.total_params ? `${formatParams(facts.total_params)} total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${formatParams(facts.active_params)} active` : ""}</dd></div>
-  </dl>
-
-  <h2 data-i18n="detail.genome">Architecture Genome</h2>
-  <p class="muted" data-i18n="detail.genomeNote">One column per layer — top: attention, bottom: FFN/MoE.</p>
-  <div class="genome" data-atlas-scroll="x" role="listbox" aria-label={`Per-layer genome: ${genome.numLayers} layers. Arrow keys move, Enter selects.`} tabindex="0">
-    {genome.layers.map((l) => (
-      <button
-        type="button"
-        class="col"
-        role="option"
-        aria-selected="false"
-        data-layer={String(l.index)}
-        data-attention={l.attention}
-        data-attn-kind={l.attentionKind}
-        data-ffn={l.ffn}
-        data-ffn-kind={l.ffnKind}
-        title={`layer ${l.index}: attention ${l.attention} · ffn ${l.ffn}`}
-      >
-        <span class="cell" style={`background:${roleColor[genomeCellRole(l)]}`} />
-        <span class="cell ffn" style={`background:${l.ffnKind === "moe" ? "var(--compute)" : "var(--line)"}`} />
-      </button>
-    ))}
-  </div>
-  <script type="application/json" id="attn-labels" set:html={JSON.stringify(attnLabels)}></script>
-  <script type="application/json" id="ffn-labels" set:html={JSON.stringify(ffnLabels)}></script>
-
-  <div id="layer-detail" class="layer-detail" hidden data-testid="layer-detail">
-    <strong>Layer <span id="ld-index"></span></strong>
-    <span id="ld-attention"></span>
-    <span id="ld-ffn"></span>
-    <span class="muted" id="ld-evidence"></span>
+<Base title={`${arch.model.label} — LLM Architecture Atlas`} active="detail">
+  <div class="crumb-row">
+    <a class="crumb-back" href="/llm-architecture-atlas/" data-i18n="detail.backCatalog">← Catalog</a>
+    <div class="crumb-meta">
+      <span class={`pill ${isSystemOne ? "pill-s1" : "pill-ar"}`}>
+        {isSystemOne ? "System-1 · Non-Autoregressive" : "System-2 · Autoregressive"}
+      </span>
+      <span class="pill">{arch.model.family ?? "Other"}</span>
+      {arch.model.license && <span class="pill mono">{arch.model.license}</span>}
+    </div>
   </div>
 
-  <p class="legend muted">
-    <span class="key"><span class="cell" style="background:var(--attention)" /> attention (GQA/MLA)</span>
-    <span class="key"><span class="cell" style="background:var(--state)" /> linear / recurrent attention</span>
-    <span class="key"><span class="cell" style="background:var(--compute)" /> MoE</span>
-    <span class="key"><span class="cell" style="background:var(--line)" /> dense FFN</span>
-  </p>
+  <header class="detail-head">
+    <div class="head-copy">
+      <h1>{arch.model.label}</h1>
+      <p class="arch-summary">{archSummaryLine}</p>
+      <p class="muted meta-line">
+        <span data-i18n="detail.generatedFrom">Architecture IR</span> {arch.ir_version} ·
+        <span data-i18n="detail.revision">Revision</span> <code class="rev-chip">{arch.model.revision}</code> ·
+        <a href="https://github.com/Liears/llm-architecture-atlas/issues" data-i18n="detail.reportCorrection">Report correction</a>
+      </p>
+    </div>
 
-  <h2 data-i18n="detail.evidence">Evidence</h2>
-  <p class="muted" data-i18n="detail.evidenceNote">Every visible number resolves to one of these claims. Inferred or unknown values are never shown as fact.</p>
-  <div class="evidence-wrap" data-atlas-scroll="x">
-  <table class="evidence">
-    <thead><tr>
-        <th data-i18n="detail.claim">Claim</th>
-        <th data-i18n="detail.value">Value</th>
-        <th data-i18n="detail.status">Status</th>
-        <th data-i18n="detail.source">Source</th>
-      </tr></thead>
-    <tbody>
-      {evidence.claims.map((c) => (
-        <tr>
-          <td><code>{c.path}</code></td>
-          <td>{c.status === "unknown" ? "—" : JSON.stringify(c.value)}</td>
-          <td><span class={`chip chip-${c.status}`} data-i18n={`status.${c.status}`}>{statusSymbol(c.status)} {c.status}</span></td>
-          <td>{c.source?.url ? <a href={c.source.url} rel="noopener noreferrer">{c.source.kind}</a> : c.source?.kind} {c.source?.locator && <span class="muted">· {c.source.locator}</span>}</td>
-        </tr>
+    <div class="compare-picker">
+      <select id="compare-target" aria-label="Compare with another model">
+        <option value="" data-i18n="detail.compareWith">Compare with…</option>
+        {otherOptions.map((o) => <option value={o.pairUrl}>{o.label}</option>)}
+      </select>
+    </div>
+  </header>
+
+  <section class="section stage-section" aria-label="Architecture diagram explorer">
+    <div class="section-bar">
+      <div class="stage-heading">
+        <h2 data-i18n="detail.overview">Architecture Plate</h2>
+        <div class="view-tabs" role="tablist" aria-label="Architecture subviews">
+          <button type="button" role="tab" aria-selected="true" class="vtab active" data-subview="overview" data-i18n="detail.viewOverview">Overview</button>
+          <button type="button" role="tab" aria-selected="false" class="vtab" data-subview="attention" data-i18n="detail.viewAttn">Attention</button>
+          <button type="button" role="tab" aria-selected="false" class="vtab" data-subview="ffn" data-i18n="detail.viewFfn">MoE / FFN</button>
+          <button type="button" role="tab" aria-selected="false" class="vtab" data-subview="residual" data-i18n="detail.viewResidual">Residual</button>
+          {isSystemOne && dh && (
+            <button type="button" role="tab" aria-selected="false" class="vtab" data-subview="decision" data-i18n="detail.viewDecision">Decision</button>
+          )}
+          <button type="button" role="tab" aria-selected="false" class="vtab" id="tab-block" data-subview="block">
+            <span data-i18n="detail.viewBlock">Layer Block</span> <span id="tab-block-idx" class="mono">L0</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-controls" role="toolbar" aria-label="Diagram zoom and export controls">
+        <button type="button" id="reset-overview-btn" class="btn btn-subtle" hidden data-i18n="detail.resetOverview">Back to Overview</button>
+        <div class="view-modes" role="group" aria-label="Zoom mode">
+          <button type="button" class="vbtn active" data-view-mode="fit" data-i18n="detail.fitView">Fit</button>
+          <button type="button" class="vbtn" data-view-mode="pan" data-i18n="detail.scrollView">1:1 Pan</button>
+          <button type="button" class="vbtn" data-view-mode="zoom" data-i18n="detail.zoomView">135%</button>
+        </div>
+        <div class="export-btns">
+          <a class="btn" href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download data-i18n="detail.downloadSvg">Download SVG</a>
+          <button type="button" class="btn png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={model.slug} data-i18n="detail.downloadPng">Download PNG</button>
+          <button type="button" class="btn copy-svg-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-i18n="detail.copySvg">Copy SVG</button>
+          <button type="button" id="export-manifest-btn" class="btn" data-name={model.slug} data-i18n="detail.exportManifest">Manifest</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage-body">
+      <div id="overview-stage">
+        <div id="figure-wrap" class="figure-wrap mode-fit" data-atlas-scroll="x" tabindex="0" aria-label="Scrollable interactive architecture figure">
+          <div class="figure-inner">
+            <img
+              class="diagram-img"
+              src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
+              alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
+            />
+            <div class="hotspot-layer" aria-label="Interactive diagram node and edge claims">
+              {overviewHotspots.map((hs) => (
+                <button
+                  type="button"
+                  class={`hotspot${hs.kind === "edge" ? " hotspot-edge" : ""}`}
+                  style={`left:${hs.xPct}%;top:${hs.yPct}%;width:${hs.wPct}%;height:${hs.hPct}%`}
+                  data-node-id={hs.kind === "node" ? hs.id : undefined}
+                  data-edge-id={hs.kind === "edge" ? hs.id : undefined}
+                  data-claim-paths={hs.claimPaths.join(",")}
+                  data-label={hs.label}
+                  data-detail={hs.detail ?? ""}
+                  aria-label={`${hs.label}${hs.detail ? `: ${hs.detail}` : ""} — inspect citation`}
+                  title={`${hs.label}${hs.detail ? ` (${hs.detail})` : ""}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="subview-stage" class="subview-stage" hidden data-testid="subview-stage">
+        <div class="subview-banner">
+          <div>
+            <strong id="subview-title"></strong>
+            <span id="subview-subtitle" class="muted mono"></span>
+          </div>
+          <span class="muted small-hint">Click any node for source citation · Esc returns to overview</span>
+        </div>
+        <div id="subview-canvas" class="figure-wrap mode-fit" data-atlas-scroll="x" tabindex="0"></div>
+      </div>
+
+      <!-- Mobile first-screen structured reading overview (#36): avoids tiny 105px desktop thumbnail -->
+      <section class="mobile-cards" aria-label="Structured reading breakdown">
+        <div class="section-bar">
+          <div>
+            <h3 data-i18n="detail.mobileBreakdown">Mobile Structured Overview</h3>
+            <p class="muted small-note" data-i18n="detail.mobileBreakdownNote">
+              Readable execution spine, repeating layer schedule, and interactive subsystem entry points.
+            </p>
+          </div>
+        </div>
+        <div class="reading-cards-grid">
+          <article class="reading-card">
+            <span class="eyebrow">Main Execution Spine</span>
+            <p class="spine-chain">{spineSummary.join(" → ")}</p>
+          </article>
+          <article class="reading-card">
+            <span class="eyebrow">Layer Schedule · {facts.num_hidden_layers}L</span>
+            <ul class="schedule-pills">
+              {scheduleRuns.map((r) => (
+                <li><strong>{r.label}</strong>: <span class="mono">{r.detail}</span></li>
+              ))}
+            </ul>
+            <div class="mobile-subview-triggers">
+              <button type="button" class="btn m-sub-btn" data-jump-subview="attention">Attention diagram →</button>
+              <button type="button" class="btn m-sub-btn" data-jump-subview="ffn">MoE / FFN diagram →</button>
+              <button type="button" class="btn m-sub-btn" data-jump-subview="block">Inspect L0 block →</button>
+            </div>
+          </article>
+          {isSystemOne && dh && (
+            <article class="reading-card reading-card-s1">
+              <span class="eyebrow">System-1 Readout & Calibration</span>
+              <p class="mini-note">{dh.note}</p>
+            </article>
+          )}
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 data-i18n="detail.factSheet">Technical Specification</h2>
+    <dl class="facts">
+      <button type="button" class="fact-btn" data-claim-paths="facts.num_hidden_layers" data-label="Layers"><dt data-i18n="fact.layers">Layers</dt><dd class="mono">{facts.num_hidden_layers}</dd></button>
+      <button type="button" class="fact-btn" data-claim-paths="facts.hidden_size" data-label="Hidden dim"><dt data-i18n="fact.hiddenSize">Hidden dim</dt><dd class="mono">{facts.hidden_size.toLocaleString("en-US")}</dd></button>
+      <button type="button" class="fact-btn" data-claim-paths="facts.num_attention_heads,facts.num_key_value_heads,facts.head_dim" data-label="Attn / KV heads"><dt data-i18n="fact.heads">Attn / KV heads</dt><dd class="mono">{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}{facts.head_dim ? ` · d=${facts.head_dim}` : ""}</dd></button>
+      <button type="button" class="fact-btn" data-claim-paths="facts.vocab_size" data-label="Vocab size"><dt data-i18n="fact.vocab">Vocab size</dt><dd class="mono">{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></button>
+      <button type="button" class="fact-btn" data-claim-paths="facts.context_tokens" data-label="Context"><dt data-i18n="fact.context">Context</dt><dd class="mono">{formatContext(facts.context_tokens)}</dd></button>
+      <button type="button" class="fact-btn" data-claim-paths="facts.total_params,facts.active_params" data-label="Parameters"><dt data-i18n="fact.params">Parameters</dt><dd class="mono">{facts.total_params ? `${formatParams(facts.total_params)} total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${formatParams(facts.active_params)} active` : ""}</dd></button>
+    </dl>
+  </section>
+
+  {isSystemOne && dh && (
+    <section class="section decision-panel">
+      <h2 data-i18n="detail.decisionSpec">System-1 Decision Contract</h2>
+      <dl class="facts">
+        <button type="button" class="fact-btn" data-claim-paths="topology.decision_head.readout_mode" data-label="Readout mode">
+          <dt data-i18n="detail.readoutMode">Readout mode</dt>
+          <dd class="mono">{dh.readout_mode}</dd>
+        </button>
+        <button type="button" class="fact-btn" data-claim-paths="topology.decision_head.primitives" data-label="Typed primitives">
+          <dt data-i18n="detail.primitives">Typed primitives</dt>
+          <dd class="mono">{dh.primitives?.join(", ") || "—"}</dd>
+        </button>
+        <button type="button" class="fact-btn" data-claim-paths="topology.decision_head.calibration" data-label="Calibration">
+          <dt data-i18n="detail.calibration">Calibration</dt>
+          <dd class="mono">{dh.calibration ?? "—"}</dd>
+        </button>
+        <button type="button" class="fact-btn" data-claim-paths="topology.decision_head.action_head,topology.decision_head.max_options,topology.decision_head.prefix_cache,topology.decision_head.vision_encoder" data-label="Execution features">
+          <dt data-i18n="detail.extras">Execution features</dt>
+          <dd class="mono">
+            {[
+              dh.head_layers ? `${dh.head_layers}L head` : null,
+              dh.action_head ? dh.action_head : null,
+              dh.max_options ? `≤${dh.max_options} opts/pass` : null,
+              dh.prefix_cache ? "Prefix KV cache" : null,
+              dh.vision_encoder ? dh.vision_encoder : null,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "Single forward pass"}
+          </dd>
+        </button>
+      </dl>
+      {dh.note && <p class="muted decision-note">{dh.note}</p>}
+    </section>
+  )}
+
+  <section class="section">
+    <div class="section-bar">
+      <div>
+        <h2 data-i18n="detail.genome">Layer Genome & Drill-Down</h2>
+        <p class="muted small-note" data-i18n="detail.genomeNote">
+          Click or use ← / → keys on any layer column to load its module block diagram and linked citations.
+        </p>
+      </div>
+      <button type="button" id="clear-layer" class="btn" hidden data-i18n="detail.clearLayer">Clear layer</button>
+    </div>
+
+    <div class="genome" data-atlas-scroll="x" role="listbox" aria-label={`Per-layer genome: ${genome.numLayers} layers. Arrow keys move, Enter selects.`} tabindex="0">
+      {genome.layers.map((l) => {
+        const aMod = attnGroups.find((g) => g.label === l.attention)?.module ?? l.attentionKind;
+        const fMod = ffnGroups.find((g) => g.label === l.ffn)?.module ?? l.ffnKind;
+        return (
+          <button
+            type="button"
+            class="col"
+            role="option"
+            aria-selected="false"
+            data-layer={String(l.index)}
+            data-attention={l.attention}
+            data-attn-kind={l.attentionKind}
+            data-attn-module={aMod}
+            data-ffn={l.ffn}
+            data-ffn-kind={l.ffnKind}
+            data-ffn-module={fMod}
+            title={`layer ${l.index}: attention ${l.attention} · ffn ${l.ffn}`}
+          >
+            <span class="cell" style={`background:${roleColor[genomeCellRole(l)]}`} />
+            <span class="cell ffn" style={`background:${l.ffnKind === "moe" ? "var(--compute)" : isSystemOne ? "var(--decision)" : "var(--line)"}`} />
+          </button>
+        );
+      })}
+    </div>
+
+    <script type="application/json" is:inline id="attn-labels" set:html={JSON.stringify(attnLabels)}></script>
+    <script type="application/json" is:inline id="ffn-labels" set:html={JSON.stringify(ffnLabels)}></script>
+    <script type="application/json" is:inline id="layer-subview-map" set:html={JSON.stringify(layerToSubviewKey)}></script>
+    <script type="application/json" is:inline id="subview-svgs" set:html={JSON.stringify(subviews)}></script>
+    <script type="application/json" is:inline id="evidence-payload" set:html={JSON.stringify(evidencePayload)}></script>
+
+    <div id="layer-detail" class="layer-detail" hidden data-testid="layer-detail">
+      <div class="ld-top">
+        <strong>Layer <span id="ld-index" class="mono"></span></strong>
+        <span class="pill pill-ar" id="ld-attention"></span>
+        <span class="pill pill-moe" id="ld-ffn"></span>
+      </div>
+      <div class="ld-modules muted mono" id="ld-modules"></div>
+      <div class="muted mono" id="ld-evidence"></div>
+    </div>
+
+    <p class="legend muted">
+      <span class="key"><span class="cell" style="background:var(--attention)" /> attention (GQA / MLA / Full)</span>
+      <span class="key"><span class="cell" style="background:var(--state)" /> linear / sliding window</span>
+      <span class="key"><span class="cell" style="background:var(--compute)" /> MoE</span>
+      <span class="key"><span class="cell" style={`background:${isSystemOne ? "var(--decision)" : "var(--line)"}`} /> {isSystemOne ? "dense FFN (System-1)" : "dense FFN"}</span>
+    </p>
+  </section>
+
+  <!-- Contextual Citation Panel (#38) -->
+  <section class="section citation-panel" id="citation-panel" data-testid="citation-panel" aria-live="polite">
+    <div class="section-bar">
+      <div>
+        <h2 data-i18n="detail.citationPanel">Contextual Citation Inspector</h2>
+        <p class="muted small-note" id="citation-subtitle" data-i18n="detail.citationDefaultNote">
+          Select any diagram node, specification card, or genome layer to inspect exact-model sources vs mechanism references.
+        </p>
+      </div>
+      <button type="button" id="clear-citation" class="btn btn-subtle" hidden>Clear selection</button>
+    </div>
+
+    <div id="citation-cards" class="citation-cards">
+      {brief && (
+        <div class="provenance-overview">
+          <div class="prov-group">
+            <span class="eyebrow">Exact-Model Primary Sources</span>
+            <ul class="prov-list">
+              {brief.primary_sources.map((src) => (
+                <li>
+                  <span class="scope-pill scope-exact">✓ exact model</span>
+                  <a href={src.url} rel="noopener noreferrer">{src.kind}</a>
+                  <code class="rev-chip">{src.revision.slice(0, 10)}</code>
+                  {src.sha256 && <span class="muted mono small-hash">sha256:{src.sha256.slice(0, 12)}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {brief.papers.length > 0 && (
+            <div class="prov-group">
+              <span class="eyebrow">Paper References & Mechanism Scope</span>
+              <ul class="prov-list">
+                {brief.papers.map((p) => (
+                  <li>
+                    <span class={`scope-pill ${p.role === "model-specific" ? "scope-exact" : "scope-mech"}`}>
+                      {p.role === "model-specific" ? "✓ model-specific" : "◐ mechanism-only"}
+                    </span>
+                    <a href={p.url} rel="noopener noreferrer">{p.title}</a>
+                    <span class="muted"> · {p.locators.join(", ")}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Full Evidence Ledger in an accessible disclosure (#38) -->
+  <section class="section">
+    <details id="evidence-ledger" class="ledger-disclosure">
+      <summary class="ledger-summary">
+        <div>
+          <div>
+            <strong data-i18n="detail.advancedLedger">Advanced: Full Evidence Ledger</strong>
+            <span class="muted mono">({evidence.claims.length} claims)</span>
+          </div>
+          <p class="muted small-note" data-i18n="detail.evidenceNote">
+            Every visible number resolves to an immutable source claim. Expand to filter or audit raw paths.
+          </p>
+        </div>
+      </summary>
+
+      <div class="ledger-body">
+        <div class="ev-filters" role="group" aria-label="Filter evidence status">
+          <button type="button" class="ev-tab active" data-status="">
+            <span data-i18n="detail.evidenceAll">All</span> ({evidence.claims.length})
+          </button>
+          {Object.entries(statusCounts).map(([st, cnt]) => (
+            <button type="button" class="ev-tab" data-status={st}>
+              {st} ({cnt})
+            </button>
+          ))}
+        </div>
+
+        <div class="evidence-wrap" data-atlas-scroll="x">
+          <table class="evidence">
+            <thead>
+              <tr>
+                <th data-i18n="detail.claim">Claim</th>
+                <th data-i18n="detail.value">Value</th>
+                <th data-i18n="detail.status">Status</th>
+                <th data-i18n="detail.source">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evidence.claims.map((c) => (
+                <tr data-claim-status={c.status} data-claim-row={c.path}>
+                  <td data-label="Claim"><code>{c.path}</code></td>
+                  <td data-label="Value" class="mono">{c.status === "unknown" ? "—" : JSON.stringify(c.value)}</td>
+                  <td data-label="Status"><span class={`chip chip-${c.status}`} data-i18n={`status.${c.status}`}>{statusSymbol(c.status)} {c.status}</span></td>
+                  <td data-label="Source">
+                    {c.source?.url ? <a href={c.source.url} rel="noopener noreferrer">{c.source.kind}</a> : c.source?.kind}
+                    {c.source?.locator && <span class="muted"> · {c.source.locator}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section class="section">
+    <h2 data-i18n="detail.compare">Compare</h2>
+    <p class="muted" data-i18n="detail.compareNote">Launch a side-by-side comparison with any other model in the atlas.</p>
+    <div class="compare-chips">
+      {otherOptions.map((o) => (
+        <a class="btn" href={o.pairUrl}>vs {o.label}</a>
       ))}
-    </tbody>
-  </table>
-  </div>
-
-  <h2 data-i18n="detail.compare">Compare</h2>
-  <p data-i18n="detail.compareNote">Compare this model with any other catalog model (see catalog).</p>
+    </div>
+  </section>
 
   <script>
-    // layer drill-down + evidence linkage (#26)
-    const genome = document.querySelector<HTMLElement>(".genome");
+    type SubviewEntry = { title: string; subtitle: string; svg: string };
+    type ClaimItem = {
+      path: string;
+      value: unknown;
+      status: string;
+      source?: { kind?: string; url?: string; revision?: string; locator?: string };
+    };
+    type BriefPaper = { url: string; title: string; role: string; locators: string[] };
+    type EvidencePayload = {
+      model: { id: string; label: string; revision: string };
+      ir_version: string;
+      paradigm: string;
+      claims: ClaimItem[];
+      brief: { papers?: BriefPaper[] } | null;
+    };
+
+    const attnLabels = JSON.parse(document.getElementById("attn-labels")!.textContent!) as string[];
+    const ffnLabels = JSON.parse(document.getElementById("ffn-labels")!.textContent!) as string[];
+    const layerSubMap = JSON.parse(document.getElementById("layer-subview-map")!.textContent!) as Record<string, string>;
+    const subviewSvgs = JSON.parse(document.getElementById("subview-svgs")!.textContent!) as Record<string, SubviewEntry>;
+    const payload = JSON.parse(document.getElementById("evidence-payload")!.textContent!) as EvidencePayload;
+    const claimByPath = new Map(payload.claims.map((c) => [c.path, c]));
+
+    // Compare dropdown jump
+    const compareSelect = document.getElementById("compare-target") as HTMLSelectElement | null;
+    compareSelect?.addEventListener("change", () => {
+      if (compareSelect.value) location.href = compareSelect.value;
+    });
+
+    // Zoom mode buttons (Fit / 1:1 Pan / 135%) applied symmetrically to active canvas
+    const figureWrap = document.getElementById("figure-wrap");
+    const subviewCanvas = document.getElementById("subview-canvas");
+    const viewButtons = [...document.querySelectorAll<HTMLButtonElement>(".vbtn")];
+    function setZoomMode(mode: string) {
+      [figureWrap, subviewCanvas].forEach((wrap) => {
+        if (!wrap) return;
+        wrap.classList.remove("mode-fit", "mode-pan", "mode-zoom");
+        wrap.classList.add(`mode-${mode}`);
+      });
+      viewButtons.forEach((b) => b.classList.toggle("active", b.dataset.viewMode === mode));
+    }
+    viewButtons.forEach((btn) =>
+      btn.addEventListener("click", () => setZoomMode(btn.dataset.viewMode ?? "fit")),
+    );
+
+    // State variables synced with URL (?view=...&layer=...&claim=...)
+    const overviewStage = document.getElementById("overview-stage")!;
+    const subviewStage = document.getElementById("subview-stage")!;
+    const subTitle = document.getElementById("subview-title")!;
+    const subSubtitle = document.getElementById("subview-subtitle")!;
+    const resetOverviewBtn = document.getElementById("reset-overview-btn") as HTMLButtonElement | null;
+    const vtabs = [...document.querySelectorAll<HTMLButtonElement>(".vtab")];
+    const tabBlockIdx = document.getElementById("tab-block-idx")!;
+
+    const genomeEl = document.querySelector<HTMLElement>(".genome");
     const detail = document.getElementById("layer-detail")!;
+    const clearLayerBtn = document.getElementById("clear-layer") as HTMLButtonElement | null;
     const cols = [...document.querySelectorAll<HTMLElement>(".genome .col")];
+    const ledgerDetails = document.getElementById("evidence-ledger") as HTMLDetailsElement | null;
     const evidenceRows = [...document.querySelectorAll<HTMLTableRowElement>("table.evidence tbody tr")];
 
-    function selectLayer(i: number) {
-      const col = cols[i];
-      if (!col) return;
-      cols.forEach((c) => c.setAttribute("aria-selected", "false"));
-      col.setAttribute("aria-selected", "true");
-      const attn = col.dataset.attention!;
-      const attnKind = col.dataset.attnKind!;
-      const ffn = col.dataset.ffn!;
-      document.getElementById("ld-index")!.textContent = col.dataset.layer!;
-      document.getElementById("ld-attention")!.textContent = attn;
-      document.getElementById("ld-ffn")!.textContent = ffn;
-      // group index for evidence matching
-      const gi = (labels: string[], label: string) => labels.indexOf(label);
-      const attnLabels = JSON.parse(document.getElementById("attn-labels")!.textContent!) as string[];
-      const ffnLabels = JSON.parse(document.getElementById("ffn-labels")!.textContent!) as string[];
-      const paths = [
-        `topology.attention_groups[${gi(attnLabels, attn)}]`,
-        `topology.ffn_groups[${gi(ffnLabels, ffn)}]`,
-      ].filter((p) => !p.includes("-1"));
-      document.getElementById("ld-evidence")!.textContent = paths.length ? `evidence: ${paths.join(", ")}` : "";
-      detail.hidden = false;
-      evidenceRows.forEach((row) => {
-        const path = row.querySelector("code")?.textContent ?? "";
-        row.classList.toggle("dimmed", paths.length > 0 && !paths.some((p) => path.startsWith(p)));
-      });
-      detail.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const citSubtitle = document.getElementById("citation-subtitle")!;
+    const citCards = document.getElementById("citation-cards")!;
+    const clearCitBtn = document.getElementById("clear-citation") as HTMLButtonElement | null;
+    const defaultCitationHtml = citCards.innerHTML;
+    const defaultCitSubtitle = citSubtitle.textContent ?? "";
+
+    let currentView = "overview";
+    let currentLayer: number | null = null;
+    let currentClaims: string[] = [];
+    let activeStatusFilter = "";
+
+    function syncUrl(push = false) {
+      const params = new URLSearchParams();
+      if (currentView !== "overview") params.set("view", currentView);
+      if (currentLayer !== null) params.set("layer", String(currentLayer));
+      if (currentClaims.length > 0) params.set("claim", currentClaims[0]!);
+      const next = params.toString() ? `?${params}` : location.pathname;
+      if (push) history.pushState(null, "", next);
+      else history.replaceState(null, "", next);
     }
 
-    cols.forEach((col, i) => col.addEventListener("click", () => selectLayer(i)));
-    genome?.addEventListener("keydown", (ev) => {
+    function esc(s: string): string {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function applyEvidenceFilter() {
+      evidenceRows.forEach((row) => {
+        const path = row.querySelector("code")?.textContent ?? "";
+        const status = row.dataset.claimStatus ?? "";
+        const statusOk = !activeStatusFilter || status === activeStatusFilter;
+        row.hidden = !statusOk;
+        const match = currentClaims.length > 0 && currentClaims.some((p) => path === p || path.startsWith(p));
+        row.classList.toggle("dimmed", currentClaims.length > 0 && !match);
+        row.classList.toggle("highlighted", match);
+      });
+    }
+
+    const STATUS_GLYPHS: Record<string, string> = {
+      verified: "✓",
+      reported: "•",
+      derived: "=",
+      inferred: "?",
+      conflict: "!",
+      unknown: "?",
+    };
+    const STATUS_ZH: Record<string, string> = {
+      verified: "已验证",
+      reported: "文献报告",
+      derived: "推导",
+      inferred: "推断",
+      conflict: "冲突",
+      unknown: "未知",
+    };
+
+    function renderCitations(label: string, paths: string[]) {
+      currentClaims = paths.filter((p) => claimByPath.has(p));
+      applyEvidenceFilter();
+
+      document.querySelectorAll<HTMLElement>(".hotspot").forEach((hs) => {
+        const hsPaths = (hs.dataset.claimPaths ?? "").split(",").filter(Boolean);
+        hs.classList.toggle("active", Boolean(label) && hsPaths.some((p) => currentClaims.includes(p)));
+      });
+
+      const isZh = document.documentElement.lang.startsWith("zh");
+      if (!currentClaims.length) {
+        citSubtitle.textContent = isZh
+          ? "点击任意架构图节点、连线、规格卡或层序列，可查看精确源码或机制论文。"
+          : defaultCitSubtitle;
+        citCards.innerHTML = defaultCitationHtml;
+        if (clearCitBtn) clearCitBtn.hidden = true;
+        return;
+      }
+
+      if (clearCitBtn) clearCitBtn.hidden = false;
+      citSubtitle.textContent = isZh
+        ? `当前展示与「${label}」关联的 ${currentClaims.length} 条溯源证据：`
+        : `Showing ${currentClaims.length} evidence claim(s) linked to "${label}":`;
+      const html = currentClaims
+        .map((p) => {
+          const c = claimByPath.get(p)!;
+          const isExact = c.source?.kind !== "tech_report";
+          const val = c.status === "unknown" ? "—" : JSON.stringify(c.value);
+          const rev = c.source?.revision ? c.source.revision.slice(0, 10) : payload.model.revision;
+          const loc = c.source?.locator ?? "source definition";
+          const url = c.source?.url;
+          const glyph = STATUS_GLYPHS[c.status] ?? "?";
+          const statusLabel = isZh ? (STATUS_ZH[c.status] ?? c.status) : c.status;
+          const scopeLabel = isExact
+            ? (isZh ? "✓ 精确模型" : "✓ exact model")
+            : (isZh ? "◐ 仅机制" : "◐ mechanism-only");
+          const ledgerBtnLabel = isZh ? "台账 ↗" : "Ledger ↗";
+          return `
+            <article class="cit-card">
+              <div class="cit-top">
+                <span class="chip chip-${esc(c.status)}">${glyph} ${esc(statusLabel)}</span>
+                <span class="scope-pill ${isExact ? "scope-exact" : "scope-mech"}">${scopeLabel}</span>
+                <code class="rev-chip">${esc(rev)}</code>
+              </div>
+              <div class="cit-val mono">${esc(val)}</div>
+              <div class="cit-loc">
+                ${url ? `<a href="${esc(url)}" rel="noopener noreferrer">${esc(c.source?.kind ?? "source")}</a>` : `<span>${esc(c.source?.kind ?? "source")}</span>`}
+                <span class="muted"> · ${esc(loc)}</span>
+              </div>
+              <div class="cit-foot">
+                <code class="cit-path">${esc(c.path)}</code>
+                <button type="button" class="btn-mini ledger-jump" data-jump-path="${esc(c.path)}">${ledgerBtnLabel}</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+      citCards.innerHTML = `<div class="cit-grid">${html}</div>`;
+      citCards.querySelectorAll<HTMLButtonElement>(".ledger-jump").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (ledgerDetails) ledgerDetails.open = true;
+          const targetRow = evidenceRows.find((r) => r.dataset.claimRow === btn.dataset.jumpPath);
+          targetRow?.scrollIntoView({ block: "center", behavior: "smooth" });
+        });
+      });
+    }
+
+    function attachSvgInteractivity(container: HTMLElement) {
+      const svg = container.querySelector<SVGSVGElement>("svg");
+      const hsLayer = container.querySelector<HTMLElement>(".hotspot-layer");
+      const vb = svg?.viewBox.baseVal;
+      const clampVal = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+      container
+        .querySelectorAll<SVGGElement | SVGPathElement>(
+          ".node[data-claim-path], .node[data-claims], .grp[data-claim-path], path[data-edge-id][data-claim-path]",
+        )
+        .forEach((el) => {
+          const cp = el.dataset.claimPath ?? "";
+          const paths: string[] = [];
+          let label = el.querySelector("text")?.textContent?.trim() ?? "";
+          if (el.dataset.claims) {
+            try {
+              const parsed = JSON.parse(el.dataset.claims) as Array<{ claimPath?: string; label?: string }>;
+              for (const item of parsed) {
+                if (item.claimPath && !paths.includes(item.claimPath)) paths.push(item.claimPath);
+              }
+              if (!label && parsed[0]?.label) label = parsed[0].label;
+            } catch {
+              // ignore malformed claims JSON
+            }
+          }
+          if (cp && !paths.includes(cp)) paths.unshift(cp);
+          if (paths.length === 0) return;
+          if (!label) label = el.dataset.edgeId ?? paths[0]!;
+
+          el.setAttribute("tabindex", "0");
+          el.setAttribute("role", "button");
+          el.style.cursor = "pointer";
+          const trigger = () => {
+            renderCitations(label, paths);
+            syncUrl(false);
+          };
+          el.addEventListener("click", trigger);
+          el.addEventListener("keydown", (ev) => {
+            if (!(ev instanceof KeyboardEvent)) return;
+            if (ev.key === "Enter" || ev.key === " ") {
+              ev.preventDefault();
+              trigger();
+            }
+          });
+
+          if (el instanceof SVGPathElement && el.dataset.edgeId && hsLayer && vb && vb.width > 0 && vb.height > 0) {
+            try {
+              const len = el.getTotalLength();
+              const pt = el.getPointAtLength(len / 2);
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "hotspot hotspot-edge";
+              btn.style.left = `${clampVal((pt.x / vb.width) * 100, 2, 98).toFixed(3)}%`;
+              btn.style.top = `${clampVal((pt.y / vb.height) * 100, 3, 97).toFixed(3)}%`;
+              btn.style.width = "2.4%";
+              btn.style.height = "3.6%";
+              btn.dataset.edgeId = el.dataset.edgeId;
+              btn.dataset.claimPaths = paths.join(",");
+              btn.dataset.label = label;
+              btn.setAttribute("aria-label", `${label} — inspect citation`);
+              btn.title = label;
+              btn.addEventListener("click", trigger);
+              hsLayer.appendChild(btn);
+            } catch {
+              // ignore if path geometry unavailable
+            }
+          }
+        });
+    }
+
+    function activateSubview(view: string, layerIdx: number | null, push = true) {
+      currentView = view;
+      vtabs.forEach((t) => {
+        const active = t.dataset.subview === view;
+        t.classList.toggle("active", active);
+        t.setAttribute("aria-selected", active ? "true" : "false");
+      });
+      if (resetOverviewBtn) resetOverviewBtn.hidden = view === "overview";
+
+      if (view === "overview") {
+        overviewStage.hidden = false;
+        subviewStage.hidden = true;
+        if (push) syncUrl(true);
+        return;
+      }
+
+      let subKey = `module:${view}`;
+      if (view === "block") {
+        const idx = layerIdx ?? currentLayer ?? 0;
+        currentLayer = idx;
+        tabBlockIdx.textContent = `L${idx}`;
+        subKey = layerSubMap[String(idx)] ?? layerSubMap["0"]!;
+      }
+
+      const sub = subviewSvgs[subKey];
+      if (!sub) {
+        activateSubview("overview", currentLayer, push);
+        return;
+      }
+      overviewStage.hidden = true;
+      subviewStage.hidden = false;
+      subTitle.textContent = view === "block" && currentLayer !== null ? `Layer ${currentLayer} Block` : sub.title;
+      subSubtitle.textContent = sub.subtitle;
+      subviewCanvas!.innerHTML = `<div class="figure-inner">${sub.svg}<div class="hotspot-layer" aria-label="Interactive subview edge claims"></div></div>`;
+      attachSvgInteractivity(subviewCanvas!);
+      if (push) syncUrl(true);
+    }
+
+    function selectLayer(i: number, opts: { scroll?: boolean; switchView?: boolean; push?: boolean } = {}) {
+      const col = cols[i];
+      if (!col) return;
+      const layerNum = Number(col.dataset.layer!);
+      currentLayer = layerNum;
+      cols.forEach((c) => c.setAttribute("aria-selected", "false"));
+      col.setAttribute("aria-selected", "true");
+      tabBlockIdx.textContent = `L${layerNum}`;
+
+      const attn = col.dataset.attention!;
+      const ffn = col.dataset.ffn!;
+      const aMod = col.dataset.attnModule ?? "";
+      const fMod = col.dataset.ffnModule ?? "";
+      document.getElementById("ld-index")!.textContent = String(layerNum);
+      document.getElementById("ld-attention")!.textContent = attn;
+      document.getElementById("ld-ffn")!.textContent = ffn;
+      document.getElementById("ld-modules")!.textContent = `attention: ${aMod} · ffn: ${fMod}`;
+
+      const matchedPaths = [
+        `topology.attention_groups[${attnLabels.indexOf(attn)}]`,
+        `topology.ffn_groups[${ffnLabels.indexOf(ffn)}]`,
+      ].filter((p) => !p.includes("-1"));
+      document.getElementById("ld-evidence")!.textContent = matchedPaths.length
+        ? `linked claims: ${matchedPaths.join(", ")}`
+        : "";
+      detail.hidden = false;
+      if (clearLayerBtn) clearLayerBtn.hidden = false;
+
+      renderCitations(`Layer ${layerNum} (${attn} + ${ffn})`, matchedPaths);
+      if (opts.switchView !== false) {
+        activateSubview("block", layerNum, opts.push ?? true);
+      } else if (opts.push) {
+        syncUrl(true);
+      } else {
+        syncUrl(false);
+      }
+      if (opts.scroll) {
+        subviewStage.scrollIntoView({ block: "nearest", behavior: "auto" });
+      }
+    }
+
+    function clearLayer(returnOverview = true) {
+      cols.forEach((c) => c.setAttribute("aria-selected", "false"));
+      currentLayer = null;
+      detail.hidden = true;
+      if (clearLayerBtn) clearLayerBtn.hidden = true;
+      renderCitations("", []);
+      if (returnOverview) activateSubview("overview", null, true);
+      else syncUrl(false);
+    }
+
+    // Bind UI triggers
+    vtabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const sub = tab.dataset.subview ?? "overview";
+        if (sub === "block" && currentLayer === null) selectLayer(0, { switchView: true, push: true });
+        else activateSubview(sub, currentLayer, true);
+      });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>(".m-sub-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.jumpSubview ?? "attention";
+        if (target === "block") selectLayer(currentLayer ?? 0, { switchView: true, push: true });
+        else activateSubview(target, currentLayer, true);
+        subviewStage.scrollIntoView({ block: "start", behavior: "auto" });
+      });
+    });
+
+    resetOverviewBtn?.addEventListener("click", () => activateSubview("overview", currentLayer, true));
+    clearLayerBtn?.addEventListener("click", () => clearLayer(true));
+    clearCitBtn?.addEventListener("click", () => {
+      renderCitations("", []);
+      syncUrl(false);
+    });
+
+    document.querySelectorAll<HTMLButtonElement>(".hotspot, .fact-btn").forEach((el) => {
+      el.addEventListener("click", () => {
+        const paths = (el.dataset.claimPaths ?? "").split(",").filter(Boolean);
+        renderCitations(el.dataset.label ?? "Selection", paths);
+        syncUrl(false);
+      });
+    });
+
+    cols.forEach((col, i) => col.addEventListener("click", () => selectLayer(i, { switchView: true, push: true })));
+    genomeEl?.addEventListener("keydown", (ev) => {
       const cur = cols.findIndex((c) => c.getAttribute("aria-selected") === "true");
       if (ev.key === "ArrowRight") { selectLayer(Math.min(cur + 1, cols.length - 1)); ev.preventDefault(); }
       if (ev.key === "ArrowLeft") { selectLayer(Math.max(cur - 1, 0)); ev.preventDefault(); }
       if (ev.key === "Home") { selectLayer(0); ev.preventDefault(); }
       if (ev.key === "End") { selectLayer(cols.length - 1); ev.preventDefault(); }
+      if (ev.key === "Escape") { clearLayer(true); ev.preventDefault(); }
     });
-    const mql = matchMedia("(prefers-reduced-motion: reduce)");
-    if (!mql.matches) { /* smooth scroll allowed */ }
-  </script>
 
-  <script>
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape" && currentView !== "overview") {
+        activateSubview("overview", currentLayer, true);
+      }
+    });
+
+    // Evidence ledger status filter tabs
+    const evTabs = [...document.querySelectorAll<HTMLButtonElement>(".ev-tab")];
+    evTabs.forEach((tab) =>
+      tab.addEventListener("click", () => {
+        activeStatusFilter = tab.dataset.status ?? "";
+        evTabs.forEach((t) => t.classList.toggle("active", t === tab));
+        applyEvidenceFilter();
+      }),
+    );
+
+    // URL restore on initial load & browser back/forward (popstate)
+    function restoreFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const rawView = params.get("view") ?? "overview";
+      const qView = rawView === "moe" ? "ffn" : rawView;
+      const qLayer = params.get("layer");
+      const qClaim = params.get("claim");
+      currentView = qView;
+
+      if (qLayer !== null && Number.isInteger(Number(qLayer)) && Number(qLayer) >= 0 && Number(qLayer) < cols.length) {
+        selectLayer(Number(qLayer), { switchView: qView === "block", push: false });
+      } else {
+        currentLayer = null;
+        detail.hidden = true;
+        cols.forEach((c) => c.setAttribute("aria-selected", "false"));
+      }
+
+      if (qView !== "block" || currentLayer === null) {
+        activateSubview(qView, currentLayer, false);
+      }
+
+      if (qClaim && claimByPath.has(qClaim)) {
+        renderCitations(qClaim, [qClaim]);
+      } else if (qLayer === null) {
+        renderCitations("", []);
+      }
+
+      syncUrl(false);
+    }
+
+    restoreFromUrl();
+    window.addEventListener("popstate", restoreFromUrl);
+
+    // Canonical PNG, SVG, and Evidence Manifest exporters (decoupled from view zoom/focus state)
     document.querySelectorAll<HTMLButtonElement>(".png-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const url = btn.dataset.fig!;
+      btn.addEventListener("click", () => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          canvas.width = (img.naturalWidth || 1200) * 2;
-          canvas.height = (img.naturalHeight || 900) * 2;
+          canvas.width = (img.naturalWidth || 1360) * 2;
+          canvas.height = (img.naturalHeight || 860) * 2;
           const ctx = canvas.getContext("2d")!;
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -188,39 +1019,804 @@ const statusSymbol = (s: string) =>
             URL.revokeObjectURL(a.href);
           }, "image/png");
         };
-        img.src = url;
+        img.src = btn.dataset.fig!;
       });
+    });
+
+    document.querySelectorAll<HTMLButtonElement>(".copy-svg-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const text = await fetch(btn.dataset.fig!).then((r) => r.text());
+        await navigator.clipboard?.writeText(text);
+        const orig = btn.textContent;
+        btn.textContent = "✓ Copied";
+        setTimeout(() => { btn.textContent = orig; }, 1400);
+      });
+    });
+
+    document.getElementById("export-manifest-btn")?.addEventListener("click", (ev) => {
+      const btn = ev.currentTarget as HTMLButtonElement;
+      const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${btn.dataset.name}-evidence-manifest.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     });
   </script>
 
   <style>
-    .figure-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .figure-wrap img {
-      display: block; width: 100%; min-width: 72rem; height: auto;
-      border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
     }
-    .facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.6rem; padding: 0; }
-    .facts > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.8rem; background: var(--panel); }
-    .facts dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-    .facts dd { margin: 0; font-weight: 700; }
-    .genome { display: flex; gap: 2px; overflow-x: auto; padding: 0.4rem 0; }
-    .col { display: grid; gap: 2px; min-width: 9px; }
-    .cell { display: block; width: 9px; height: 16px; border-radius: 2px; }
-    .legend { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .key { display: inline-flex; align-items: center; gap: 0.3rem; }
-    .key .cell { width: 10px; height: 10px; }
-    .evidence-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .evidence { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 34rem; }
-    .genome { display: flex; gap: 2px; overflow-x: auto; padding: 0.4rem 0; max-width: 100%; }
-    .evidence th, .evidence td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.4rem 0.5rem; vertical-align: top; }
-    .chip { border-radius: 999px; padding: 0.05rem 0.55rem; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
-    .chip-verified { background: var(--state); color: #fff; }
-    .chip-reported { background: var(--attention); color: #fff; }
-    .chip-derived { background: var(--panel); color: var(--ink); border: 1px solid var(--line); }
-    .chip-inferred { background: var(--compute); color: #fff; }
-    .chip-conflict { background: var(--conflict); color: #fff; }
-    .chip-unknown { background: var(--line); color: var(--ink); }
-    .png-btn { font: inherit; cursor: pointer; margin-left: 0.6rem; }
-    code { font-family: ui-monospace, monospace; font-size: 0.85em; }
+    .crumb-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    .crumb-back {
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .crumb-back:hover {
+      text-decoration: underline;
+    }
+    .crumb-meta {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .detail-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 1.25rem;
+    }
+    .head-copy {
+      max-width: 52rem;
+    }
+    .detail-head h1 {
+      margin: 0 0 0.25rem;
+      font-size: clamp(1.75rem, 3.6vw, 2.5rem);
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+    }
+    .arch-summary {
+      margin: 0 0 0.35rem;
+      font-size: 1rem;
+      line-height: 1.45;
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .meta-line {
+      margin: 0;
+      font-size: 0.88rem;
+    }
+    .rev-chip {
+      padding: 0.08rem 0.42rem;
+      border-radius: 5px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      font-size: 0.82em;
+    }
+    .compare-picker select {
+      min-height: 36px;
+      padding: 0.42rem 0.75rem;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.88rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+    .section h2 {
+      margin: 0 0 0.65rem;
+      font-size: 1.22rem;
+      letter-spacing: -0.015em;
+    }
+    .section-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.7rem;
+    }
+    .section-bar h2,
+    .section-bar h3 {
+      margin: 0;
+    }
+    .stage-heading {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .small-note {
+      margin: 0.2rem 0 0;
+      font-size: 0.88rem;
+    }
+
+    .view-tabs {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .vtab {
+      min-height: 28px;
+      min-width: 28px;
+      padding: 0.32rem 0.72rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .vtab:hover {
+      color: var(--ink);
+      border-color: var(--muted);
+    }
+    .vtab.active {
+      background: var(--attention);
+      color: #ffffff;
+      border-color: var(--attention);
+    }
+
+    .canvas-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+    .view-modes {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+    .vbtn {
+      min-height: 28px;
+      min-width: 28px;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.34rem 0.65rem;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .vbtn + .vbtn {
+      border-left: 1px solid var(--line);
+    }
+    .vbtn.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+    .export-btns {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .export-btns .btn,
+    .btn-subtle {
+      min-height: 28px;
+    }
+    .btn-subtle {
+      background: var(--surface);
+    }
+
+    .stage-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .figure-wrap {
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: var(--shadow-md);
+      padding: 0.4rem;
+    }
+    .figure-inner {
+      position: relative;
+      display: block;
+      width: 100%;
+    }
+    .figure-wrap img {
+      display: block;
+      height: auto;
+      border-radius: 10px;
+    }
+    .figure-wrap.mode-fit .figure-inner,
+    .figure-wrap.mode-fit svg {
+      width: 100%;
+      min-width: 0;
+    }
+    .figure-wrap.mode-fit img {
+      width: 100%;
+      min-width: 0;
+    }
+    .figure-wrap.mode-pan .figure-inner,
+    .figure-wrap.mode-pan svg {
+      width: 72rem;
+      min-width: 72rem;
+    }
+    .figure-wrap.mode-pan img {
+      width: 100%;
+    }
+    .figure-wrap.mode-zoom .figure-inner,
+    .figure-wrap.mode-zoom svg {
+      width: 96rem;
+      min-width: 96rem;
+    }
+    .figure-wrap.mode-zoom img {
+      width: 100%;
+    }
+
+    .hotspot-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .hotspot {
+      position: absolute;
+      pointer-events: auto;
+      min-width: 24px;
+      min-height: 24px;
+      z-index: 2;
+      background: transparent;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .hotspot-edge {
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+    }
+    #subview-canvas :global(svg path[data-edge-id][data-claim-path]) {
+      cursor: pointer;
+      pointer-events: all;
+    }
+    .hotspot:hover {
+      border-color: color-mix(in srgb, var(--attention) 55%, transparent);
+      background: color-mix(in srgb, var(--attention) 6%, transparent);
+    }
+    .hotspot:focus-visible,
+    .hotspot.active {
+      outline: none;
+      border-color: var(--attention);
+      background: color-mix(in srgb, var(--attention) 10%, transparent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--attention) 25%, transparent);
+    }
+
+    .subview-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .subview-banner strong {
+      margin-right: 0.5rem;
+    }
+    .small-hint {
+      font-size: 0.8rem;
+    }
+
+    .mobile-cards {
+      margin: 0;
+    }
+    .reading-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.55rem;
+    }
+    .reading-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 0.85rem 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .reading-card-s1 {
+      border-left: 4px solid var(--decision);
+    }
+    .spine-chain {
+      margin: 0.3rem 0 0;
+      font-weight: 700;
+      font-size: 0.94rem;
+    }
+    .schedule-pills {
+      margin: 0.35rem 0 0;
+      padding-left: 1.1rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      display: grid;
+      gap: 0.25rem;
+    }
+    .mobile-subview-triggers {
+      margin-top: 0.65rem;
+      display: flex;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .m-sub-btn {
+      min-height: 30px;
+      font-size: 0.82rem;
+    }
+    .mini-note {
+      margin: 0.25rem 0 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .facts {
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+      gap: 0.65rem;
+      padding: 0;
+    }
+    .fact-btn {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      background: var(--panel);
+      box-shadow: var(--shadow-sm);
+      min-width: 0;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
+    .fact-btn:hover {
+      border-color: var(--attention);
+    }
+    .facts dt {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .facts dd {
+      margin: 0.15rem 0 0;
+      font-weight: 700;
+      font-size: 0.96rem;
+      overflow-wrap: anywhere;
+    }
+
+    .decision-panel {
+      border: 1px solid color-mix(in srgb, var(--decision) 40%, var(--line));
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      background: color-mix(in srgb, var(--decision) 4%, var(--panel));
+    }
+    .decision-panel .facts {
+      grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+    }
+    .decision-panel .facts dd {
+      font-size: 0.9rem;
+    }
+    .decision-note {
+      margin: 0.75rem 0 0;
+      font-size: 0.88rem;
+    }
+
+    .genome {
+      display: flex;
+      gap: 3px;
+      overflow-x: auto;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow-sm);
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 4px 7px;
+      min-width: 24px;
+      min-height: 36px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    .col[aria-selected="true"] {
+      outline: 2px solid var(--ink);
+      outline-offset: 1px;
+    }
+    .cell {
+      display: block;
+      width: 9px;
+      height: 18px;
+      border-radius: 2px;
+    }
+    .cell.ffn {
+      height: 7px;
+    }
+    .layer-detail {
+      margin-top: 0.75rem;
+      border: 1px solid var(--attention);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 0.75rem 0.95rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+    .layer-detail[hidden] {
+      display: none;
+    }
+    .ld-top {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .ld-modules {
+      font-size: 0.84rem;
+    }
+    .legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 0.65rem 0 0;
+      font-size: 0.86rem;
+    }
+    .key {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .key .cell {
+      width: 10px;
+      height: 10px;
+    }
+
+    .citation-panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .provenance-overview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+      gap: 0.85rem;
+    }
+    .prov-group {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 0.75rem 0.9rem;
+    }
+    .prov-list {
+      margin: 0.45rem 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 0.45rem;
+      font-size: 0.88rem;
+    }
+    .prov-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .small-hash {
+      font-size: 0.76rem;
+    }
+
+    :global(.cit-grid) {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+      gap: 0.75rem;
+    }
+    :global(.cit-card) {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 0.75rem 0.9rem;
+      display: grid;
+      gap: 0.38rem;
+      box-shadow: var(--shadow-sm);
+    }
+    :global(.cit-top) {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    :global(.cit-val) {
+      font-size: 0.92rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    :global(.cit-loc) {
+      font-size: 0.85rem;
+      overflow-wrap: anywhere;
+    }
+    :global(.cit-foot) {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.15rem;
+      padding-top: 0.35rem;
+      border-top: 1px solid var(--line-soft);
+    }
+    :global(.cit-path) {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    :global(.btn-mini) {
+      min-height: 26px;
+      padding: 0.18rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    :global(.scope-pill) {
+      border-radius: 999px;
+      padding: 0.1rem 0.52rem;
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    :global(.scope-exact) {
+      background: color-mix(in srgb, var(--state) 14%, var(--panel));
+      color: var(--state);
+      border: 1px solid color-mix(in srgb, var(--state) 35%, var(--line));
+    }
+    :global(.scope-mech) {
+      background: color-mix(in srgb, var(--compute) 14%, var(--panel));
+      color: var(--compute);
+      border: 1px solid color-mix(in srgb, var(--compute) 35%, var(--line));
+    }
+
+    .ledger-disclosure {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: var(--shadow-sm);
+    }
+    .ledger-summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.85rem 1.05rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 36px;
+    }
+    .ledger-summary::-webkit-details-marker {
+      display: none;
+    }
+    .ledger-summary::after {
+      content: "▾";
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--attention);
+    }
+    .ledger-disclosure[open] .ledger-summary::after {
+      content: "▴";
+    }
+    .ledger-body {
+      padding: 0 1.05rem 1rem;
+      border-top: 1px solid var(--line-soft);
+      display: grid;
+      gap: 0.75rem;
+      padding-top: 0.75rem;
+    }
+
+    .ev-filters {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+    .ev-tab {
+      min-height: 28px;
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .ev-tab.active {
+      background: var(--ink);
+      color: var(--paper);
+      border-color: var(--ink);
+    }
+
+    .evidence-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+    }
+    .evidence {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .evidence th {
+      background: var(--surface);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .evidence th,
+    .evidence td {
+      text-align: left;
+      border-bottom: 1px solid var(--line-soft);
+      padding: 0.55rem 0.75rem;
+      vertical-align: top;
+    }
+    .evidence tbody tr.dimmed {
+      opacity: 0.38;
+    }
+    .evidence tbody tr.highlighted {
+      background: color-mix(in srgb, var(--attention) 8%, transparent);
+    }
+    .evidence tbody tr[hidden] {
+      display: none;
+    }
+
+    :global(.chip) {
+      border-radius: 999px;
+      padding: 0.1rem 0.55rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    :global(.chip-verified) { background: var(--state); color: #ffffff; }
+    :global(.chip-reported) { background: var(--attention); color: #ffffff; }
+    :global(.chip-derived) { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+    :global(.chip-inferred) { background: var(--compute); color: #ffffff; }
+    :global(.chip-conflict) { background: var(--conflict); color: #ffffff; }
+    :global(.chip-unknown) { background: var(--line); color: var(--ink); }
+
+    :global(html[data-theme="dark"]) .vtab.active,
+    :global(html[data-theme="dark"]) :global(.chip-verified),
+    :global(html[data-theme="dark"]) :global(.chip-reported),
+    :global(html[data-theme="dark"]) :global(.chip-inferred),
+    :global(html[data-theme="dark"]) :global(.chip-conflict) {
+      color: #0b1220;
+    }
+    @media (prefers-color-scheme: dark) {
+      :global(:root:not([data-theme="light"])) .vtab.active,
+      :global(:root:not([data-theme="light"])) :global(.chip-verified),
+      :global(:root:not([data-theme="light"])) :global(.chip-reported),
+      :global(:root:not([data-theme="light"])) :global(.chip-inferred),
+      :global(:root:not([data-theme="light"])) :global(.chip-conflict) {
+        color: #0b1220;
+      }
+    }
+
+    .compare-chips {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    @media (min-width: 720px) {
+      .facts {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .decision-panel .facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 821px) {
+      .mobile-cards {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      /* #36 tablet/mobile readability: put readable vertical cards FIRST and keep full blueprint scrollable at >=12px font */
+      .mobile-cards {
+        order: -1;
+      }
+      .figure-wrap.mode-fit .figure-inner,
+      .figure-wrap.mode-fit svg {
+        width: 78rem;
+        min-width: 78rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      /* #38 mobile citation table: stack each row cleanly with zero horizontal scroll */
+      .evidence thead {
+        display: none;
+      }
+      .evidence,
+      .evidence tbody,
+      .evidence tr,
+      .evidence td {
+        display: block;
+        width: 100%;
+      }
+      .evidence tr {
+        padding: 0.6rem 0.7rem;
+        border-bottom: 1px solid var(--line);
+      }
+      .evidence td {
+        border: 0;
+        padding: 0.18rem 0;
+        overflow-wrap: anywhere;
+      }
+      .evidence td::before {
+        content: attr(data-label) ": ";
+        font-weight: 700;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+        animation: none !important;
+      }
+    }
   </style>
 </Base>

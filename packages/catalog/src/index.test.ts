@@ -46,6 +46,30 @@ describe("buildCatalog", () => {
     expect(filterEntries(entries, { query: "kda" })[0]!.id).toBe("zai-org/glm-5.3-flash");
     expect(families(entries)).toEqual(["GLM", "Llama"]);
   });
+
+  it("classifies system_one_decision models and filters by paradigm", () => {
+    const sysDocs = [
+      ...docs,
+      {
+        model: { id: "convaiinnovations/laya", label: "Laya (421M)", family: "Laya", revision: "fd4f9db" },
+        facts: { num_hidden_layers: 28, total_params: 421293830, active_params: 421293830, context_tokens: 512 },
+        topology: {
+          paradigm: "system_one_decision" as const,
+          decision_head: { readout_mode: "mask_marker_mlp", primitives: ["choice", "score", "noul"] },
+          attention_groups: [
+            { label: "Full", kind: "mha", layers: [0, 3] },
+            { label: "Sliding", kind: "sliding_window", layers: [1, 2] },
+          ],
+          ffn_groups: [{ label: "Dense", kind: "dense_ffn", layers: [0, 1, 2, 3] }],
+        },
+      },
+    ];
+    const all = buildCatalog(sysDocs);
+    const sys = filterEntries(all, { paradigm: "system_one_decision" });
+    expect(sys).toHaveLength(1);
+    expect(sys[0]!.decoderType).toContain("System-1");
+    expect(sys[0]!.primitives).toEqual(["choice", "score", "noul"]);
+  });
 });
 
 describe("genome", () => {

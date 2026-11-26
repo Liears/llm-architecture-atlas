@@ -4,7 +4,7 @@
     "id": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
     "label": "Kimi Linear 48B-A3B",
     "family": "Kimi",
-    "revision": "69e2a71feb",
+    "revision": "e1df551a44",
     "license": "modified-mit"
   },
   "facts": {
@@ -50,7 +50,7 @@
       {
         "label": "MLA",
         "kind": "mla",
-        "module": "MLA",
+        "module": "KimiMLAAttention",
         "layers": [
           3,
           7,
@@ -64,11 +64,18 @@
     ],
     "ffn_groups": [
       {
+        "label": "Dense SwiGLU",
+        "kind": "dense_ffn",
+        "module": "KimiMLP",
+        "layers": [
+          0
+        ]
+      },
+      {
         "label": "MoE",
         "kind": "moe",
-        "module": "MoE",
+        "module": "KimiSparseMoeBlock",
         "layers": [
-          0,
           1,
           2,
           3,
@@ -101,7 +108,7 @@
     "experts": {
       "routed_total": 256,
       "active_routed": 8,
-      "shared": null
+      "shared": 1
     },
     "residual": {
       "scheme": "plain",
@@ -110,7 +117,7 @@
     },
     "position_encoding": {
       "type": "rope",
-      "note": "qk_rope_head_dim=64 on MLA layers"
+      "note": "qk_rope_head_dim=64, kv_lora_rank=512, mla_use_nope=true on MLA layers"
     }
   }
 }

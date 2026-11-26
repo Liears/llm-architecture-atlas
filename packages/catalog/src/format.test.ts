@@ -3,6 +3,7 @@ import { formatParams, formatContext } from "./format.js";
 
 describe("formatParams (issue #22 — single formatter, no drift)", () => {
   it.each([
+    [421_293_830, "421.3M"],
     [8_030_000_000, "8B"],
     [46_700_000_000, "46.7B"],
     [320_000_000_000, "320B"],
@@ -18,6 +19,7 @@ describe("formatParams (issue #22 — single formatter, no drift)", () => {
 
 describe("formatContext", () => {
   it.each([
+    [512, "512"],
     [8_192, "8K"],
     [262_144, "256K"],
     [1_048_576, "1M"],

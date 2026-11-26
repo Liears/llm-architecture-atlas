@@ -13,7 +13,9 @@
   "dependencies": {
     "astro": "^5.13.0",
     "@atlas/catalog": "workspace:*",
-    "@atlas/architecture-ir": "workspace:*"
+    "@atlas/architecture-ir": "workspace:*",
+    "@atlas/diagram-engine": "workspace:*",
+    "@atlas/renderer-svg": "workspace:*"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",

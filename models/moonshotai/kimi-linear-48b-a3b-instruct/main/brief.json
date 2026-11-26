@@ -3,15 +3,20 @@
   "primary_sources": [
     {
       "kind": "config",
-      "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/69e2a71feb9258d1ac9e8b0a7cd34d5446672755/config.json",
-      "revision": "69e2a71feb9258d1ac9e8b0a7cd34d5446672755",
+      "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/config.json",
+      "revision": "e1df551a447157d4658b573f9a695d57658590e9",
       "sha256": "a6ac3c2c4b5aa72370f9727f49ffa4432715d20061889acdb37c688be853096e"
+    },
+    {
+      "kind": "code",
+      "url": "https://huggingface.co/moonshotai/Kimi-Linear-48B-A3B-Instruct/raw/e1df551a447157d4658b573f9a695d57658590e9/modeling_kimi.py",
+      "revision": "e1df551a447157d4658b573f9a695d57658590e9"
     }
   ],
   "papers": [
     {
       "url": "https://arxiv.org/abs/2510.26692",
-      "title": "Kimi Linear: An Hybrid Fisher-Decay Linear Attention Model",
+      "title": "Kimi Linear: An Expressive, Efficient Attention Architecture",
       "role": "model-specific",
       "verifies": "moonshotai/Kimi-Linear-48B-A3B-Instruct",
       "locators": [
@@ -24,20 +29,25 @@
   "visual_references": [],
   "paper_to_diagram": [
     {
-      "element": "27 layers, KDA:MLA = 3:1 (last layer MLA)",
-      "locator": "config $.linear_attn_config.kda_layers/full_attn_layers (rev 69e2a71f)",
+      "element": "27 layers, KDA:MLA = 3:1 (layers 0-2 KDA, last layer 26 MLA); Layer 0 Dense -> Layers 1..26 MoE",
+      "locator": "config $.linear_attn_config + $.first_k_dense_replace=1 + modeling_kimi.py:783-805 (rev e1df551a44)",
       "status": "verified"
     },
     {
-      "element": "KDA shortconv kernel 4, 32 heads, head_dim 128",
-      "locator": "config $.linear_attn_config (rev 69e2a71f); Kimi paper §4/Fig.3 for mechanism",
+      "element": "KDA Q/K/V ShortConv (k=4, 32 heads, head_dim=128) -> KDA decay gate -> delta state -> sigmoid o_norm gate",
+      "locator": "config $.linear_attn_config + modeling_kimi.py:444-504 (rev e1df551a44); Kimi Linear §4/Fig.3",
       "status": "verified"
     },
     {
-      "element": "MoE 256 experts, top-8, 1 shared",
-      "locator": "config $.num_experts + $.num_experts_per_token + $.n_shared_experts",
+      "element": "MLA compressed KV bottleneck (kv_lora_rank=512) + RoPE/NoPE key (64d/128d)",
+      "locator": "config $.kv_lora_rank/$.qk_rope_head_dim/$.mla_use_nope + modeling_kimi.py:344-379",
+      "status": "verified"
+    },
+    {
+      "element": "MoE 256 routed experts, top-8, 1 shared expert, weighted merge",
+      "locator": "config $.num_experts + $.num_experts_per_token + $.num_shared_experts (rev e1df551a44)",
       "status": "verified"
     }
   ],
-  "notes": "The Kimi Linear report is model-specific for this family. Context 1M comes from the model card (config has no max_position_embeddings)."
+  "notes": "Verified against HF main commit e1df551a44 (config sha256 identical to prior snapshot). Fixed first_k_dense_replace=1 (layer 0 Dense SwiGLU) and num_shared_experts=1."
 }

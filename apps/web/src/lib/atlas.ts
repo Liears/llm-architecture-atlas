@@ -1,19 +1,44 @@
 /**
- * Build-time data loading for the static site (issues #8–#11).
+ * Build-time data loading for the static site (issues #8-#11, #37-#38).
  * Runs at astro build; no client-side data fetching.
  */
 
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { buildCatalog, type CatalogEntry } from "@atlas/catalog";
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 
 // repo root injected by astro.config (vite define) — robust in build output
 const root: string = typeof __ATLAS_ROOT__ === "string" ? __ATLAS_ROOT__ : resolve(process.cwd(), "../..");
 
+export interface BriefSource {
+  kind: string;
+  url: string;
+  revision: string;
+  sha256?: string;
+}
+
+export interface BriefPaper {
+  url: string;
+  title: string;
+  role: "model-specific" | "mechanism-only";
+  verifies: string;
+  locators: string[];
+}
+
+export interface BriefData {
+  model_id: string;
+  primary_sources: BriefSource[];
+  papers: BriefPaper[];
+  paper_to_diagram: Array<{ element: string; locator: string; status: string }>;
+  notes?: string;
+}
+
 export interface ModelData {
   slug: string;
   arch: ModelDocument;
   evidence: EvidenceFile;
+  brief?: BriefData;
 }
 
 export function loadModels(): ModelData[] {
@@ -27,8 +52,10 @@ export function loadModels(): ModelData[] {
       if (!existsSync(`${main}/architecture.json`)) continue;
       const arch = JSON.parse(readFileSync(`${main}/architecture.json`, "utf8")) as ModelDocument;
       const evidence = JSON.parse(readFileSync(`${main}/evidence.json`, "utf8")) as EvidenceFile;
+      const briefPath = `${main}/brief.json`;
+      const brief = existsSync(briefPath) ? (JSON.parse(readFileSync(briefPath, "utf8")) as BriefData) : undefined;
       const slug = arch.model.id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      out.push({ slug, arch, evidence });
+      out.push({ slug, arch, evidence, ...(brief ? { brief } : {}) });
     }
   }
   return out.sort((a, b) => a.arch.model.label.localeCompare(b.arch.model.label));

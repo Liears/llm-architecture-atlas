@@ -26,6 +26,12 @@ importers:
       '@atlas/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@atlas/diagram-engine':
+        specifier: workspace:*
+        version: link:../../packages/diagram-engine
+      '@atlas/renderer-svg':
+        specifier: workspace:*
+        version: link:../../packages/renderer-svg
       astro:
         specifier: ^5.13.0
         version: 5.18.2(@types/node@22.20.2)(rollup@4.63.2)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.1)

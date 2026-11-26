@@ -246,7 +246,7 @@ export function compileGlmAnatomyScene(arch: ModelDocument, evidence: EvidenceFi
 
   const groups: DiagramScene["groups"] = [
     {
-      id: "g-pattern", label: `${facts.num_hidden_layers}-layer genome · ${attentionSummary}`, kind: "stack",
+      id: "g-pattern", label: `${facts.num_hidden_layers}-layer genome`, kind: "stack",
       members: scheduleChunks.map((chunk, i) => chunk.length === 4 ? `pattern-${i}` : "pattern-tail"),
       claimPath: "facts.num_hidden_layers",
     },

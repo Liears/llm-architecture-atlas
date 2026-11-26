@@ -97,6 +97,121 @@
       "title": "ClaimStatus",
       "type": "string"
     },
+    "DecisionHeadConfig": {
+      "additionalProperties": false,
+      "description": "Typed decision readout and calibration structure for System-1 models.",
+      "properties": {
+        "readout_mode": {
+          "title": "Readout Mode",
+          "type": "string"
+        },
+        "primitives": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Primitives",
+          "type": "array"
+        },
+        "head_layers": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Head Layers"
+        },
+        "calibration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibration"
+        },
+        "action_head": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action Head"
+        },
+        "max_options": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Options"
+        },
+        "prefix_cache": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prefix Cache"
+        },
+        "vision_encoder": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vision Encoder"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "readout_mode"
+      ],
+      "title": "DecisionHeadConfig",
+      "type": "object"
+    },
+    "ExecutionParadigm": {
+      "description": "High-level execution family: generative decoding vs non-autoregressive System-1 decision.",
+      "enum": [
+        "autoregressive_lm",
+        "system_one_decision"
+      ],
+      "title": "ExecutionParadigm",
+      "type": "string"
+    },
     "ExpertConfig": {
       "additionalProperties": false,
       "properties": {
@@ -375,6 +490,28 @@
           "anyOf": [
             {
               "$ref": "#/$defs/PositionEncoding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "paradigm": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExecutionParadigm"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "decision_head": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DecisionHeadConfig"
             },
             {
               "type": "null"
