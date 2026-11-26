@@ -209,12 +209,42 @@ test("System-1 model pages render decision contract and non-autoregressive SVG p
   expect(ojSvg).toContain("Shared Prefix KV");
 });
 
-test("language toggle switches to Chinese and persists", async ({ page }) => {
+test("language toggle switches to Chinese and persists across catalog, detail, SVG diagrams, and compare", async ({ page }) => {
   await page.goto("/llm-architecture-atlas/");
   await page.click("#lang-toggle");
   await expect(page.locator("h1")).toHaveText("目录");
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.locator("html")).toHaveAttribute("data-lang", "zh");
+  await expect(page.locator(".site-footer")).toContainText("由可溯源 Architecture IR 编译生成");
+  await expect(page.locator("#catalog .pill").first()).toContainText("System-");
+
   await page.reload();
+  await expect(page.locator("h1")).toHaveText("目录");
+
+  // Navigating to detail page keeps Chinese chrome, overview SVG translation & live subview translation
+  await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/?view=ffn");
+  await expect(page.locator("#subview-title")).toHaveText("FFN 与专家路由");
+  await expect(page.locator("#subview-canvas svg")).toContainText("路由专家");
+  await expect(page.locator("#subview-canvas svg")).toContainText("42 / 45 层");
+  await expect(page.locator(".stage-footer")).toContainText("点击架构图中任意模块或连线");
+
+  // Switching to Overview translates the overview diagram cleanly as well
+  await page.click('.vtab[data-subview="overview"]');
+  await expect
+    .poll(async () => {
+      const src = await page.locator("#overview-stage img.diagram-img").getAttribute("src");
+      return decodeURIComponent(src ?? "");
+    })
+    .toContain("架构总览");
+
+  // Switching back to English restores canonical EN overview & subviews immediately
+  await page.click("#lang-toggle");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#overview-stage img.diagram-img")).toHaveAttribute(
+    "src",
+    "/llm-architecture-atlas/figures/zai-org-glm-5-3-flash-generated.svg",
+  );
+  await page.goto("/llm-architecture-atlas/?lang=zh");
   await expect(page.locator("h1")).toHaveText("目录");
   await page.click("#lang-toggle");
   await expect(page.locator("h1")).toHaveText("Catalog");

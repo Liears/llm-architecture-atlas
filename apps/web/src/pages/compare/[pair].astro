@@ -89,29 +89,35 @@ const alignedB = paddedLayers(genomeB.layers);
     <div class="side-cards">
       <article class="side-card side-a">
         <div class="side-head">
-          <span class={`pill ${ea!.paradigm === "system_one_decision" ? "pill-s1" : "pill-ar"}`}>
+          <span
+            class={`pill ${ea!.paradigm === "system_one_decision" ? "pill-s1" : "pill-ar"}`}
+            data-i18n={ea!.paradigm === "system_one_decision" ? "catalog.cardS1" : "catalog.cardAr"}
+          >
             {ea!.paradigm === "system_one_decision" ? "System-1 · Decision" : "System-2 · Autoregressive"}
           </span>
           <a href={`/llm-architecture-atlas/models/${a.slug}/`}>{ea!.label} →</a>
         </div>
         <dl class="side-meta">
-          <div><dt>Readout / Output</dt><dd class="mono">{ea!.readoutMode ?? "Autoregressive LM head"}</dd></div>
-          <div><dt>Primitives</dt><dd class="mono">{ea!.primitives.length ? ea!.primitives.join(", ") : "Free-form text / code"}</dd></div>
-          <div><dt>Attention mix</dt><dd>{ea!.attentionTypes.join(" + ")}</dd></div>
+          <div><dt data-i18n="compare.readout">Readout / Output</dt><dd class="mono" data-i18n={ea!.readoutMode ? "" : "compare.lmHeadFallback"}>{ea!.readoutMode ?? "Autoregressive LM head"}</dd></div>
+          <div><dt data-i18n="compare.primitives">Primitives</dt><dd class="mono" data-i18n={ea!.primitives.length ? "" : "compare.freeFormFallback"}>{ea!.primitives.length ? ea!.primitives.join(", ") : "Free-form text / code"}</dd></div>
+          <div><dt data-i18n="compare.attnMix">Attention mix</dt><dd>{ea!.attentionTypes.join(" + ")}</dd></div>
         </dl>
       </article>
 
       <article class="side-card side-b">
         <div class="side-head">
-          <span class={`pill ${eb!.paradigm === "system_one_decision" ? "pill-s1" : "pill-ar"}`}>
+          <span
+            class={`pill ${eb!.paradigm === "system_one_decision" ? "pill-s1" : "pill-ar"}`}
+            data-i18n={eb!.paradigm === "system_one_decision" ? "catalog.cardS1" : "catalog.cardAr"}
+          >
             {eb!.paradigm === "system_one_decision" ? "System-1 · Decision" : "System-2 · Autoregressive"}
           </span>
           <a href={`/llm-architecture-atlas/models/${b.slug}/`}>{eb!.label} →</a>
         </div>
         <dl class="side-meta">
-          <div><dt>Readout / Output</dt><dd class="mono">{eb!.readoutMode ?? "Autoregressive LM head"}</dd></div>
-          <div><dt>Primitives</dt><dd class="mono">{eb!.primitives.length ? eb!.primitives.join(", ") : "Free-form text / code"}</dd></div>
-          <div><dt>Attention mix</dt><dd>{eb!.attentionTypes.join(" + ")}</dd></div>
+          <div><dt data-i18n="compare.readout">Readout / Output</dt><dd class="mono" data-i18n={eb!.readoutMode ? "" : "compare.lmHeadFallback"}>{eb!.readoutMode ?? "Autoregressive LM head"}</dd></div>
+          <div><dt data-i18n="compare.primitives">Primitives</dt><dd class="mono" data-i18n={eb!.primitives.length ? "" : "compare.freeFormFallback"}>{eb!.primitives.length ? eb!.primitives.join(", ") : "Free-form text / code"}</dd></div>
+          <div><dt data-i18n="compare.attnMix">Attention mix</dt><dd>{eb!.attentionTypes.join(" + ")}</dd></div>
         </dl>
       </article>
     </div>
@@ -123,7 +129,7 @@ const alignedB = paddedLayers(genomeB.layers);
       <table class="diff">
         <thead>
           <tr>
-            <th data-i18n="compare.fields">Field</th>
+            <th data-i18n="compare.colField">Field</th>
             <th class="col-a">{ea!.label}</th>
             <th class="col-b">{eb!.label}</th>
           </tr>
