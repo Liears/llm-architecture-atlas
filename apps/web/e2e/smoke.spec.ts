@@ -114,10 +114,16 @@ test("Kimi Linear reuses hybrid KDA + MLA + MoE template without model-id hacks 
   await page.click('#subview-canvas .hotspot[data-edge-id="e-blk-f-route"]');
   await expect(page.locator("#citation-cards")).toContainText("topology.experts.active_routed");
 
-  // ?view=moe alias opens the MoE/FFN subview (#36, #37)
+  // ?view=moe alias opens the MoE/FFN subview (#36, #37) and preserves normalized view=ffn across URL/reload
   await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/?view=moe&layer=3");
   await expect(page.getByTestId("subview-stage")).toBeVisible();
   await expect(page.locator("#subview-title")).toContainText("FFN & Expert Routing");
+  expect(page.url()).toContain("view=ffn");
+  expect(page.url()).toContain("layer=3");
+  await page.reload();
+  await expect(page.getByTestId("subview-stage")).toBeVisible();
+  await expect(page.locator("#subview-title")).toContainText("FFN & Expert Routing");
+  expect(page.url()).toContain("view=ffn");
 });
 
 test("mobile 390x844 shows readable structured overview cards and >=24px controls (#36)", async ({ page }) => {

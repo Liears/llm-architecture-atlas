@@ -973,6 +973,7 @@ const evidencePayload = {
       const qView = rawView === "moe" ? "ffn" : rawView;
       const qLayer = params.get("layer");
       const qClaim = params.get("claim");
+      currentView = qView;
 
       if (qLayer !== null && Number.isInteger(Number(qLayer)) && Number(qLayer) >= 0 && Number(qLayer) < cols.length) {
         selectLayer(Number(qLayer), { switchView: qView === "block", push: false });
@@ -991,6 +992,8 @@ const evidencePayload = {
       } else if (qLayer === null) {
         renderCitations("", []);
       }
+
+      syncUrl(false);
     }
 
     restoreFromUrl();
