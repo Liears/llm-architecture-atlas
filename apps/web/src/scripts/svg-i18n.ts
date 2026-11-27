@@ -61,6 +61,41 @@ const EXACT_ZH: Record<string, string> = {
   "Input RMSNorm": "输入 RMSNorm",
   "Post-Attn Norm": "注意力后 Norm",
   "MLA Attention": "MLA 注意力",
+  // Block spine & zooms (Raschka + ModelMap synthesis)
+  "Block Input": "模块输入",
+  "Pre-Attn Norm": "Attn 前 Norm",
+  "Hybrid Attention": "混合注意力",
+  "Bidirectional Attn": "双向注意力",
+  "Hybrid Backbone": "混合骨干",
+  "Attn Stream": "注意力残差流",
+  "pre-FFN fork": "FFN 前分叉",
+  "RMSNorm": "RMSNorm",
+  "LayerNorm": "LayerNorm",
+  "Part. RoPE": "局部 RoPE",
+  "dual RoPE": "双频 RoPE",
+  "pos enc": "位置编码",
+  "h + attn": "h + 注意力",
+  "h + FFN": "h + FFN",
+  "h + ffn": "h + FFN",
+  "gated MLP": "门控 MLP",
+  "Q Projections": "Q 投影",
+  "KV Projections": "KV 投影",
+  "SDPA Attn": "SDPA 注意力",
+  "O Proj": "O 输出投影",
+  "KV Down-Proj": "KV 降维投影",
+  "MLA Core": "MLA 核心",
+  "Gate Proj": "门控投影 Gate",
+  "SiLU Act": "SiLU 激活",
+  "GELU Act": "GELU 激活",
+  "Up Proj": "上投影 Up",
+  "⊗ Multiply": "⊗ 逐元素乘",
+  "Down Proj": "下投影 Down",
+  "gating branch": "门控分支",
+  "Expert SwiGLU": "专家 SwiGLU",
+  "compressed cache": "低秩压缩缓存",
+  "causal mask": "因果掩码",
+  "RLCD Scoring": "RLCD 评分",
+  "Fixed T + shuffle inv.": "固定温度 + 乱序不变",
   "Dense SwiGLU": "稠密 SwiGLU",
   "Dense GeGLU": "稠密 GeGLU",
   "Sliding Window (w=128)": "滑动窗口 (w=128)",
@@ -201,14 +236,39 @@ export function localizeSvgText(raw: string, lang: Lang): string {
   if (trimmed.startsWith("Backbone Schedule · ")) {
     return `骨干调度 · ${trimmed.slice("Backbone Schedule · ".length)}`;
   }
-  if (trimmed.startsWith("Backbone Mix · ")) {
-    const rest = trimmed
-      .slice("Backbone Mix · ".length)
-      .replace(/Full Attention/g, "全局注意力")
+  if (trimmed.startsWith("Layer Schedule · ")) {
+    return `层级调度 · ${trimmed.slice("Layer Schedule · ".length)}`;
+  }
+  const blockGroupHead = trimmed.match(/^(Transformer|Encoder|Hybrid) Block · (\d+) layers$/);
+  if (blockGroupHead) {
+    const mapKind: Record<string, string> = { Transformer: "Transformer", Encoder: "编码器", Hybrid: "混合骨干" };
+    return `${mapKind[blockGroupHead[1]] ?? blockGroupHead[1]} 模块 · ${blockGroupHead[2]} 层`;
+  }
+  if (trimmed.startsWith("Attention Zoom · ")) {
+    return `注意力微结构 · ${localizeSvgText(trimmed.slice("Attention Zoom · ".length), "zh")}`;
+  }
+  if (trimmed.startsWith("FFN Zoom · ")) {
+    return `FFN 微结构 · ${localizeSvgText(trimmed.slice("FFN Zoom · ".length), "zh")}`;
+  }
+  const moeZoom = trimmed.match(/^MoE Zoom · ([\d,]+) experts$/);
+  if (moeZoom) {
+    return `MoE 微结构 · ${moeZoom[1]} 专家`;
+  }
+  const localizeAttnMix = (rest: string) =>
+    rest
+      .replace(/Full Attention/g, "全局全注意力")
       .replace(/Sliding Window/g, "滑动窗口")
       .replace(/Gated Attention \(GQA\)/g, "门控注意力 (GQA)")
       .replace(/Gated DeltaNet/g, "Gated DeltaNet");
-    return `骨干配比 · ${rest}`;
+
+  if (trimmed.startsWith("Marker Readout · ")) {
+    return `占位读出 · ${localizeAttnMix(trimmed.slice("Marker Readout · ".length))}`;
+  }
+  if (trimmed.startsWith("Prefix Readout · ")) {
+    return `前缀读出 · ${localizeAttnMix(trimmed.slice("Prefix Readout · ".length))}`;
+  }
+  if (trimmed.startsWith("Backbone Mix · ")) {
+    return `骨干配比 · ${localizeAttnMix(trimmed.slice("Backbone Mix · ".length))}`;
   }
   if (trimmed.startsWith("Sparse MoE · ")) {
     const layersRange = trimmed.match(/^Sparse MoE · layers (\d+[–-]\d+)$/);
@@ -260,7 +320,16 @@ export function localizeSvgText(raw: string, lang: Lang): string {
   out = out.replace(/Dense→MoE/g, "稠密→MoE");
   out = out.replace(/tail KDA/g, "尾层 KDA");
   out = out.replace(/KDA \+ MLA/g, "KDA + MLA");
-  out = out.replace(/<= (\d+) letters \/ chunk/g, "每批 ≤ $1 选项");
+  out = out.replace(/^<= (\d+) letters \/ chunk$/, "每批 ≤ $1 选项");
+  out = out.replace(/^<= (\d+) letters$/, "每批 ≤ $1 字母");
+  out = out.replace(/from d=([\d,]+)/g, "输入 d=$1");
+  out = out.replace(/to d=([\d,]+)/g, "输出 d=$1");
+  out = out.replace(/^d=([\d,]+) linear$/, "d=$1 线性分支");
+  out = out.replace(/^ffn ([\d,]+)$/, "前馈维 $1");
+  out = out.replace(/^([\d,]+) experts · top-(\d+)$/, "$1 专家 · top-$2");
+  out = out.replace(/^(\d+):1 Q\/KV ratio$/, "$1:1 Q/KV 分组比");
+  out = out.replace(/^(\d+)h · up-proj$/, "$1 头 · 升维投影");
+  out = out.replace(/(\d+)L vision · (\d+)d/, "$1 层视觉塔 · $2 维");
   out = out.replace(/(\d+)L vision encoder · (\d+)d/, "$1 层视觉塔 · $2 维");
   return out;
 }

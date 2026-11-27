@@ -1,6 +1,6 @@
 import type { EvidenceFile, LayerGroup, ModelDocument } from "@atlas/architecture-ir";
 import type { EditorialPosterBlueprint } from "./poster.js";
-import { buildPosterGridBlueprint, type LensSpec } from "./poster-grid.js";
+import { buildSpinePosterBlueprint, type LensSpec } from "./poster-grid.js";
 import type { DiagramScene, EvidenceAnnotation, SemanticGroup, SemanticNode } from "./types.js";
 
 type AnnStatus = NonNullable<EvidenceAnnotation["status"]>;
@@ -212,33 +212,105 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
   }
 
   const attnSummary = attnGroups.map((g) => `${g.layers.length} ${g.label}`).join(" + ");
+  const compactAttnSummary = attnGroups
+    .map((g) => `${g.layers.length} ${g.kind === "linear_attention" ? "Lin" : g.kind === "sliding_window" ? "SWA" : g.kind.toUpperCase()}`)
+    .join(" + ");
+  const ffnSummary = topology.ffn_groups.map((g) => `${g.layers.length} ${g.label}`).join(" → ");
   const hasMoe = Boolean(topology.experts?.routed_total);
   const hasShared = Boolean(topology.experts?.shared && topology.experts.shared > 0);
   const attnKinds = new Set(attnGroups.map((g) => g.kind));
+  const primaryAttnClaim = "topology.attention_groups[0]";
+  const secondaryAttnClaim = hasClaim("topology.attention_groups[1]") ? "topology.attention_groups[1]" : primaryAttnClaim;
+  const posClaim = hasClaim("topology.position_encoding.type") ? "topology.position_encoding.type" : secondaryAttnClaim;
+  const posLabel = topology.position_encoding?.type?.toUpperCase() ?? "RoPE";
 
-  // 1. Main Spine
-  const nodes: SemanticNode[] = [
-    { id: "tok", kind: "io", label: "Token ids" },
-    safeNode("embed", "embedding", "Token embedding", [
-      { claimPath: "facts.hidden_size", label: `hidden ${commas(facts.hidden_size)}` },
-    ]),
+  // 1. Top & Bottom Main Execution Spine + Nested Pre-Norm Block with Explicit Residual Rails
+  const blockNodes: SemanticNode[] = [
     safeNode(
-      "decoder",
-      "stack",
-      "Decoder stack",
-      [
-        { claimPath: "facts.num_hidden_layers", label: `${facts.num_hidden_layers} layers` },
-        { label: attnSummary },
-      ],
-      [
-        { name: "sched", side: "bottom" },
-        { name: "scale", side: "bottom" },
-        { name: "ffn", side: "bottom" },
-        { name: "attn", side: "bottom" },
-      ],
+      "blk-in",
+      "split",
+      "Block Input",
+      [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+      "facts.hidden_size",
     ),
-    { id: "norm", kind: "norm", label: "Final RMSNorm" },
-    safeNode("head", "output", "LM head", facts.vocab_size ? [{ claimPath: "facts.vocab_size", label: `vocab ${commas(facts.vocab_size)}` }] : []),
+    { id: "blk-norm1", kind: "norm", label: "Pre-Attn Norm", detail: "RMSNorm", ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }] },
+    safeNode(
+      "blk-attn",
+      attnKinds.has("linear_attention") && attnGroups.length === 1 ? "state" : "attention",
+      attnGroups.length > 1 ? "Hybrid Attention" : attnGroups[0]!.label,
+      [
+        { claimPath: primaryAttnClaim, label: compactAttnSummary },
+        ...(facts.num_attention_heads ? [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` }] : []),
+      ],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "mod", side: "left" }],
+      primaryAttnClaim,
+    ),
+    {
+      id: "blk-add1",
+      kind: "merge",
+      label: "⊕ Residual",
+      detail: "h + attn",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+    },
+    {
+      id: "blk-fork2",
+      kind: "split",
+      label: "Attn Stream",
+      detail: "pre-FFN fork",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+    },
+    { id: "blk-norm2", kind: "norm", label: "Pre-FFN Norm", detail: "RMSNorm", ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }] },
+    safeNode(
+      "blk-ffn",
+      hasMoe ? "moe" : "ffn",
+      hasMoe ? "Sparse MoE" : (topology.ffn_groups[0]?.label ?? "Dense SwiGLU"),
+      hasMoe
+        ? [
+            { claimPath: "topology.experts.routed_total", label: `${commas(topology.experts!.routed_total!)} experts` },
+            ...(topology.experts?.active_routed ? [{ claimPath: "topology.experts.active_routed", label: `top-${topology.experts.active_routed}` }] : []),
+          ]
+        : [{ label: ffnSummary }],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+      hasMoe ? "topology.experts.routed_total" : "facts.hidden_size",
+    ),
+    {
+      id: "blk-add2",
+      kind: "merge",
+      label: "⊕ Residual",
+      detail: "h + FFN",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+    },
+    safeNode(
+      "blk-mod",
+      "state",
+      attnGroups.length > 1 || attnKinds.has("mla") ? "Part. RoPE" : posLabel,
+      [
+        ...(facts.context_tokens ? [{ claimPath: "facts.context_tokens", label: contextLabel(facts.context_tokens) }] : [{ label: posLabel }]),
+      ],
+      undefined,
+      posClaim,
+    ),
+  ];
+
+  const nodes: SemanticNode[] = [
+    { id: "tok", kind: "io", label: "Token ids", ports: [{ name: "out", side: "bottom" }] },
+    safeNode(
+      "embed",
+      "embedding",
+      "Token embedding",
+      [{ claimPath: "facts.hidden_size", label: `hidden ${commas(facts.hidden_size)}` }],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+    ),
+    ...blockNodes,
+    { id: "norm", kind: "norm", label: "Final RMSNorm", ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }] },
+    safeNode(
+      "head",
+      "output",
+      "LM head",
+      facts.vocab_size ? [{ claimPath: "facts.vocab_size", label: `vocab ${commas(facts.vocab_size)}` }] : [],
+      [{ name: "in", side: "top" }, { name: "scale", side: "bottom" }],
+    ),
   ];
 
   // 2. Schedule column nodes
@@ -256,13 +328,10 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
     });
   });
 
-  // 3. Mechanism Lens 1: Attention anatomy (multi-row non-isomorphic graphs for hybrid linear+full)
+  // 3. Mechanism Lens 1: Detailed Attention / Mixer Internals
   const attnLensIds: string[] = [];
   let attnRows: Array<Array<string | null>> = [];
   const attnInternalEdges: DiagramScene["edges"] = [];
-  const primaryAttnClaim = "topology.attention_groups[0]";
-  const secondaryAttnClaim = hasClaim("topology.attention_groups[1]") ? "topology.attention_groups[1]" : primaryAttnClaim;
-  const posClaim = hasClaim("topology.position_encoding.type") ? "topology.position_encoding.type" : secondaryAttnClaim;
 
   if (attnKinds.has("linear_attention") && (attnKinds.has("mla") || attnKinds.has("gqa"))) {
     const linGrp = attnGroups.find((g) => g.kind === "linear_attention")!;
@@ -363,32 +432,41 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
     attnLensIds.push(...linIds, ...fullIds);
   } else if (attnKinds.has("mla") || attnKinds.has("mla_sparse")) {
     nodes.push(
-      safeNode("attn-proj", "attention", "Q / KV Latent Proj", [{ claimPath: "facts.hidden_size", label: `from d=${commas(facts.hidden_size)}` }], [{ name: "latent", side: "bottom" }]),
-      safeNode("attn-kv", "state", "Compressed KV Cache", [{ label: "low-rank latent vector" }], undefined, primaryAttnClaim),
+      safeNode("attn-q", "attention", "Query Proj", [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q heads` }]),
+      safeNode("attn-rope", "attention", "RoPE / NoPE", [{ claimPath: posClaim, label: "decoupled key" }], undefined, posClaim),
+      safeNode("attn-proj", "attention", "KV Down-Proj", [{ claimPath: "facts.hidden_size", label: `from d=${commas(facts.hidden_size)}` }]),
+      safeNode("attn-kv", "state", "Latent KV", [{ label: "compressed cache" }], undefined, primaryAttnClaim),
       safeNode(
         "attn-core",
         "attention",
-        "MLA Attention",
-        [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q heads` }],
-        [{ name: "latent", side: "bottom" }],
+        "MLA Core",
+        [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads}h · up-proj` }],
+        [{ name: "kv", side: "bottom" }],
         primaryAttnClaim,
       ),
+      safeNode("attn-out", "attention", "O Proj", [{ claimPath: "facts.hidden_size", label: `to d=${commas(facts.hidden_size)}` }]),
     );
-    attnRows = [["attn-proj", "attn-kv", "attn-core"]];
-    attnLensIds.push("attn-proj", "attn-kv", "attn-core");
+    attnRows = [
+      ["attn-q", "attn-rope", "attn-core", "attn-out"],
+      ["attn-proj", "attn-kv", null, null],
+    ];
+    attnLensIds.push("attn-q", "attn-rope", "attn-proj", "attn-kv", "attn-core", "attn-out");
     attnInternalEdges.push(
-      { id: "e-attn-1", from: "attn-proj", to: "attn-kv", kind: "flow", claimPath: primaryAttnClaim },
-      { id: "e-attn-2", from: "attn-kv", to: "attn-core", kind: "flow", claimPath: primaryAttnClaim },
-      { id: "e-attn-bypass", from: "attn-proj.latent", to: "attn-core.latent", kind: "skip", claimPath: primaryAttnClaim },
+      { id: "e-attn-q1", from: "attn-q", to: "attn-rope", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-q2", from: "attn-rope", to: "attn-core", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-kv1", from: "attn-proj", to: "attn-kv", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-kv2", from: "attn-kv", to: "attn-core.kv", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-out", from: "attn-core", to: "attn-out", kind: "flow", claimPath: primaryAttnClaim },
     );
   } else {
     const kvRatio = facts.num_key_value_heads ? Math.round(facts.num_attention_heads / facts.num_key_value_heads) : null;
     nodes.push(
-      safeNode("attn-q", "attention", "Query Projections", [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q heads` }]),
+      safeNode("attn-q", "attention", "Q Projections", [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q heads` }]),
+      safeNode("attn-rope", "attention", `RoPE (Q, K)`, [{ claimPath: posClaim, label: posLabel }], undefined, posClaim),
       safeNode(
         "attn-kv",
         "state",
-        "Shared KV Cache",
+        "KV Projections",
         [
           ...(facts.num_key_value_heads ? [{ claimPath: "facts.num_key_value_heads", label: `${facts.num_key_value_heads} KV heads` }] : [{ label: "grouped KV" }]),
         ],
@@ -398,23 +476,27 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
       safeNode(
         "attn-core",
         "attention",
-        attnGroups[0]!.label,
-        [
-          ...(kvRatio ? [{ label: `${kvRatio}:1 Q/KV ratio` }] : [{ label: "attention core" }]),
-        ],
-        undefined,
+        "SDPA Attn",
+        [...(kvRatio ? [{ label: `${kvRatio}:1 Q/KV ratio` }] : [{ label: "causal mask" }])],
+        [{ name: "kv", side: "bottom" }],
         primaryAttnClaim,
       ),
+      safeNode("attn-out", "attention", "O Proj", [{ claimPath: "facts.hidden_size", label: `to d=${commas(facts.hidden_size)}` }]),
     );
-    attnRows = [["attn-q", "attn-kv", "attn-core"]];
-    attnLensIds.push("attn-q", "attn-kv", "attn-core");
+    attnRows = [
+      ["attn-q", "attn-rope", "attn-core", "attn-out"],
+      [null, "attn-kv", null, null],
+    ];
+    attnLensIds.push("attn-q", "attn-rope", "attn-kv", "attn-core", "attn-out");
     attnInternalEdges.push(
-      { id: "e-attn-1", from: "attn-q", to: "attn-kv", kind: "flow", claimPath: primaryAttnClaim },
-      { id: "e-attn-2", from: "attn-kv", to: "attn-core", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-1", from: "attn-q", to: "attn-rope", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-2", from: "attn-rope", to: "attn-core", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-kv", from: "attn-kv", to: "attn-core.kv", kind: "flow", claimPath: primaryAttnClaim },
+      { id: "e-attn-out", from: "attn-core", to: "attn-out", kind: "flow", claimPath: primaryAttnClaim },
     );
   }
 
-  // 4. Mechanism Lens 2: FFN / Sparse MoE
+  // 4. Mechanism Lens 2: Detailed FFN SwiGLU Diamond or Sparse MoE
   const ffnRows: Array<Array<string | null>> = [];
   const ffnLensIds: string[] = [];
   const ffnEdges: DiagramScene["edges"] = [];
@@ -429,20 +511,27 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
         claimPath: "topology.experts.active_routed",
         ports: [{ name: hasShared ? "shared" : "skip", side: "bottom" }],
       },
-      safeNode("moe-routed", "moe", "Routed Experts", [
-        { claimPath: "topology.experts.routed_total", label: `${commas(exp.routed_total!)} total` },
-        ...(exp.active_routed ? [{ claimPath: "topology.experts.active_routed", label: `top-${exp.active_routed}` }] : []),
-      ]),
+      safeNode(
+        "moe-routed",
+        "moe",
+        "Routed Experts",
+        [
+          { claimPath: "topology.experts.routed_total", label: `${commas(exp.routed_total!)} total` },
+          ...(exp.active_routed ? [{ claimPath: "topology.experts.active_routed", label: `top-${exp.active_routed}` }] : []),
+        ],
+        hasShared ? undefined : [{ name: "recipe", side: "bottom" }],
+      ),
       {
         id: "moe-merge",
         kind: "merge",
         label: "⊕ Merge",
         detail: hasShared ? "routed + shared" : "routed + residual",
         claimPath: "topology.experts.routed_total",
-        ports: [{ name: hasShared ? "shared" : "skip", side: "bottom" }],
+        ports: hasShared ? [{ name: "shared", side: "bottom" }, { name: "recipe", side: "right" }] : [{ name: "skip", side: "bottom" }],
       },
+      safeNode("moe-swiglu", "ffn", "Expert SwiGLU", [{ label: "Gate·SiLU ⊙ Up" }], hasShared ? [{ name: "in", side: "top" }] : [{ name: "recipe", side: "top" }], "facts.hidden_size"),
     );
-    ffnLensIds.push("moe-router", "moe-routed", "moe-merge");
+    ffnLensIds.push("moe-router", "moe-routed", "moe-merge", "moe-swiglu");
     ffnEdges.push(
       { id: "e-moe-route", from: "moe-router", to: "moe-routed", kind: "control", claimPath: "topology.experts.active_routed" },
       { id: "e-moe-routed-merge", from: "moe-routed", to: "moe-merge", kind: "flow", claimPath: "topology.experts.routed_total" },
@@ -452,46 +541,43 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
         safeNode("moe-shared", "moe", "Shared Expert", [{ claimPath: "topology.experts.shared", label: `${exp.shared} always-on` }]),
       );
       ffnLensIds.push("moe-shared");
-      ffnRows.push(["moe-router", "moe-routed", "moe-merge"], [null, "moe-shared", null]);
+      ffnRows.push(["moe-router", "moe-routed", "moe-merge", null], [null, "moe-shared", null, "moe-swiglu"]);
       ffnEdges.push(
         { id: "e-moe-shared-route", from: "moe-router.shared", to: "moe-shared", kind: "control", claimPath: "topology.experts.shared" },
         { id: "e-moe-shared-merge", from: "moe-shared", to: "moe-merge.shared", kind: "flow", claimPath: "topology.experts.shared" },
+        { id: "e-moe-recipe", from: "moe-merge.recipe", to: "moe-swiglu.in", kind: "control" },
       );
     } else {
-      ffnRows.push(["moe-router", "moe-routed", "moe-merge"]);
-      ffnEdges.push({ id: "e-moe-skip", from: "moe-router.skip", to: "moe-merge.skip", kind: "skip" });
+      ffnRows.push(["moe-router", "moe-routed", "moe-merge"], [null, "moe-swiglu", null]);
+      ffnEdges.push(
+        { id: "e-moe-skip", from: "moe-router.skip", to: "moe-merge.skip", kind: "skip" },
+        { id: "e-moe-recipe", from: "moe-routed.recipe", to: "moe-swiglu.recipe", kind: "control" },
+      );
     }
   } else {
+    const ffnLabel = topology.ffn_groups[0]?.label ?? "SwiGLU";
+    const actName = ffnLabel.toLowerCase().includes("geglu") ? "GELU Act" : "SiLU Act";
     nodes.push(
-      {
-        id: "ffn-norm",
-        kind: "norm",
-        label: "Pre-FFN Norm",
-        detail: "RMSNorm",
-        ports: [{ name: "skip", side: "bottom" }],
-      },
-      safeNode("ffn-mlp", "ffn", topology.ffn_groups[0]?.label ?? "Dense FFN", [
-        { claimPath: "facts.hidden_size", label: `width ${commas(facts.hidden_size)}` },
-      ]),
-      {
-        id: "ffn-add",
-        kind: "merge",
-        label: "⊕ Residual",
-        detail: "skip + MLP",
-        ports: [{ name: "skip", side: "bottom" }],
-      },
+      safeNode("ffn-gate", "ffn", "Gate Proj", [{ claimPath: "facts.hidden_size", label: `from d=${commas(facts.hidden_size)}` }]),
+      { id: "ffn-act", kind: "ffn", label: actName, detail: "gating branch" },
+      safeNode("ffn-up", "ffn", "Up Proj", [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)} linear` }]),
+      { id: "ffn-mul", kind: "merge", label: "⊗ Multiply", detail: "gate ⊙ up", ports: [{ name: "up", side: "bottom" }] },
+      safeNode("ffn-down", "ffn", "Down Proj", [{ claimPath: "facts.hidden_size", label: `to d=${commas(facts.hidden_size)}` }]),
     );
-    ffnLensIds.push("ffn-norm", "ffn-mlp", "ffn-add");
-    ffnRows.push(["ffn-norm", "ffn-mlp", "ffn-add"]);
+    ffnLensIds.push("ffn-gate", "ffn-act", "ffn-up", "ffn-mul", "ffn-down");
+    ffnRows.push(
+      ["ffn-gate", "ffn-act", "ffn-mul", "ffn-down"],
+      [null, "ffn-up", null, null],
+    );
     ffnEdges.push(
-      { id: "e-ffn-1", from: "ffn-norm", to: "ffn-mlp", kind: "flow" },
-      { id: "e-ffn-2", from: "ffn-mlp", to: "ffn-add", kind: "flow" },
-      { id: "e-ffn-skip", from: "ffn-norm.skip", to: "ffn-add.skip", kind: "skip" },
+      { id: "e-ffn-1", from: "ffn-gate", to: "ffn-act", kind: "flow" },
+      { id: "e-ffn-2", from: "ffn-act", to: "ffn-mul", kind: "flow" },
+      { id: "e-ffn-up", from: "ffn-up", to: "ffn-mul.up", kind: "flow" },
+      { id: "e-ffn-3", from: "ffn-mul", to: "ffn-down", kind: "flow" },
     );
   }
 
   // 5. Mechanism Lens 3: Context, Position & Parameter Scale
-  const posLabel = topology.position_encoding?.type?.toUpperCase() ?? "RoPE";
   nodes.push(
     safeNode(
       "scale-ctx",
@@ -518,32 +604,50 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
   );
   const scaleLensIds = ["scale-ctx", "scale-params"];
 
-  // Edges (main spine + callouts + internal lens edges)
+  // Edges (top spine -> nested block with residual rails -> bottom spine + right zoom callouts)
   const edges: DiagramScene["edges"] = [
-    { id: "e-tok-embed", from: "tok", to: "embed", kind: "flow" },
-    { id: "e-embed-dec", from: "embed", to: "decoder", kind: "flow" },
-    { id: "e-dec-norm", from: "decoder", to: "norm", kind: "flow" },
-    { id: "e-norm-head", from: "norm", to: "head", kind: "flow" },
-    { id: "c-sched", from: "decoder.sched", to: "g-schedule.in", kind: "control", claimPath: "facts.num_hidden_layers" },
-    { id: "c-attn", from: "decoder.attn", to: "g-attn.in", kind: "control", claimPath: primaryAttnClaim },
-    { id: "c-ffn", from: "decoder.ffn", to: "g-ffn.in", kind: "control" },
-    { id: "c-scale", from: "decoder.scale", to: "g-scale.in", kind: "control", claimPath: "facts.total_params" },
+    { id: "e-top-0", from: "tok", to: "embed", kind: "flow" },
+    { id: "e-top-1", from: "embed", to: "g-block.in", kind: "flow" },
+    { id: "e-blk-0", from: "blk-in", to: "blk-norm1", kind: "flow" },
+    { id: "e-blk-1", from: "blk-norm1", to: "blk-attn", kind: "flow" },
+    { id: "e-blk-mod", from: "blk-mod", to: "blk-attn.mod", kind: "control", claimPath: posClaim },
+    { id: "e-blk-2", from: "blk-attn", to: "blk-add1", kind: "flow" },
+    { id: "e-blk-skip1", from: "blk-in.skip", to: "blk-add1.skip", kind: "skip" },
+    { id: "e-blk-3", from: "blk-add1", to: "blk-fork2", kind: "flow" },
+    { id: "e-blk-4", from: "blk-fork2", to: "blk-norm2", kind: "flow" },
+    { id: "e-blk-5", from: "blk-norm2", to: "blk-ffn", kind: "flow" },
+    { id: "e-blk-6", from: "blk-ffn", to: "blk-add2", kind: "flow" },
+    { id: "e-blk-skip2", from: "blk-fork2.skip", to: "blk-add2.skip", kind: "skip" },
+    { id: "e-bot-0", from: "g-block.out", to: "norm", kind: "flow" },
+    { id: "e-bot-1", from: "norm", to: "head", kind: "flow" },
+    { id: "c-attn", from: "g-block.attn", to: "g-attn.in", kind: "control", claimPath: primaryAttnClaim },
+    { id: "c-ffn", from: "g-block.ffn", to: "g-ffn.in", kind: "control" },
+    { id: "c-sched", from: "g-block.sched", to: "g-schedule.in", kind: "control", claimPath: "facts.num_hidden_layers" },
+    { id: "c-scale", from: "head.scale", to: "g-scale.in", kind: "control", claimPath: "facts.total_params" },
     ...attnInternalEdges,
     ...ffnEdges,
   ];
 
+  const blockMemberIds = blockNodes.map((n) => n.id);
   const groups: SemanticGroup[] = [
     {
-      id: "g-schedule",
-      label: `Layer Genome · ${facts.num_hidden_layers} layers`,
+      id: "g-block",
+      label: `Transformer Block · ${facts.num_hidden_layers} layers`,
       kind: "inset",
-      members: scheduleIds,
-      ports: [{ id: "in", side: "right", inner: scheduleIds[0]! }],
+      repeat: { count: facts.num_hidden_layers, label: `${facts.num_hidden_layers} ×` },
+      members: blockMemberIds,
+      ports: [
+        { id: "in", side: "top", inner: "blk-in" },
+        { id: "out", side: "bottom", inner: "blk-add2" },
+        { id: "attn", side: "right", inner: "blk-attn" },
+        { id: "ffn", side: "right", inner: "blk-ffn" },
+        { id: "sched", side: "right", inner: "blk-add2" },
+      ],
       claimPath: "facts.num_hidden_layers",
     },
     {
       id: "g-attn",
-      label: `Attention · ${attnSummary}`,
+      label: `Attention Zoom · ${attnSummary}`,
       kind: "inset",
       members: attnLensIds,
       ports: [{ id: "in", side: "left", inner: attnLensIds[0]! }],
@@ -551,18 +655,26 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
     },
     {
       id: "g-ffn",
-      label: hasMoe ? `Sparse MoE · ${commas(topology.experts!.routed_total!)} experts` : "Dense FFN Block",
+      label: hasMoe ? `MoE Zoom · ${commas(topology.experts!.routed_total!)} experts` : `FFN Zoom · ${topology.ffn_groups[0]?.label ?? "SwiGLU"}`,
       kind: "inset",
       members: ffnLensIds,
       ports: [{ id: "in", side: "left", inner: ffnLensIds[0]! }],
       ...(hasMoe ? { claimPath: "topology.experts.routed_total" } : {}),
     },
     {
+      id: "g-schedule",
+      label: `Layer Schedule · ${facts.num_hidden_layers}L`,
+      kind: "inset",
+      members: scheduleIds,
+      ports: [{ id: "in", side: "left", inner: scheduleIds[0]! }],
+      claimPath: "facts.num_hidden_layers",
+    },
+    {
       id: "g-scale",
       label: "Context & Footprint",
       kind: "inset",
       members: scaleLensIds,
-      ports: [{ id: "in", side: "right", inner: scaleLensIds[0]! }],
+      ports: [{ id: "in", side: "bottom", inner: scaleLensIds[scaleLensIds.length - 1]! }],
       claimPath: "facts.total_params",
     },
   ];
@@ -575,7 +687,7 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
     edges,
     groups,
     annotations: [],
-    constraints: [{ type: "direction", value: "left-to-right" }],
+    constraints: [{ type: "direction", value: "top-to-bottom" }],
     streams: [],
   };
 
@@ -597,20 +709,27 @@ export function compileAutoregressivePoster(arch: ModelDocument, evidence: Evide
     { groupId: "g-ffn", rows: ffnRows },
   ];
 
-  const blueprint = buildPosterGridBlueprint({
+  const blueprint = buildSpinePosterBlueprint({
     id: `editorial-${arch.model.id}`,
     scene,
-    spine: ["tok", "embed", "decoder", "norm", "head"],
-    scheduleGroupId: "g-schedule",
-    scheduleNodes: scheduleIds,
-    leftBottomGroup: { groupId: "g-scale", rows: scaleLensIds.map((id) => [id]) },
-    lenses,
-    callouts: [
-      { edgeId: "c-sched", sourceNodeId: "decoder", sourcePort: "sched", targetGroupId: "g-schedule", targetPort: "in", busY: 148, corridorX: 446 },
-      { edgeId: "c-scale", sourceNodeId: "decoder", sourcePort: "scale", targetGroupId: "g-scale", targetPort: "in", busY: 160, corridorX: 456 },
-      { edgeId: "c-ffn", sourceNodeId: "decoder", sourcePort: "ffn", targetGroupId: "g-ffn", targetPort: "in", busY: 172, corridorX: 468 },
-      { edgeId: "c-attn", sourceNodeId: "decoder", sourcePort: "attn", targetGroupId: "g-attn", targetPort: "in", busY: 184, corridorX: 478 },
+    topSpine: ["tok", "embed"],
+    bottomSpine: ["norm", "head"],
+    blockGroupId: "g-block",
+    blockSpine: ["blk-in", "blk-norm1", "blk-attn", "blk-add1", "blk-fork2", "blk-norm2", "blk-ffn", "blk-add2"],
+    blockModifierId: "blk-mod",
+    blockSkips: [
+      { edgeId: "e-blk-skip1", fromId: "blk-in", toId: "blk-add1" },
+      { edgeId: "e-blk-skip2", fromId: "blk-fork2", toId: "blk-add2" },
     ],
+    lenses,
+    scheduleGroup: { groupId: "g-schedule", cols: 2, nodeIds: scheduleIds },
+    scaleGroup: { groupId: "g-scale", rows: scaleLensIds.map((id) => [id]) },
+    callouts: [
+      { edgeId: "c-attn", sourceGroupPort: "attn", targetGroupId: "g-attn", targetPort: "in", corridorX: 460 },
+      { edgeId: "c-ffn", sourceGroupPort: "ffn", targetGroupId: "g-ffn", targetPort: "in", corridorX: 473 },
+      { edgeId: "c-sched", sourceGroupPort: "sched", targetGroupId: "g-schedule", targetPort: "in", corridorX: 486 },
+    ],
+    scaleCallout: { edgeId: "c-scale", sourceNodeId: "head", sourcePort: "scale" },
   });
 
   return { scene, blueprint };

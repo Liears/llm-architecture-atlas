@@ -29,6 +29,11 @@ describe("System One decision model diagrams", () => {
     expect(scene.nodes.some((n) => n.kind === "decision")).toBe(true);
     expect(scene.nodes.some((n) => n.kind === "action")).toBe(true);
     expect(scene.nodes.find((n) => n.id === "sched-0")?.detail).toContain("(F,S,S) ×9");
+    expect(scene.nodes.some((n) => n.id === "ffn-mul")).toBe(true);
+    expect(scene.nodes.find((n) => n.id === "ffn-up")?.detail).toContain("linear");
+    expect(scene.nodes.find((n) => n.id === "ffn-up")?.detail).not.toContain(" KV");
+    expect(scene.nodes.find((n) => n.id === "a-g0")?.detail).toContain("16 Q");
+    expect(scene.edges.filter((e) => e.kind === "skip" && e.id.startsWith("e-blk-skip"))).toHaveLength(2);
   });
 
   it("compiles OpenJev with hybrid Qwen3.5 backbone, shared prefix KV, and single-pass letter readout with zero debt", () => {
@@ -41,6 +46,8 @@ describe("System One decision model diagrams", () => {
     expect(scene.nodes.some((n) => n.kind === "cache")).toBe(true);
     expect(scene.nodes.some((n) => n.kind === "vision")).toBe(true);
     expect(scene.nodes.find((n) => n.id === "sched-0")?.detail).toContain("(L,L,L,G) ×16");
+    expect(scene.nodes.some((n) => n.id === "ffn-gate")).toBe(true);
+    expect(scene.edges.filter((e) => e.kind === "skip" && e.id.startsWith("e-blk-skip"))).toHaveLength(2);
   });
 
   it("rejects system_one_decision models missing decision_head metadata", () => {

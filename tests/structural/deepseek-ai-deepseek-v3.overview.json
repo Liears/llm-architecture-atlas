@@ -3,8 +3,8 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1380,
-    "h": 780
+    "w": 1400,
+    "h": 860
   },
   "nodes": [
     {
@@ -20,10 +20,58 @@
       "claimPath": "facts.hidden_size"
     },
     {
-      "id": "decoder",
-      "label": "Decoder stack",
-      "detail": "61 layers · 61 MLA",
-      "claimPath": "facts.num_hidden_layers"
+      "id": "blk-in",
+      "label": "Block Input",
+      "detail": "d=7,168",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "blk-norm1",
+      "label": "Pre-Attn Norm",
+      "detail": "RMSNorm",
+      "claimPath": null
+    },
+    {
+      "id": "blk-attn",
+      "label": "MLA",
+      "detail": "61 MLA · 128 Q",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "blk-add1",
+      "label": "⊕ Residual",
+      "detail": "h + attn",
+      "claimPath": null
+    },
+    {
+      "id": "blk-fork2",
+      "label": "Attn Stream",
+      "detail": "pre-FFN fork",
+      "claimPath": null
+    },
+    {
+      "id": "blk-norm2",
+      "label": "Pre-FFN Norm",
+      "detail": "RMSNorm",
+      "claimPath": null
+    },
+    {
+      "id": "blk-ffn",
+      "label": "Sparse MoE",
+      "detail": "256 experts · top-8",
+      "claimPath": "topology.experts.routed_total"
+    },
+    {
+      "id": "blk-add2",
+      "label": "⊕ Residual",
+      "detail": "h + FFN",
+      "claimPath": null
+    },
+    {
+      "id": "blk-mod",
+      "label": "Part. RoPE",
+      "detail": "160K ctx",
+      "claimPath": "facts.context_tokens"
     },
     {
       "id": "norm",
@@ -56,22 +104,40 @@
       "claimPath": "facts.num_hidden_layers"
     },
     {
+      "id": "attn-q",
+      "label": "Query Proj",
+      "detail": "128 Q heads",
+      "claimPath": "facts.num_attention_heads"
+    },
+    {
+      "id": "attn-rope",
+      "label": "RoPE / NoPE",
+      "detail": "decoupled key",
+      "claimPath": "topology.position_encoding.type"
+    },
+    {
       "id": "attn-proj",
-      "label": "Q / KV Latent Proj",
+      "label": "KV Down-Proj",
       "detail": "from d=7,168",
       "claimPath": "facts.hidden_size"
     },
     {
       "id": "attn-kv",
-      "label": "Compressed KV Cache",
-      "detail": "low-rank latent vector",
+      "label": "Latent KV",
+      "detail": "compressed cache",
       "claimPath": "topology.attention_groups[0]"
     },
     {
       "id": "attn-core",
-      "label": "MLA Attention",
-      "detail": "128 Q heads",
+      "label": "MLA Core",
+      "detail": "128h · up-proj",
       "claimPath": "facts.num_attention_heads"
+    },
+    {
+      "id": "attn-out",
+      "label": "O Proj",
+      "detail": "to d=7,168",
+      "claimPath": "facts.hidden_size"
     },
     {
       "id": "moe-router",
@@ -90,6 +156,12 @@
       "label": "⊕ Merge",
       "detail": "routed + shared",
       "claimPath": "topology.experts.routed_total"
+    },
+    {
+      "id": "moe-swiglu",
+      "label": "Expert SwiGLU",
+      "detail": "Gate·SiLU ⊙ Up",
+      "claimPath": "facts.hidden_size"
     },
     {
       "id": "moe-shared",
@@ -112,70 +184,142 @@
   ],
   "edges": [
     {
-      "id": "e-tok-embed",
+      "id": "e-top-0",
       "kind": "flow",
       "from": "tok",
       "to": "embed"
     },
     {
-      "id": "e-embed-dec",
+      "id": "e-top-1",
       "kind": "flow",
       "from": "embed",
-      "to": "decoder"
+      "to": "g-block.in"
     },
     {
-      "id": "e-dec-norm",
+      "id": "e-blk-0",
       "kind": "flow",
-      "from": "decoder",
+      "from": "blk-in",
+      "to": "blk-norm1"
+    },
+    {
+      "id": "e-blk-1",
+      "kind": "flow",
+      "from": "blk-norm1",
+      "to": "blk-attn"
+    },
+    {
+      "id": "e-blk-mod",
+      "kind": "control",
+      "from": "blk-mod",
+      "to": "blk-attn.mod"
+    },
+    {
+      "id": "e-blk-2",
+      "kind": "flow",
+      "from": "blk-attn",
+      "to": "blk-add1"
+    },
+    {
+      "id": "e-blk-skip1",
+      "kind": "skip",
+      "from": "blk-in.skip",
+      "to": "blk-add1.skip"
+    },
+    {
+      "id": "e-blk-3",
+      "kind": "flow",
+      "from": "blk-add1",
+      "to": "blk-fork2"
+    },
+    {
+      "id": "e-blk-4",
+      "kind": "flow",
+      "from": "blk-fork2",
+      "to": "blk-norm2"
+    },
+    {
+      "id": "e-blk-5",
+      "kind": "flow",
+      "from": "blk-norm2",
+      "to": "blk-ffn"
+    },
+    {
+      "id": "e-blk-6",
+      "kind": "flow",
+      "from": "blk-ffn",
+      "to": "blk-add2"
+    },
+    {
+      "id": "e-blk-skip2",
+      "kind": "skip",
+      "from": "blk-fork2.skip",
+      "to": "blk-add2.skip"
+    },
+    {
+      "id": "e-bot-0",
+      "kind": "flow",
+      "from": "g-block.out",
       "to": "norm"
     },
     {
-      "id": "e-norm-head",
+      "id": "e-bot-1",
       "kind": "flow",
       "from": "norm",
       "to": "head"
     },
     {
-      "id": "c-sched",
-      "kind": "control",
-      "from": "decoder.sched",
-      "to": "g-schedule.in"
-    },
-    {
       "id": "c-attn",
       "kind": "control",
-      "from": "decoder.attn",
+      "from": "g-block.attn",
       "to": "g-attn.in"
     },
     {
       "id": "c-ffn",
       "kind": "control",
-      "from": "decoder.ffn",
+      "from": "g-block.ffn",
       "to": "g-ffn.in"
+    },
+    {
+      "id": "c-sched",
+      "kind": "control",
+      "from": "g-block.sched",
+      "to": "g-schedule.in"
     },
     {
       "id": "c-scale",
       "kind": "control",
-      "from": "decoder.scale",
+      "from": "head.scale",
       "to": "g-scale.in"
     },
     {
-      "id": "e-attn-1",
+      "id": "e-attn-q1",
+      "kind": "flow",
+      "from": "attn-q",
+      "to": "attn-rope"
+    },
+    {
+      "id": "e-attn-q2",
+      "kind": "flow",
+      "from": "attn-rope",
+      "to": "attn-core"
+    },
+    {
+      "id": "e-attn-kv1",
       "kind": "flow",
       "from": "attn-proj",
       "to": "attn-kv"
     },
     {
-      "id": "e-attn-2",
+      "id": "e-attn-kv2",
       "kind": "flow",
       "from": "attn-kv",
-      "to": "attn-core"
+      "to": "attn-core.kv"
     },
     {
-      "id": "e-attn-bypass",
-      "kind": "skip",
-      "from": "attn-proj.latent",
-      "to": "attn-core.latent"
+      "id": "e-attn-out",
+      "kind": "flow",
+      "from": "attn-core",
+      "to": "attn-out"
     },
     {
       "id": "e-moe-route",
@@ -200,53 +344,93 @@
       "kind": "flow",
       "from": "moe-shared",
       "to": "moe-merge.shared"
+    },
+    {
+      "id": "e-moe-recipe",
+      "kind": "control",
+      "from": "moe-merge.recipe",
+      "to": "moe-swiglu.in"
     }
   ],
   "groups": [
     {
-      "id": "g-schedule",
-      "label": "Layer Genome · 61 layers",
+      "id": "g-block",
+      "label": "Transformer Block · 61 layers",
       "kind": "inset",
+      "repeat": {
+        "count": 61,
+        "label": "61 ×"
+      },
       "members": [
-        "sched-0",
-        "sched-1",
-        "sched-summary"
+        "blk-in",
+        "blk-norm1",
+        "blk-attn",
+        "blk-add1",
+        "blk-fork2",
+        "blk-norm2",
+        "blk-ffn",
+        "blk-add2",
+        "blk-mod"
       ],
       "ports": [
         {
           "id": "in",
+          "side": "top",
+          "inner": "blk-in"
+        },
+        {
+          "id": "out",
+          "side": "bottom",
+          "inner": "blk-add2"
+        },
+        {
+          "id": "attn",
           "side": "right",
-          "inner": "sched-0"
+          "inner": "blk-attn"
+        },
+        {
+          "id": "ffn",
+          "side": "right",
+          "inner": "blk-ffn"
+        },
+        {
+          "id": "sched",
+          "side": "right",
+          "inner": "blk-add2"
         }
       ],
       "claimPath": "facts.num_hidden_layers"
     },
     {
       "id": "g-attn",
-      "label": "Attention · 61 MLA",
+      "label": "Attention Zoom · 61 MLA",
       "kind": "inset",
       "members": [
+        "attn-q",
+        "attn-rope",
         "attn-proj",
         "attn-kv",
-        "attn-core"
+        "attn-core",
+        "attn-out"
       ],
       "ports": [
         {
           "id": "in",
           "side": "left",
-          "inner": "attn-proj"
+          "inner": "attn-q"
         }
       ],
       "claimPath": "topology.attention_groups[0]"
     },
     {
       "id": "g-ffn",
-      "label": "Sparse MoE · 256 experts",
+      "label": "MoE Zoom · 256 experts",
       "kind": "inset",
       "members": [
         "moe-router",
         "moe-routed",
         "moe-merge",
+        "moe-swiglu",
         "moe-shared"
       ],
       "ports": [
@@ -259,6 +443,24 @@
       "claimPath": "topology.experts.routed_total"
     },
     {
+      "id": "g-schedule",
+      "label": "Layer Schedule · 61L",
+      "kind": "inset",
+      "members": [
+        "sched-0",
+        "sched-1",
+        "sched-summary"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "sched-0"
+        }
+      ],
+      "claimPath": "facts.num_hidden_layers"
+    },
+    {
       "id": "g-scale",
       "label": "Context & Footprint",
       "kind": "inset",
@@ -269,8 +471,8 @@
       "ports": [
         {
           "id": "in",
-          "side": "right",
-          "inner": "scale-ctx"
+          "side": "bottom",
+          "inner": "scale-params"
         }
       ],
       "claimPath": "facts.total_params"
@@ -283,8 +485,33 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_hidden_layers",
-      "target": "decoder",
+      "claimPath": "facts.hidden_size",
+      "target": "blk-in",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "blk-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_attention_heads",
+      "target": "blk-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.routed_total",
+      "target": "blk-ffn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.experts.active_routed",
+      "target": "blk-ffn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.context_tokens",
+      "target": "blk-mod",
       "status": "reported"
     },
     {
@@ -308,6 +535,16 @@
       "status": "reported"
     },
     {
+      "claimPath": "facts.num_attention_heads",
+      "target": "attn-q",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.position_encoding.type",
+      "target": "attn-rope",
+      "status": "reported"
+    },
+    {
       "claimPath": "facts.hidden_size",
       "target": "attn-proj",
       "status": "reported"
@@ -320,6 +557,11 @@
     {
       "claimPath": "facts.num_attention_heads",
       "target": "attn-core",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "attn-out",
       "status": "reported"
     },
     {
@@ -343,6 +585,11 @@
       "status": "reported"
     },
     {
+      "claimPath": "facts.hidden_size",
+      "target": "moe-swiglu",
+      "status": "reported"
+    },
+    {
       "claimPath": "topology.experts.shared",
       "target": "moe-shared",
       "status": "reported"
@@ -363,13 +610,18 @@
       "status": "derived"
     },
     {
-      "claimPath": "facts.num_hidden_layers",
-      "target": "c-sched",
+      "claimPath": "topology.position_encoding.type",
+      "target": "e-blk-mod",
       "status": "reported"
     },
     {
       "claimPath": "topology.attention_groups[0]",
       "target": "c-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_hidden_layers",
+      "target": "c-sched",
       "status": "reported"
     },
     {
@@ -379,17 +631,27 @@
     },
     {
       "claimPath": "topology.attention_groups[0]",
-      "target": "e-attn-1",
+      "target": "e-attn-q1",
       "status": "reported"
     },
     {
       "claimPath": "topology.attention_groups[0]",
-      "target": "e-attn-2",
+      "target": "e-attn-q2",
       "status": "reported"
     },
     {
       "claimPath": "topology.attention_groups[0]",
-      "target": "e-attn-bypass",
+      "target": "e-attn-kv1",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "e-attn-kv2",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "e-attn-out",
       "status": "reported"
     },
     {

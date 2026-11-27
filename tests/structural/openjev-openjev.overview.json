@@ -3,8 +3,8 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1380,
-    "h": 780
+    "w": 1400,
+    "h": 860
   },
   "nodes": [
     {
@@ -16,14 +16,62 @@
     {
       "id": "embed",
       "label": "Embed + Vision",
-      "detail": "hidden 5,120",
+      "detail": "d=5,120",
       "claimPath": "facts.hidden_size"
     },
     {
-      "id": "backbone",
+      "id": "blk-in",
+      "label": "Block Input",
+      "detail": "d=5,120",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "blk-norm1",
+      "label": "Pre-Attn Norm",
+      "detail": "RMSNorm",
+      "claimPath": null
+    },
+    {
+      "id": "blk-attn",
       "label": "Hybrid Backbone",
-      "detail": "64 layers · 3:1 GDN + GQA",
-      "claimPath": "facts.num_hidden_layers"
+      "detail": "48 Lin + 16 Full · 24 Q",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "blk-add1",
+      "label": "⊕ Residual",
+      "detail": "h + attn",
+      "claimPath": null
+    },
+    {
+      "id": "blk-fork2",
+      "label": "Attn Stream",
+      "detail": "pre-FFN fork",
+      "claimPath": null
+    },
+    {
+      "id": "blk-norm2",
+      "label": "Pre-FFN Norm",
+      "detail": "RMSNorm",
+      "claimPath": null
+    },
+    {
+      "id": "blk-ffn",
+      "label": "Dense SwiGLU",
+      "detail": "gated MLP",
+      "claimPath": "topology.ffn_groups[0]"
+    },
+    {
+      "id": "blk-add2",
+      "label": "⊕ Residual",
+      "detail": "h + ffn",
+      "claimPath": null
+    },
+    {
+      "id": "blk-mod",
+      "label": "ROPE",
+      "detail": "pos enc",
+      "claimPath": "topology.position_encoding.type"
     },
     {
       "id": "prefill",
@@ -64,19 +112,19 @@
     {
       "id": "sched-vision",
       "label": "+ Vision Tower",
-      "detail": "27L vision encoder · 1152d",
+      "detail": "27L vision · 1152d",
       "claimPath": "topology.decision_head.vision_encoder"
     },
     {
       "id": "r-prefix",
       "label": "Shared Prefix KV",
-      "detail": "page_first + block pad",
+      "detail": "page_first + block",
       "claimPath": "topology.decision_head.prefix_cache"
     },
     {
       "id": "r-slice",
       "label": "Pos-0 Logit Readout",
-      "detail": "<= 52 letters / chunk",
+      "detail": "<= 52 letters",
       "claimPath": "topology.decision_head.max_options"
     },
     {
@@ -88,8 +136,8 @@
     {
       "id": "a-g0",
       "label": "Gated DeltaNet",
-      "detail": "48 layers",
-      "claimPath": "topology.attention_groups[0]"
+      "detail": "48L · 24 Q · 4 KV · d=256",
+      "claimPath": "facts.num_attention_heads"
     },
     {
       "id": "a-g1",
@@ -98,15 +146,39 @@
       "claimPath": "topology.attention_groups[1]"
     },
     {
-      "id": "a-ffn",
-      "label": "Dense SwiGLU",
-      "detail": "24 Q · 4 KV · d=256",
-      "claimPath": "facts.num_attention_heads"
+      "id": "ffn-gate",
+      "label": "Gate Proj",
+      "detail": "from d=5,120",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "ffn-act",
+      "label": "SiLU Act",
+      "detail": "σ(gate)",
+      "claimPath": null
+    },
+    {
+      "id": "ffn-mul",
+      "label": "⊗ Multiply",
+      "detail": "act ⊙ up",
+      "claimPath": null
+    },
+    {
+      "id": "ffn-up",
+      "label": "Up Proj",
+      "detail": "d=5,120 linear",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "ffn-down",
+      "label": "Down Proj",
+      "detail": "to d=5,120",
+      "claimPath": "facts.hidden_size"
     },
     {
       "id": "c-obj",
-      "label": "Calibration & Shuffle",
-      "detail": "Fixed temp + order invariance",
+      "label": "Calibration",
+      "detail": "Fixed T + shuffle inv.",
       "claimPath": "topology.decision_head.calibration"
     },
     {
@@ -124,51 +196,111 @@
       "to": "embed"
     },
     {
-      "id": "e-spine-1",
+      "id": "e-spine-in-blk",
       "kind": "flow",
       "from": "embed",
-      "to": "backbone"
+      "to": "g-block.in"
     },
     {
-      "id": "e-spine-2",
+      "id": "e-blk-0",
       "kind": "flow",
-      "from": "backbone",
+      "from": "blk-in",
+      "to": "blk-norm1"
+    },
+    {
+      "id": "e-blk-1",
+      "kind": "flow",
+      "from": "blk-norm1",
+      "to": "blk-attn"
+    },
+    {
+      "id": "e-blk-mod",
+      "kind": "control",
+      "from": "blk-mod",
+      "to": "blk-attn.mod"
+    },
+    {
+      "id": "e-blk-2",
+      "kind": "flow",
+      "from": "blk-attn",
+      "to": "blk-add1"
+    },
+    {
+      "id": "e-blk-skip1",
+      "kind": "skip",
+      "from": "blk-in.skip",
+      "to": "blk-add1.skip"
+    },
+    {
+      "id": "e-blk-3",
+      "kind": "flow",
+      "from": "blk-add1",
+      "to": "blk-fork2"
+    },
+    {
+      "id": "e-blk-4",
+      "kind": "flow",
+      "from": "blk-fork2",
+      "to": "blk-norm2"
+    },
+    {
+      "id": "e-blk-5",
+      "kind": "flow",
+      "from": "blk-norm2",
+      "to": "blk-ffn"
+    },
+    {
+      "id": "e-blk-6",
+      "kind": "flow",
+      "from": "blk-ffn",
+      "to": "blk-add2"
+    },
+    {
+      "id": "e-blk-skip2",
+      "kind": "skip",
+      "from": "blk-fork2.skip",
+      "to": "blk-add2.skip"
+    },
+    {
+      "id": "e-blk-out",
+      "kind": "flow",
+      "from": "g-block.out",
       "to": "prefill"
     },
     {
-      "id": "e-spine-3",
+      "id": "e-bot-0",
       "kind": "flow",
       "from": "prefill",
       "to": "cal"
     },
     {
-      "id": "e-spine-4",
+      "id": "e-bot-1",
       "kind": "flow",
       "from": "cal",
       "to": "out"
     },
     {
-      "id": "c-sched",
-      "kind": "control",
-      "from": "backbone.sched",
-      "to": "g-schedule.in"
-    },
-    {
       "id": "c-readout",
       "kind": "control",
-      "from": "backbone.readout",
+      "from": "g-block.attn",
       "to": "g-readout.in"
     },
     {
-      "id": "c-attn",
+      "id": "c-ffn",
       "kind": "control",
-      "from": "backbone.attn",
-      "to": "g-attn.in"
+      "from": "g-block.ffn",
+      "to": "g-ffn.in"
     },
     {
-      "id": "c-cal",
+      "id": "c-sched",
       "kind": "control",
-      "from": "backbone.cal",
+      "from": "g-block.sched",
+      "to": "g-schedule.in"
+    },
+    {
+      "id": "c-scale",
+      "kind": "control",
+      "from": "out.scale",
       "to": "g-cal.in"
     },
     {
@@ -182,9 +314,121 @@
       "kind": "flow",
       "from": "r-slice",
       "to": "r-scale"
+    },
+    {
+      "id": "e-ffn-1",
+      "kind": "flow",
+      "from": "ffn-gate",
+      "to": "ffn-act"
+    },
+    {
+      "id": "e-ffn-2",
+      "kind": "flow",
+      "from": "ffn-act",
+      "to": "ffn-mul"
+    },
+    {
+      "id": "e-ffn-up",
+      "kind": "flow",
+      "from": "ffn-up",
+      "to": "ffn-mul.up"
+    },
+    {
+      "id": "e-ffn-down",
+      "kind": "flow",
+      "from": "ffn-mul",
+      "to": "ffn-down"
     }
   ],
   "groups": [
+    {
+      "id": "g-block",
+      "label": "Hybrid Block · 64 layers",
+      "kind": "inset",
+      "repeat": {
+        "count": 64,
+        "label": "64 ×"
+      },
+      "members": [
+        "blk-in",
+        "blk-norm1",
+        "blk-attn",
+        "blk-add1",
+        "blk-fork2",
+        "blk-norm2",
+        "blk-ffn",
+        "blk-add2",
+        "blk-mod"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "top",
+          "inner": "blk-in"
+        },
+        {
+          "id": "out",
+          "side": "bottom",
+          "inner": "blk-add2"
+        },
+        {
+          "id": "attn",
+          "side": "right",
+          "inner": "blk-attn"
+        },
+        {
+          "id": "ffn",
+          "side": "right",
+          "inner": "blk-ffn"
+        },
+        {
+          "id": "sched",
+          "side": "right",
+          "inner": "blk-add2"
+        }
+      ],
+      "claimPath": "facts.num_hidden_layers"
+    },
+    {
+      "id": "g-readout",
+      "label": "Prefix Readout · 48 Gated DeltaNet + 16 Gated Attention (GQA)",
+      "kind": "inset",
+      "members": [
+        "r-prefix",
+        "r-slice",
+        "r-scale",
+        "a-g0",
+        "a-g1"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "r-prefix"
+        }
+      ],
+      "claimPath": "topology.decision_head.readout_mode"
+    },
+    {
+      "id": "g-ffn",
+      "label": "FFN Zoom · Dense SwiGLU",
+      "kind": "inset",
+      "members": [
+        "ffn-gate",
+        "ffn-act",
+        "ffn-mul",
+        "ffn-up",
+        "ffn-down"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "ffn-gate"
+        }
+      ],
+      "claimPath": "topology.attention_groups[0]"
+    },
     {
       "id": "g-schedule",
       "label": "Backbone Schedule · 64L",
@@ -198,47 +442,11 @@
       "ports": [
         {
           "id": "in",
-          "side": "right",
+          "side": "left",
           "inner": "sched-0"
         }
       ],
       "claimPath": "facts.num_hidden_layers"
-    },
-    {
-      "id": "g-readout",
-      "label": "System-1 Prefix & Letter Readout",
-      "kind": "inset",
-      "members": [
-        "r-prefix",
-        "r-slice",
-        "r-scale"
-      ],
-      "ports": [
-        {
-          "id": "in",
-          "side": "left",
-          "inner": "r-prefix"
-        }
-      ],
-      "claimPath": "topology.decision_head.readout_mode"
-    },
-    {
-      "id": "g-attn",
-      "label": "Backbone Mix · 48 Gated DeltaNet + 16 Gated Attention (GQA)",
-      "kind": "inset",
-      "members": [
-        "a-g0",
-        "a-g1",
-        "a-ffn"
-      ],
-      "ports": [
-        {
-          "id": "in",
-          "side": "left",
-          "inner": "a-g0"
-        }
-      ],
-      "claimPath": "topology.attention_groups[0]"
     },
     {
       "id": "g-cal",
@@ -251,8 +459,8 @@
       "ports": [
         {
           "id": "in",
-          "side": "right",
-          "inner": "c-obj"
+          "side": "bottom",
+          "inner": "c-scale"
         }
       ],
       "claimPath": "topology.decision_head.calibration"
@@ -270,8 +478,28 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_hidden_layers",
-      "target": "backbone",
+      "claimPath": "facts.hidden_size",
+      "target": "blk-in",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "blk-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_attention_heads",
+      "target": "blk-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.ffn_groups[0]",
+      "target": "blk-ffn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.position_encoding.type",
+      "target": "blk-mod",
       "status": "reported"
     },
     {
@@ -325,7 +553,17 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[0]",
+      "claimPath": "facts.num_attention_heads",
+      "target": "a-g0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_key_value_heads",
+      "target": "a-g0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.head_dim",
       "target": "a-g0",
       "status": "reported"
     },
@@ -335,18 +573,18 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_attention_heads",
-      "target": "a-ffn",
+      "claimPath": "facts.hidden_size",
+      "target": "ffn-gate",
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_key_value_heads",
-      "target": "a-ffn",
+      "claimPath": "facts.hidden_size",
+      "target": "ffn-up",
       "status": "reported"
     },
     {
-      "claimPath": "facts.head_dim",
-      "target": "a-ffn",
+      "claimPath": "facts.hidden_size",
+      "target": "ffn-down",
       "status": "reported"
     },
     {
@@ -366,7 +604,27 @@
     },
     {
       "claimPath": "facts.num_hidden_layers",
-      "target": "c-sched",
+      "target": "e-spine-in-blk",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.position_encoding.type",
+      "target": "e-blk-mod",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "e-blk-2",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.decision_head.calibration",
+      "target": "e-bot-0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.paradigm",
+      "target": "e-bot-1",
       "status": "reported"
     },
     {
@@ -375,13 +633,13 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[0]",
-      "target": "c-attn",
+      "claimPath": "facts.num_hidden_layers",
+      "target": "c-sched",
       "status": "reported"
     },
     {
       "claimPath": "topology.decision_head.calibration",
-      "target": "c-cal",
+      "target": "c-scale",
       "status": "reported"
     },
     {

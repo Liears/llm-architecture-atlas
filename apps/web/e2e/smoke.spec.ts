@@ -198,9 +198,11 @@ test("System-1 model pages render decision contract and non-autoregressive SVG p
   await page.goto("/llm-architecture-atlas/models/convaiinnovations-laya/");
   await expect(page.locator(".decision-panel")).toBeVisible();
   const layaSvg = await (await page.request.get("/llm-architecture-atlas/figures/convaiinnovations-laya-generated.svg")).text();
-  expect(layaSvg).toContain("Bidirectional Encoder");
+  expect(layaSvg).toContain("Encoder Block");
+  expect(layaSvg).toContain("Bidirectional Attn");
   expect(layaSvg).toContain("Calibrated Scorer");
-  expect(layaSvg).toContain("RLCD Proper Scoring");
+  expect(layaSvg).toContain("RLCD Scoring");
+  expect(layaSvg).toContain("⊗ Multiply");
 
   await page.goto("/llm-architecture-atlas/models/openjev-openjev/");
   await expect(page.locator(".decision-panel")).toBeVisible();
@@ -279,4 +281,34 @@ test("atom feed is served", async ({ request }) => {
 test("hand-drawn migration sample still served", async ({ request }) => {
   const res = await request.get("/llm-architecture-atlas/figures/glm-5.3-flash.svg");
   expect(res.ok()).toBeTruthy();
+});
+
+test("Flow Replay HUD, KV Cache & Memory Estimator, and Chinese overview diagrams work cleanly", async ({ page }) => {
+  await page.goto("/llm-architecture-atlas/models/meta-llama-llama-3-8b/");
+  await expect(page.locator("#kv-weights")).toContainText("15.0 GiB");
+  await expect(page.locator("#kv-pertok")).toContainText("128.0 KiB/tok");
+
+  // Switching context 4K -> 32K and precision BF16 -> INT4 updates estimator deterministically
+  await page.click('.kv-ctx-btn[data-ctx="32768"]');
+  await expect(page.locator("#kv-total-cache")).toContainText("4.00 GiB");
+  await page.click('.kv-prec-btn[data-prec="INT4"]');
+  await expect(page.locator("#kv-weights")).toContainText("3.74 GiB");
+
+  // Flow Replay steps through execution spine, highlights hotspots, and localizes in Chinese
+  await page.click("#flow-next");
+  await expect(page.locator("#flow-hud")).toBeVisible();
+  await expect(page.locator("#flow-step-badge")).toHaveText("1/6");
+  expect(await page.locator("#overview-stage .hotspot.flow-hit").count()).toBeGreaterThanOrEqual(1);
+
+  await page.click("#flow-next");
+  await expect(page.locator("#flow-step-badge")).toHaveText("2/6");
+  expect(await page.locator("#overview-stage .hotspot.flow-hit").count()).toBeGreaterThanOrEqual(3);
+  await page.click("#lang-toggle");
+  await expect(page.locator("#flow-caption")).toContainText("Transformer 模块");
+  await page.click("#flow-stop");
+  await expect(page.locator("#flow-hud")).toBeHidden();
+
+  // Verify DeepSeek MLA KV planner note
+  await page.goto("/llm-architecture-atlas/models/deepseek-ai-deepseek-v3/");
+  await expect(page.locator("#kv-pertok")).toContainText("MLA");
 });

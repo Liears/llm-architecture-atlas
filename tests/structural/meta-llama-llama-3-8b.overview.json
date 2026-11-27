@@ -3,8 +3,8 @@
   "view": "overview",
   "irVersion": "0.1.0",
   "size": {
-    "w": 1380,
-    "h": 780
+    "w": 1400,
+    "h": 860
   },
   "nodes": [
     {
@@ -20,10 +20,58 @@
       "claimPath": "facts.hidden_size"
     },
     {
-      "id": "decoder",
-      "label": "Decoder stack",
-      "detail": "32 layers · 32 GQA",
-      "claimPath": "facts.num_hidden_layers"
+      "id": "blk-in",
+      "label": "Block Input",
+      "detail": "d=4,096",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "blk-norm1",
+      "label": "Pre-Attn Norm",
+      "detail": "RMSNorm",
+      "claimPath": null
+    },
+    {
+      "id": "blk-attn",
+      "label": "GQA",
+      "detail": "32 GQA · 32 Q",
+      "claimPath": "topology.attention_groups[0]"
+    },
+    {
+      "id": "blk-add1",
+      "label": "⊕ Residual",
+      "detail": "h + attn",
+      "claimPath": null
+    },
+    {
+      "id": "blk-fork2",
+      "label": "Attn Stream",
+      "detail": "pre-FFN fork",
+      "claimPath": null
+    },
+    {
+      "id": "blk-norm2",
+      "label": "Pre-FFN Norm",
+      "detail": "RMSNorm",
+      "claimPath": null
+    },
+    {
+      "id": "blk-ffn",
+      "label": "Dense SwiGLU",
+      "detail": "32 Dense SwiGLU",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "blk-add2",
+      "label": "⊕ Residual",
+      "detail": "h + FFN",
+      "claimPath": null
+    },
+    {
+      "id": "blk-mod",
+      "label": "ROPE",
+      "detail": "8K ctx",
+      "claimPath": "facts.context_tokens"
     },
     {
       "id": "norm",
@@ -51,39 +99,63 @@
     },
     {
       "id": "attn-q",
-      "label": "Query Projections",
+      "label": "Q Projections",
       "detail": "32 Q heads",
       "claimPath": "facts.num_attention_heads"
     },
     {
+      "id": "attn-rope",
+      "label": "RoPE (Q, K)",
+      "detail": "ROPE",
+      "claimPath": "topology.position_encoding.type"
+    },
+    {
       "id": "attn-kv",
-      "label": "Shared KV Cache",
+      "label": "KV Projections",
       "detail": "8 KV heads",
       "claimPath": "facts.num_key_value_heads"
     },
     {
       "id": "attn-core",
-      "label": "GQA",
+      "label": "SDPA Attn",
       "detail": "4:1 Q/KV ratio",
       "claimPath": "topology.attention_groups[0]"
     },
     {
-      "id": "ffn-norm",
-      "label": "Pre-FFN Norm",
-      "detail": "RMSNorm",
-      "claimPath": null
-    },
-    {
-      "id": "ffn-mlp",
-      "label": "Dense SwiGLU",
-      "detail": "width 4,096",
+      "id": "attn-out",
+      "label": "O Proj",
+      "detail": "to d=4,096",
       "claimPath": "facts.hidden_size"
     },
     {
-      "id": "ffn-add",
-      "label": "⊕ Residual",
-      "detail": "skip + MLP",
+      "id": "ffn-gate",
+      "label": "Gate Proj",
+      "detail": "from d=4,096",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "ffn-act",
+      "label": "SiLU Act",
+      "detail": "gating branch",
       "claimPath": null
+    },
+    {
+      "id": "ffn-up",
+      "label": "Up Proj",
+      "detail": "d=4,096 linear",
+      "claimPath": "facts.hidden_size"
+    },
+    {
+      "id": "ffn-mul",
+      "label": "⊗ Multiply",
+      "detail": "gate ⊙ up",
+      "claimPath": null
+    },
+    {
+      "id": "ffn-down",
+      "label": "Down Proj",
+      "detail": "to d=4,096",
+      "claimPath": "facts.hidden_size"
     },
     {
       "id": "scale-ctx",
@@ -100,110 +172,221 @@
   ],
   "edges": [
     {
-      "id": "e-tok-embed",
+      "id": "e-top-0",
       "kind": "flow",
       "from": "tok",
       "to": "embed"
     },
     {
-      "id": "e-embed-dec",
+      "id": "e-top-1",
       "kind": "flow",
       "from": "embed",
-      "to": "decoder"
+      "to": "g-block.in"
     },
     {
-      "id": "e-dec-norm",
+      "id": "e-blk-0",
       "kind": "flow",
-      "from": "decoder",
+      "from": "blk-in",
+      "to": "blk-norm1"
+    },
+    {
+      "id": "e-blk-1",
+      "kind": "flow",
+      "from": "blk-norm1",
+      "to": "blk-attn"
+    },
+    {
+      "id": "e-blk-mod",
+      "kind": "control",
+      "from": "blk-mod",
+      "to": "blk-attn.mod"
+    },
+    {
+      "id": "e-blk-2",
+      "kind": "flow",
+      "from": "blk-attn",
+      "to": "blk-add1"
+    },
+    {
+      "id": "e-blk-skip1",
+      "kind": "skip",
+      "from": "blk-in.skip",
+      "to": "blk-add1.skip"
+    },
+    {
+      "id": "e-blk-3",
+      "kind": "flow",
+      "from": "blk-add1",
+      "to": "blk-fork2"
+    },
+    {
+      "id": "e-blk-4",
+      "kind": "flow",
+      "from": "blk-fork2",
+      "to": "blk-norm2"
+    },
+    {
+      "id": "e-blk-5",
+      "kind": "flow",
+      "from": "blk-norm2",
+      "to": "blk-ffn"
+    },
+    {
+      "id": "e-blk-6",
+      "kind": "flow",
+      "from": "blk-ffn",
+      "to": "blk-add2"
+    },
+    {
+      "id": "e-blk-skip2",
+      "kind": "skip",
+      "from": "blk-fork2.skip",
+      "to": "blk-add2.skip"
+    },
+    {
+      "id": "e-bot-0",
+      "kind": "flow",
+      "from": "g-block.out",
       "to": "norm"
     },
     {
-      "id": "e-norm-head",
+      "id": "e-bot-1",
       "kind": "flow",
       "from": "norm",
       "to": "head"
     },
     {
-      "id": "c-sched",
-      "kind": "control",
-      "from": "decoder.sched",
-      "to": "g-schedule.in"
-    },
-    {
       "id": "c-attn",
       "kind": "control",
-      "from": "decoder.attn",
+      "from": "g-block.attn",
       "to": "g-attn.in"
     },
     {
       "id": "c-ffn",
       "kind": "control",
-      "from": "decoder.ffn",
+      "from": "g-block.ffn",
       "to": "g-ffn.in"
+    },
+    {
+      "id": "c-sched",
+      "kind": "control",
+      "from": "g-block.sched",
+      "to": "g-schedule.in"
     },
     {
       "id": "c-scale",
       "kind": "control",
-      "from": "decoder.scale",
+      "from": "head.scale",
       "to": "g-scale.in"
     },
     {
       "id": "e-attn-1",
       "kind": "flow",
       "from": "attn-q",
-      "to": "attn-kv"
+      "to": "attn-rope"
     },
     {
       "id": "e-attn-2",
       "kind": "flow",
-      "from": "attn-kv",
+      "from": "attn-rope",
       "to": "attn-core"
+    },
+    {
+      "id": "e-attn-kv",
+      "kind": "flow",
+      "from": "attn-kv",
+      "to": "attn-core.kv"
+    },
+    {
+      "id": "e-attn-out",
+      "kind": "flow",
+      "from": "attn-core",
+      "to": "attn-out"
     },
     {
       "id": "e-ffn-1",
       "kind": "flow",
-      "from": "ffn-norm",
-      "to": "ffn-mlp"
+      "from": "ffn-gate",
+      "to": "ffn-act"
     },
     {
       "id": "e-ffn-2",
       "kind": "flow",
-      "from": "ffn-mlp",
-      "to": "ffn-add"
+      "from": "ffn-act",
+      "to": "ffn-mul"
     },
     {
-      "id": "e-ffn-skip",
-      "kind": "skip",
-      "from": "ffn-norm.skip",
-      "to": "ffn-add.skip"
+      "id": "e-ffn-up",
+      "kind": "flow",
+      "from": "ffn-up",
+      "to": "ffn-mul.up"
+    },
+    {
+      "id": "e-ffn-3",
+      "kind": "flow",
+      "from": "ffn-mul",
+      "to": "ffn-down"
     }
   ],
   "groups": [
     {
-      "id": "g-schedule",
-      "label": "Layer Genome · 32 layers",
+      "id": "g-block",
+      "label": "Transformer Block · 32 layers",
       "kind": "inset",
+      "repeat": {
+        "count": 32,
+        "label": "32 ×"
+      },
       "members": [
-        "sched-0",
-        "sched-summary"
+        "blk-in",
+        "blk-norm1",
+        "blk-attn",
+        "blk-add1",
+        "blk-fork2",
+        "blk-norm2",
+        "blk-ffn",
+        "blk-add2",
+        "blk-mod"
       ],
       "ports": [
         {
           "id": "in",
+          "side": "top",
+          "inner": "blk-in"
+        },
+        {
+          "id": "out",
+          "side": "bottom",
+          "inner": "blk-add2"
+        },
+        {
+          "id": "attn",
           "side": "right",
-          "inner": "sched-0"
+          "inner": "blk-attn"
+        },
+        {
+          "id": "ffn",
+          "side": "right",
+          "inner": "blk-ffn"
+        },
+        {
+          "id": "sched",
+          "side": "right",
+          "inner": "blk-add2"
         }
       ],
       "claimPath": "facts.num_hidden_layers"
     },
     {
       "id": "g-attn",
-      "label": "Attention · 32 GQA",
+      "label": "Attention Zoom · 32 GQA",
       "kind": "inset",
       "members": [
         "attn-q",
+        "attn-rope",
         "attn-kv",
-        "attn-core"
+        "attn-core",
+        "attn-out"
       ],
       "ports": [
         {
@@ -216,20 +399,39 @@
     },
     {
       "id": "g-ffn",
-      "label": "Dense FFN Block",
+      "label": "FFN Zoom · Dense SwiGLU",
       "kind": "inset",
       "members": [
-        "ffn-norm",
-        "ffn-mlp",
-        "ffn-add"
+        "ffn-gate",
+        "ffn-act",
+        "ffn-up",
+        "ffn-mul",
+        "ffn-down"
       ],
       "ports": [
         {
           "id": "in",
           "side": "left",
-          "inner": "ffn-norm"
+          "inner": "ffn-gate"
         }
       ]
+    },
+    {
+      "id": "g-schedule",
+      "label": "Layer Schedule · 32L",
+      "kind": "inset",
+      "members": [
+        "sched-0",
+        "sched-summary"
+      ],
+      "ports": [
+        {
+          "id": "in",
+          "side": "left",
+          "inner": "sched-0"
+        }
+      ],
+      "claimPath": "facts.num_hidden_layers"
     },
     {
       "id": "g-scale",
@@ -242,8 +444,8 @@
       "ports": [
         {
           "id": "in",
-          "side": "right",
-          "inner": "scale-ctx"
+          "side": "bottom",
+          "inner": "scale-params"
         }
       ],
       "claimPath": "facts.total_params"
@@ -256,8 +458,28 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_hidden_layers",
-      "target": "decoder",
+      "claimPath": "facts.hidden_size",
+      "target": "blk-in",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "blk-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_attention_heads",
+      "target": "blk-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "blk-ffn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.context_tokens",
+      "target": "blk-mod",
       "status": "reported"
     },
     {
@@ -281,6 +503,11 @@
       "status": "reported"
     },
     {
+      "claimPath": "topology.position_encoding.type",
+      "target": "attn-rope",
+      "status": "reported"
+    },
+    {
       "claimPath": "facts.num_key_value_heads",
       "target": "attn-kv",
       "status": "reported"
@@ -292,7 +519,22 @@
     },
     {
       "claimPath": "facts.hidden_size",
-      "target": "ffn-mlp",
+      "target": "attn-out",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "ffn-gate",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "ffn-up",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.hidden_size",
+      "target": "ffn-down",
       "status": "reported"
     },
     {
@@ -311,13 +553,18 @@
       "status": "derived"
     },
     {
-      "claimPath": "facts.num_hidden_layers",
-      "target": "c-sched",
+      "claimPath": "topology.position_encoding.type",
+      "target": "e-blk-mod",
       "status": "reported"
     },
     {
       "claimPath": "topology.attention_groups[0]",
       "target": "c-attn",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_hidden_layers",
+      "target": "c-sched",
       "status": "reported"
     },
     {
@@ -333,6 +580,16 @@
     {
       "claimPath": "topology.attention_groups[0]",
       "target": "e-attn-2",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "e-attn-kv",
+      "status": "reported"
+    },
+    {
+      "claimPath": "topology.attention_groups[0]",
+      "target": "e-attn-out",
       "status": "reported"
     }
   ]
