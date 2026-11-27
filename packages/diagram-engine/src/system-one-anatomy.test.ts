@@ -30,6 +30,9 @@ describe("System One decision model diagrams", () => {
     expect(scene.nodes.some((n) => n.kind === "action")).toBe(true);
     expect(scene.nodes.find((n) => n.id === "sched-0")?.detail).toContain("(F,S,S) ×9");
     expect(scene.nodes.some((n) => n.id === "ffn-mul")).toBe(true);
+    expect(scene.nodes.find((n) => n.id === "ffn-up")?.detail).toContain("linear");
+    expect(scene.nodes.find((n) => n.id === "ffn-up")?.detail).not.toContain(" KV");
+    expect(scene.nodes.find((n) => n.id === "a-g0")?.detail).toContain("16 Q");
     expect(scene.edges.filter((e) => e.kind === "skip" && e.id.startsWith("e-blk-skip"))).toHaveLength(2);
   });
 

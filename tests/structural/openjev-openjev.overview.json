@@ -136,8 +136,8 @@
     {
       "id": "a-g0",
       "label": "Gated DeltaNet",
-      "detail": "48 layers",
-      "claimPath": "topology.attention_groups[0]"
+      "detail": "48L · 24 Q · 4 KV · d=256",
+      "claimPath": "facts.num_attention_heads"
     },
     {
       "id": "a-g1",
@@ -166,8 +166,8 @@
     {
       "id": "ffn-up",
       "label": "Up Proj",
-      "detail": "24 Q · 4 KV · d=256",
-      "claimPath": "facts.num_attention_heads"
+      "detail": "d=5,120 linear",
+      "claimPath": "facts.hidden_size"
     },
     {
       "id": "ffn-down",
@@ -553,7 +553,17 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[0]",
+      "claimPath": "facts.num_attention_heads",
+      "target": "a-g0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_key_value_heads",
+      "target": "a-g0",
+      "status": "reported"
+    },
+    {
+      "claimPath": "facts.head_dim",
       "target": "a-g0",
       "status": "reported"
     },
@@ -568,17 +578,7 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_attention_heads",
-      "target": "ffn-up",
-      "status": "reported"
-    },
-    {
-      "claimPath": "facts.num_key_value_heads",
-      "target": "ffn-up",
-      "status": "reported"
-    },
-    {
-      "claimPath": "facts.head_dim",
+      "claimPath": "facts.hidden_size",
       "target": "ffn-up",
       "status": "reported"
     },

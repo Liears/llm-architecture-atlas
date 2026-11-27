@@ -1242,9 +1242,9 @@ const evidencePayload = {
           },
           {
             ids: ["blk-fork2", "blk-norm2", "blk-ffn", "blk-add2", "ffn-gate", "ffn-act", "ffn-up", "ffn-mul", "ffn-down"],
-            claim: "facts.num_attention_heads",
-            en: `Evaluate gated FFN diamond (Gate · Act ⊙ Up → Down) and merge residual stream.`,
-            zh: `执行门控 FFN 张量计算（Gate · 激活 ⊙ Up → Down）并合并主干残差流。`,
+            claim: "facts.hidden_size",
+            en: `Evaluate gated FFN diamond (d=${(pFacts.hidden_size ?? 0).toLocaleString("en-US")}: Gate · Act ⊙ Up → Down) and merge residual.`,
+            zh: `执行门控 FFN 张量计算（d=${(pFacts.hidden_size ?? 0).toLocaleString("en-US")}: Gate · 激活 ⊙ Up → Down）并合并残差。`,
           },
           {
             ids: ["dhead", "prefill", "cal", "out", "c-obj", "c-scale"],
@@ -1449,11 +1449,22 @@ const evidencePayload = {
       const attnGroups: any[] = pTopo.attention_groups ?? [];
       const linLayers = attnGroups.filter((g) => g.kind === "linear_attention").reduce((s, g) => s + g.layers.length, 0);
       const mlaLayers = attnGroups.filter((g) => g.kind === "mla" || g.kind === "mla_sparse").reduce((s, g) => s + g.layers.length, 0);
-      const swaLayers = attnGroups.filter((g) => g.kind === "sliding_window").reduce((s, g) => s + g.layers.length, 0);
+      const swaGroupList = attnGroups.filter((g) => g.kind === "sliding_window");
+      const swaLayers = swaGroupList.reduce((s, g) => s + g.layers.length, 0);
+      const parsedSwaWin = swaGroupList.reduce<number | null>((acc, g) => {
+        const m = String(g.label ?? "").match(/w\s*=\s*(\d+)/i);
+        return m ? Number(m[1]) : acc;
+      }, null);
       const stdKvLayers = attnGroups.filter((g) => g.kind === "full" || g.kind === "gqa").reduce((s, g) => s + g.layers.length, 0);
 
       const kvHeads = pFacts.num_key_value_heads ?? null;
       const headDim = pFacts.head_dim ?? (pFacts.hidden_size && pFacts.num_attention_heads ? Math.floor(pFacts.hidden_size / pFacts.num_attention_heads) : null);
+      const nativeCtx = pFacts.context_tokens ?? null;
+      const ctxLbl = selectedCtx >= 1048576 ? "1M" : `${Math.round(selectedCtx / 1024)}K`;
+      const exceedsNative = Boolean(nativeCtx && selectedCtx > nativeCtx);
+      const exceedSuffix = exceedsNative
+        ? (isZh ? `（超出原生 ${nativeCtx! >= 1024 ? `${Math.round(nativeCtx! / 1024)}K` : nativeCtx}）` : ` (> native ${nativeCtx! >= 1024 ? `${Math.round(nativeCtx! / 1024)}K` : nativeCtx})`)
+        : "";
 
       if (mlaLayers > 0) {
         if (kvPerTokEl) kvPerTokEl.textContent = isZh ? "低秩潜空间 MLA" : "Compressed MLA";
@@ -1465,12 +1476,12 @@ const evidencePayload = {
         if (kvTotalCacheEl) kvTotalCacheEl.textContent = "≪ GQA upper bound";
         if (kvCacheNoteEl) {
           kvCacheNoteEl.textContent = isZh
-            ? `${selectedCtx >= 1024 ? `${Math.round(selectedCtx / 1024)}K` : selectedCtx} ctx · 显著低于常规 MHA/GQA`
-            : `${selectedCtx >= 1024 ? `${Math.round(selectedCtx / 1024)}K` : selectedCtx} ctx · far below full K/V heads`;
+            ? `${ctxLbl} 上下文${exceedSuffix} · 显著低于常规 MHA/GQA`
+            : `${ctxLbl} ctx${exceedSuffix} · far below full K/V heads`;
         }
         if (kvTotalVramEl) kvTotalVramEl.textContent = weightsGibStr !== "—" ? `≥ ${weightsGibStr} + MLA KV` : "—";
         if (kvFitNoteEl) {
-          const gpus80 = weightsBytes ? Math.max(1, Math.ceil(weightsBytes / (80 * 1e9))) : null;
+          const gpus80 = weightsBytes ? Math.max(1, Math.ceil(weightsBytes / (76 * 1024 ** 3))) : null;
           kvFitNoteEl.textContent = gpus80
             ? (isZh ? `仅权重约需 ${gpus80} × 80GB GPU (${selectedPrecName})` : `Weights ~${gpus80} × 80GB GPU (${selectedPrecName})`)
             : "";
@@ -1480,7 +1491,7 @@ const evidencePayload = {
 
       if (kvHeads && headDim && (stdKvLayers > 0 || swaLayers > 0)) {
         const bytesPerTokFull = stdKvLayers * 2 * kvHeads * headDim * 2; // BF16 K+V
-        const effectiveSwaCtx = Math.min(selectedCtx, 128); // documented sliding window w=128 in IR
+        const effectiveSwaCtx = parsedSwaWin !== null ? Math.min(selectedCtx, parsedSwaWin) : selectedCtx;
         const swaBytes = swaLayers * 2 * kvHeads * headDim * 2 * effectiveSwaCtx;
         const totalCacheBytes = bytesPerTokFull * selectedCtx + swaBytes;
         const perTokExact = bytesPerTokFull + (swaLayers > 0 ? swaLayers * 2 * kvHeads * headDim * 2 : 0);
@@ -1490,13 +1501,12 @@ const evidencePayload = {
           kvPerTokNoteEl.textContent = linLayers > 0
             ? (isZh ? `${linLayers} 线性层(0 KV) + ${stdKvLayers} GQA×2×${kvHeads}×${headDim}×2B` : `${linLayers} linear (0 KV) + ${stdKvLayers}L × 2 × ${kvHeads}kv × ${headDim}d × 2B`)
             : swaLayers > 0
-              ? (isZh ? `${stdKvLayers} 全注意 + ${swaLayers} 滑窗 (w=128 上限)` : `${stdKvLayers} full + ${swaLayers} SWA (capped at w=128)`)
+              ? (isZh ? `${stdKvLayers} 全注意 + ${swaLayers} 滑窗${parsedSwaWin ? ` (w=${parsedSwaWin})` : ""}` : `${stdKvLayers} full + ${swaLayers} SWA${parsedSwaWin ? ` (w=${parsedSwaWin})` : ""}`)
               : `${stdKvLayers}L × 2 × ${kvHeads}kv × ${headDim}d × 2B`;
         }
         if (kvTotalCacheEl) kvTotalCacheEl.textContent = fmtGiB(totalCacheBytes);
         if (kvCacheNoteEl) {
-          const ctxLbl = selectedCtx >= 1048576 ? "1M" : `${Math.round(selectedCtx / 1024)}K`;
-          kvCacheNoteEl.textContent = isZh ? `批次=1 @ ${ctxLbl} 上下文 (BF16 KV)` : `batch=1 @ ${ctxLbl} context (BF16 KV)`;
+          kvCacheNoteEl.textContent = isZh ? `批次=1 @ ${ctxLbl} 上下文${exceedSuffix} (BF16 KV)` : `batch=1 @ ${ctxLbl} context${exceedSuffix} (BF16 KV)`;
         }
         const combinedBytes = weightsBytes !== null ? weightsBytes + totalCacheBytes : null;
         if (kvTotalVramEl) kvTotalVramEl.textContent = combinedBytes !== null ? fmtGiB(combinedBytes) : "—";

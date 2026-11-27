@@ -142,8 +142,8 @@
     {
       "id": "a-g0",
       "label": "Full Attention",
-      "detail": "10 layers",
-      "claimPath": "topology.attention_groups[0]"
+      "detail": "10L · 16 Q · 16 KV · d=64",
+      "claimPath": "facts.num_attention_heads"
     },
     {
       "id": "a-g1",
@@ -172,8 +172,8 @@
     {
       "id": "ffn-up",
       "label": "Up Proj",
-      "detail": "16 Q · 16 KV · d=64",
-      "claimPath": "facts.num_attention_heads"
+      "detail": "d=1,024 linear",
+      "claimPath": "facts.hidden_size"
     },
     {
       "id": "ffn-down",
@@ -565,9 +565,19 @@
       "status": "reported"
     },
     {
-      "claimPath": "topology.attention_groups[0]",
+      "claimPath": "facts.num_attention_heads",
       "target": "a-g0",
       "status": "reported"
+    },
+    {
+      "claimPath": "facts.num_key_value_heads",
+      "target": "a-g0",
+      "status": "derived"
+    },
+    {
+      "claimPath": "facts.head_dim",
+      "target": "a-g0",
+      "status": "derived"
     },
     {
       "claimPath": "topology.attention_groups[1]",
@@ -580,19 +590,9 @@
       "status": "reported"
     },
     {
-      "claimPath": "facts.num_attention_heads",
+      "claimPath": "facts.hidden_size",
       "target": "ffn-up",
       "status": "reported"
-    },
-    {
-      "claimPath": "facts.num_key_value_heads",
-      "target": "ffn-up",
-      "status": "derived"
-    },
-    {
-      "claimPath": "facts.head_dim",
-      "target": "ffn-up",
-      "status": "derived"
     },
     {
       "claimPath": "facts.hidden_size",

@@ -254,20 +254,21 @@ export function localizeSvgText(raw: string, lang: Lang): string {
   if (moeZoom) {
     return `MoE 微结构 · ${moeZoom[1]} 专家`;
   }
-  if (trimmed.startsWith("Marker Readout · ")) {
-    return `占位读出 · ${trimmed.slice("Marker Readout · ".length)}`;
-  }
-  if (trimmed.startsWith("Prefix Readout · ")) {
-    return `前缀读出 · ${trimmed.slice("Prefix Readout · ".length)}`;
-  }
-  if (trimmed.startsWith("Backbone Mix · ")) {
-    const rest = trimmed
-      .slice("Backbone Mix · ".length)
-      .replace(/Full Attention/g, "全局注意力")
+  const localizeAttnMix = (rest: string) =>
+    rest
+      .replace(/Full Attention/g, "全局全注意力")
       .replace(/Sliding Window/g, "滑动窗口")
       .replace(/Gated Attention \(GQA\)/g, "门控注意力 (GQA)")
       .replace(/Gated DeltaNet/g, "Gated DeltaNet");
-    return `骨干配比 · ${rest}`;
+
+  if (trimmed.startsWith("Marker Readout · ")) {
+    return `占位读出 · ${localizeAttnMix(trimmed.slice("Marker Readout · ".length))}`;
+  }
+  if (trimmed.startsWith("Prefix Readout · ")) {
+    return `前缀读出 · ${localizeAttnMix(trimmed.slice("Prefix Readout · ".length))}`;
+  }
+  if (trimmed.startsWith("Backbone Mix · ")) {
+    return `骨干配比 · ${localizeAttnMix(trimmed.slice("Backbone Mix · ".length))}`;
   }
   if (trimmed.startsWith("Sparse MoE · ")) {
     const layersRange = trimmed.match(/^Sparse MoE · layers (\d+[–-]\d+)$/);

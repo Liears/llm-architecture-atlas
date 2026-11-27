@@ -301,7 +301,19 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
   const g0 = attnGroups[0]!;
   const g1 = attnGroups[1];
   nodes.push(
-    safeNode("a-g0", g0.kind === "linear_attention" ? "state" : "attention", g0.label, [{ label: `${g0.layers.length} layers` }], undefined, "topology.attention_groups[0]"),
+    safeNode(
+      "a-g0",
+      g0.kind === "linear_attention" ? "state" : "attention",
+      g0.label,
+      [
+        { label: `${g0.layers.length}L` },
+        { claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` },
+        ...(facts.num_key_value_heads ? [{ claimPath: "facts.num_key_value_heads", label: `${facts.num_key_value_heads} KV` }] : []),
+        ...(facts.head_dim ? [{ claimPath: "facts.head_dim", label: `d=${facts.head_dim}` }] : []),
+      ],
+      undefined,
+      "topology.attention_groups[0]",
+    ),
     ...(g1
       ? [safeNode("a-g1", g1.kind === "sliding_window" ? "state" : "attention", g1.label, [{ label: `${g1.layers.length} layers` }], undefined, "topology.attention_groups[1]")]
       : []),
@@ -312,7 +324,7 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
   ];
   const readoutMemberIds = [...readoutPipelineIds, "a-g0", ...(g1 ? ["a-g1"] : [])];
 
-  // 4. Lens 2 (g-ffn): Expanded Gated FFN Diamond + Head/KV Tensor Dimensions
+  // 4. Lens 2 (g-ffn): Expanded Gated FFN Diamond (hidden dim linear + gating branches)
   nodes.push(
     safeNode(
       "ffn-gate",
@@ -328,13 +340,9 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
       "ffn-up",
       "ffn",
       "Up Proj",
-      [
-        { claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` },
-        ...(facts.num_key_value_heads ? [{ claimPath: "facts.num_key_value_heads", label: `${facts.num_key_value_heads} KV` }] : []),
-        ...(facts.head_dim ? [{ claimPath: "facts.head_dim", label: `d=${facts.head_dim}` }] : []),
-      ],
+      [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)} linear` }],
       undefined,
-      "facts.num_attention_heads",
+      "facts.hidden_size",
     ),
     safeNode("ffn-down", "ffn", "Down Proj", [{ claimPath: "facts.hidden_size", label: `to d=${commas(facts.hidden_size)}` }], undefined, "facts.hidden_size"),
   );

@@ -46,6 +46,9 @@ describe("bilingual i18n dictionary & SVG localization", () => {
     expect(localizeSvgText("Q / KV Latent Proj", "zh")).toBe("Q / KV 潜空间投影");
     expect(localizeSvgText("Attention Zoom · 32 GQA", "zh")).toBe("注意力微结构 · 32 GQA");
     expect(localizeSvgText("Transformer Block · 32 layers", "zh")).toBe("Transformer 模块 · 32 层");
+    expect(localizeSvgText("Marker Readout · 10 Full Attention + 18 Sliding Window (w=128)", "zh")).toBe(
+      "占位读出 · 10 全局全注意力 + 18 滑动窗口 (w=128)",
+    );
     expect(localizeSvgText("Gate Proj", "zh")).toBe("门控投影 Gate");
     const escaped = localizeSvg('<svg><title>Context &amp; Pos</title><text x="10" y="10">&lt;= 52 letters / chunk</text></svg>', "zh");
     expect(escaped).toContain("<title>上下文与位置编码</title>");
