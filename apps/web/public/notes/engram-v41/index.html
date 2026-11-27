@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="data-as-of" content="2026-11-27">
+<title>Engram 条件记忆与 DeepSeek-V4.1-Flash-1017 学习笔记</title>
+<link rel="stylesheet" href="fonts/fonts.css?v=b6d8e39a">
+<style>
+:root {
+  --ink:#2b2418;
+  --paper:#f4ecd8;
+  --paper-2:#faf4e6;
+  --paper-3:#ece2c9;
+  --ink-35:rgba(43,36,24,.35);
+  --ink-50:rgba(43,36,24,.5);
+  --muted:#6a5f4b;
+  --accent:#b5482a;
+  --alt:#3d5a80;
+  --good:#35693f;
+  --warn:#8a5a0b;
+  --bad:#a8322a;
+  --hachure:repeating-linear-gradient(45deg,transparent 0 7px,rgba(43,36,24,.09) 7px 8.5px);
+  --hachure-alt:repeating-linear-gradient(45deg,transparent 0 7px,rgba(61,90,128,.28) 7px 8.5px);
+  --fs-stat:80px;
+  --fs-readout:64px;
+  --fs-title:56px;
+  --fs-body:28px;
+  --fs-h3:26px;
+  --fs-mono-md:22px;
+  --fs-label:20px;
+  --fs-micro:20px;
+  --fs-mono:19px;
+  --font-hand:'Excalifont','Xiaolai',cursive;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; }
+body {
+  background:
+    radial-gradient(1200px 620px at 12% 8%, rgba(43,36,24,.035), transparent 70%),
+    radial-gradient(1000px 700px at 88% 92%, rgba(43,36,24,.03), transparent 70%),
+    var(--paper);
+}
+h1, h2, h3, p { margin:0; font-weight:400; }
+a { color:var(--accent); text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:4px; }
+::selection { background:var(--ink); color:var(--paper); }
+a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); outline-offset:4px; border-radius:4px; }
+
+.stage { width:1920px; transform-origin:top left; }
+.deck { width:1920px; }
+.slide {
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:28px;
+  width:1920px;
+  padding:64px 80px 84px;
+  font-family:var(--font-hand);
+  font-size:var(--fs-body);
+  line-height:1.6;
+  color:var(--ink);
+  word-break:keep-all;
+}
+.slide + .slide { border-top:2px dashed var(--ink-50); }
+.pageno { position:absolute; right:80px; bottom:30px; font-size:var(--fs-label); color:var(--muted); }
+
+.t-title { font-size:var(--fs-title); line-height:1.3; }
+.t-h3    { font-size:var(--fs-h3); line-height:1.4; }
+.t-body  { font-size:var(--fs-body); line-height:1.6; }
+.t-label { font-size:var(--fs-label); line-height:1.4; color:var(--muted); }
+.t-micro { font-size:var(--fs-micro); line-height:1.45; color:var(--muted); }
+.t-readout { font-size:var(--fs-readout); line-height:1.15; }
+.t-stat    { font-size:var(--fs-stat); line-height:1.1; }
+.t-mono-md { font-family:var(--font-mono); font-size:var(--fs-mono-md); line-height:1.5; }
+.t-title, .t-h3 { text-wrap:balance; }
+.t-body, .t-micro { text-wrap:pretty; }
+.t-stat, .t-readout { font-variant-numeric:tabular-nums; }
+
+.card {
+  padding:28px 30px;
+  border:2px solid var(--ink);
+  border-radius:8px 12px 9px 11px / 11px 8px 12px 9px;
+  background:var(--hachure), var(--paper-2);
+  box-shadow:4px 4px 0 var(--ink);
+}
+.subcard {
+  padding:22px 26px;
+  border:1.5px solid var(--ink);
+  border-radius:11px 8px 12px 9px / 9px 12px 8px 11px;
+  background:var(--paper-2);
+  box-shadow:3px 3px 0 var(--ink);
+}
+.inset {
+  padding:16px 22px;
+  border:1.4px solid var(--ink-50);
+  border-radius:8px 10px 8px 10px / 10px 8px 10px 8px;
+  background:var(--paper-3);
+}
+.anno {
+  padding:16px 24px;
+  border-left:5px solid var(--accent);
+  border-radius:0 9px 9px 0;
+  background:rgba(181,72,42,.08);
+}
+
+.badge {
+  display:inline-flex;
+  align-items:center;
+  padding:1px 14px;
+  border:1.5px solid var(--ink);
+  border-radius:9px 7px 10px 8px / 8px 10px 7px 9px;
+  background:var(--paper-2);
+  font-size:var(--fs-label);
+  line-height:1.5;
+  white-space:nowrap;
+}
+.badge.solid { background:var(--ink); color:var(--paper); }
+.badge.good  { border-color:var(--good); color:var(--good); }
+.badge.warn  { border-color:var(--warn); color:var(--warn); }
+.badge.bad   { border-color:var(--bad);  color:var(--bad); }
+
+.grid2, .grid3, .grid4 { display:grid; gap:24px; }
+.grid2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+.grid3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+.grid4 { grid-template-columns:repeat(4, minmax(0,1fr)); gap:20px; }
+
+.bar {
+  height:22px;
+  width:calc(var(--v) / var(--max) * 100%);
+  border:1.5px solid var(--ink);
+  border-radius:5px 7px 4px 6px;
+  background:var(--accent);
+}
+.bar.base { border-color:var(--alt); border-radius:6px 4px 7px 5px; background:var(--hachure-alt), var(--paper); }
+
+.stack {
+  display:flex;
+  height:44px;
+  border:2px solid var(--ink);
+  border-radius:8px 11px 9px 10px / 10px 9px 11px 8px;
+  overflow:hidden;
+  background:var(--paper-2);
+}
+.stack > i { flex:var(--v); min-width:0; border-right:2px solid var(--paper-2); }
+.stack > i:last-child { border-right:none; }
+.sw { display:block; }
+.sw.a { background:var(--accent); }
+.sw.b { background:var(--hachure-alt), var(--paper-2); }
+.sw.c { background:var(--paper-3); }
+.sw.d { background:var(--paper-3); }
+.legend { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px 28px; margin-top:22px; }
+.legend > div { display:flex; align-items:center; gap:14px; }
+.legend i.sw { width:32px; height:24px; border:1.5px solid var(--ink); border-radius:4px 6px 5px 7px; flex:none; }
+
+.flow { display:flex; align-items:stretch; }
+.flow > .node {
+  flex:1 1 0; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:6px;
+  padding:24px 18px; text-align:center;
+  border:1.5px solid var(--ink); border-radius:11px 8px 12px 9px / 9px 12px 8px 11px;
+  background:var(--paper-2); box-shadow:3px 3px 0 var(--ink);
+}
+.flow > .node > .t-micro { margin:0; }
+.flow > .link { position:relative; flex:0 0 150px; align-self:center; height:64px; }
+.flow > .link::before { content:''; position:absolute; left:6px; right:18px; top:40px; border-top:2.5px solid var(--ink); }
+.flow > .link::after {
+  content:''; position:absolute; right:8px; top:40px; width:13px; height:13px;
+  border-top:2.5px solid var(--ink); border-right:2.5px solid var(--ink);
+  transform:translateY(-50%) rotate(45deg);
+}
+.flow > .link.dashed::before { border-top:none; height:3px; top:calc(40px - 1.5px); background:repeating-linear-gradient(90deg, var(--ink) 0 10px, transparent 10px 18px); }
+.flow > .link > span { position:absolute; left:0; right:0; top:0; text-align:center; font-size:var(--fs-label); line-height:1.3; color:var(--muted); white-space:nowrap; }
+
+.chart-line svg { display:block; width:100%; height:auto; }
+.chart-line .plot { fill:var(--paper-2); }
+.chart-line .grid { stroke:var(--ink-35); stroke-width:1.5; stroke-dasharray:8 10; }
+.chart-line .axis { stroke:var(--ink); stroke-width:2.5; stroke-linecap:round; }
+.chart-line .line { fill:none; stroke:var(--ink); stroke-width:4.5; stroke-linejoin:round; stroke-linecap:round; }
+.chart-line .dot { fill:var(--paper-2); stroke:var(--ink); stroke-width:3; }
+.chart-line .mark { stroke:var(--accent); stroke-width:2.5; stroke-dasharray:10 10; }
+.chart-line text { font-family:var(--font-hand); font-size:var(--fs-label); fill:var(--muted); }
+.chart-line text.val { font-size:var(--fs-h3); fill:var(--ink); }
+.chart-line text.mark-text { fill:var(--accent); }
+
+.codewin {
+  border-radius:10px 8px 10px 9px / 9px 10px 8px 10px;
+  background:#1e1e1e;
+  box-shadow:4px 4px 0 var(--ink);
+  padding-bottom:14px;
+}
+.codewin .dots { display:flex; gap:8px; padding:13px 16px 9px; }
+.codewin .dot { width:12px; height:12px; border-radius:50%; }
+.codewin .r { background:#ff5f57; }
+.codewin .y { background:#febc2e; }
+.codewin .g { background:#28c840; }
+.codewin pre {
+  margin:0;
+  padding:0 22px;
+  font-family:var(--font-mono);
+  font-size:var(--fs-mono);
+  line-height:1.6;
+  color:#d4d4d4;
+  white-space:pre;
+}
+.kw  { color:#569cd6; }
+.st  { color:#ce9178; }
+.fn  { color:#dcdcaa; }
+.cls { color:#4ec9b0; }
+.num { color:#b5cea8; }
+.cm  { color:#6a9955; }
+
+.dtable { display:grid; }
+.dtable[data-cols="2"] { grid-template-columns:340px minmax(0,1fr); }
+.dtable[data-cols="3"] { grid-template-columns:300px minmax(0,1fr) minmax(0,1fr); }
+.dtable[data-cols="4"] { grid-template-columns:320px repeat(3, minmax(0,1fr)); }
+.dtable > div {
+  display:flex;
+  align-items:center;
+  padding:16px 20px;
+  border-bottom:1.4px solid var(--ink-35);
+}
+.dtable > .th { font-size:var(--fs-label); color:var(--muted); }
+.dtable[data-cols="2"] > div:nth-child(-n+2),
+.dtable[data-cols="3"] > div:nth-child(-n+3),
+.dtable[data-cols="4"] > div:nth-child(-n+4) { border-bottom:1.5px solid var(--ink); }
+.dtable[data-cols="2"] > div:nth-last-child(-n+2),
+.dtable[data-cols="3"] > div:nth-last-child(-n+3),
+.dtable[data-cols="4"] > div:nth-last-child(-n+4) { border-bottom:none; }
+
+.rv { opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease; }
+.slide.on .rv { opacity:1; transform:none; }
+@media (prefers-reduced-motion: reduce) {
+  .rv { opacity:1; transform:none; transition:none; }
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+<div class="deck" id="deck">
+
+<!-- 页 1 · 结论首屏 -->
+<section class="slide" id="cover">
+  <header class="rv" style="display:flex;align-items:center;gap:20px">
+    <h1 class="t-title">Engram 把静态知识改成 O(1) 查表，在 DeepSeek-V4.1 承载近 2,000 亿静态参数</h1>
+    <span class="badge good" style="margin-left:auto">源码核对</span>
+  </header>
+  <div class="card rv">
+    <div class="grid3">
+      <div class="subcard">
+        <div class="t-label">V4.1-Flash-1017 静态表</div>
+        <div class="t-stat">196.6B</div>
+        <p class="t-micro">第 1 与第 14 层合计 7.68 亿行<br>表权重保持 FP8 约占 183.1 GiB</p>
+      </div>
+      <div class="subcard">
+        <div class="t-label">词表规范化压缩</div>
+        <div class="t-stat">-23.35%</div>
+        <p class="t-micro">V4.1 与论文同为 129,280→99,092<br>大小写与全半角共享哈希键</p>
+      </div>
+      <div class="subcard">
+        <div class="t-label">27B 长上下文检索跃升</div>
+        <div class="t-stat">+12.8</div>
+        <p class="t-micro">Multi-Query NIAH 由 84.2 升至 97.0<br>等总参 26.7B / 激活 3.8B 口径</p>
+      </div>
+    </div>
+  </div>
+  <div class="anno rv">核心脉络：论文先在 27B 验证条件记忆扩展律，再于 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017" rel="noopener noreferrer" style="white-space:nowrap">DeepSeek-V4.1-Flash-1017</a> 简化落地。决策见<a href="#next" style="white-space:nowrap">第 11 页</a>。</div>
+  <div class="pageno">1 / 11</div>
+</section>
+
+<!-- 页 2 · A/B 对比（架构分工） -->
+<section class="slide" id="paradigm">
+  <header class="rv"><h2 class="t-title">MoE 解决条件计算，Engram 补齐条件记忆，消除前层算力浪费</h2></header>
+  <div class="grid2">
+    <div class="card rv">
+      <div class="t-label">双轴稀疏（MoE + Engram 条件记忆）</div>
+      <h3 class="t-h3" style="margin-top:6px">静态模式走查表，神经层只算推理与上下文组合</h3>
+      <p class="t-body" style="margin-top:10px">常见实体、短语直接按 O(1) 哈希索引取回。</p>
+      <p class="t-body" style="margin-top:8px">前排层免去机械记忆，等于释放有效推理深度。</p>
+    </div>
+    <div class="subcard rv">
+      <div class="t-label">对照（纯 MoE 条件计算）</div>
+      <h3 class="t-h3" style="margin-top:6px">缺少原生查表原语，固定知识与动态推理混用同一条算路</h3>
+      <p class="t-body" style="margin-top:10px">每次遇到固定名字或语法模板，仍要走多层路由与前馈矩阵。</p>
+      <p class="t-body" style="margin-top:8px">路由位置依赖隐藏态，难以提前预测并脱离显存。</p>
+    </div>
+  </div>
+  <div class="anno rv">来源：<a href="https://arxiv.org/abs/2601.07372" rel="noopener noreferrer">Engram 论文 arXiv:2601.07372</a> 与官方演示代码。LogitLens 分析表明前排层静态重构负担显著下降。</div>
+  <div class="pageno">2 / 11</div>
+</section>
+
+<!-- 页 3 · 读数行（U 型分配律） -->
+<section class="slide" id="u-curve">
+  <header class="rv"><h2 class="t-title">稀疏预算在 20%–25% 处有<span style="white-space:nowrap"> U&nbsp;型</span>最优值，偏向任一端均退化</h2></header>
+  <div class="grid4">
+    <div class="card rv">
+      <div class="t-label">稀疏记忆最优配比</div>
+      <div class="t-readout">20%–25%</div>
+      <p class="t-micro">稀疏增量参数分配区间<br>固定总参、固定算力验证</p>
+    </div>
+    <div class="card rv">
+      <div class="t-label">27B 实验记忆表规模</div>
+      <div class="t-readout">5.7B</div>
+      <p class="t-micro">总参 26.7B 中的查表配额<br>占比约 21.3%</p>
+    </div>
+    <div class="card rv">
+      <div class="t-label">对应路由专家缩减</div>
+      <div class="t-readout">72 → 55</div>
+      <p class="t-micro">省出 17 个专家参数位<br>每 token 激活同为 3.8B</p>
+    </div>
+    <div class="card rv">
+      <div class="t-label">极端配比退化规律</div>
+      <div class="t-readout">U&nbsp;型双尾</div>
+      <p class="t-micro">0% 回退为纯 MoE 瓶颈<br>记忆过多则削弱神经表达</p>
+    </div>
+  </div>
+  <div class="anno rv">口径：以上四项取自 <a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer" style="white-space:nowrap">deepseek-ai/Engram</a>（27B / 262B 词元）。20%–25% 指稀疏内部配比；V4.1 按文本总参算为 26.3%。</div>
+  <div class="pageno">3 / 11</div>
+</section>
+
+<!-- 页 4 · 简表（27B 基准测试全览） -->
+<section class="slide" id="bench-27b">
+  <header class="rv"><h2 class="t-title">在 26.7B 等总参、3.8B 等激活约束下，Engram 各项评测全线压过 MoE 基线</h2></header>
+  <div class="card rv">
+    <div class="dtable" data-cols="4">
+      <div class="th"><div>评测任务</div></div><div class="th"><div>MoE-27B 基线</div></div><div class="th"><div>Engram-27B</div></div><div class="th"><div>净提升（百分点）</div></div>
+      <div><div>MMLU（综合知识）</div></div><div><div>57.4</div></div><div><div>60.4</div></div><div><div>+3.0</div></div>
+      <div><div>CMMLU（中文知识）</div></div><div><div>57.9</div></div><div><div>61.9</div></div><div><div>+4.0</div></div>
+      <div><div>BBH（复杂多步推理）</div></div><div><div>50.9</div></div><div><div>55.9</div></div><div><div>+5.0</div></div>
+      <div><div>ARC-Challenge（科学推理）</div></div><div><div>70.1</div></div><div><div>73.8</div></div><div><div>+3.7</div></div>
+      <div><div>HumanEval（代码生成）</div></div><div><div>37.8</div></div><div><div>40.8</div></div><div><div>+3.0</div></div>
+      <div><div>MATH（数学解题）</div></div><div><div>28.3</div></div><div><div>30.7</div></div><div><div>+2.4</div></div>
+      <div><div>Multi-Query NIAH（长文检索）</div></div><div><div>84.2</div></div><div><div>97.0</div></div><div><div>+12.8</div></div>
+    </div>
+  </div>
+  <div class="anno rv">口径：两组共享 26.7B 总参、3.8B 激活与 262B 训练量。代码与推理同步涨分，说明浅层减负利好通用计算。</div>
+  <div class="pageno">4 / 11</div>
+</section>
+
+<!-- 页 5 · 链路（前向执行四步） -->
+<section class="slide" id="pipeline">
+  <header class="rv"><h2 class="t-title">从 Token ID 到写回残差，Engram 走词表折叠、素数哈希、多流门控与累加四步</h2></header>
+  <div class="card rv">
+    <div class="flow">
+      <div class="node"><div class="t-h3">词表压缩</div><p class="t-micro">NFKC 规范化与小写折叠<br>同义变形归入同一 ID</p></div>
+      <div class="link"><span>滑窗 N-gram</span></div>
+      <div class="node"><div class="t-h3">多头素数哈希</div><p class="t-micro">按位 XOR 后取素数模<br>每组 N-gram 配 8 路头</p></div>
+      <div class="link"><span>FP8 反量化查表</span></div>
+      <div class="node"><div class="t-h3">多流 RMSNorm 门控</div><p class="t-micro">h 做 Query 对齐键值<br>生成 (0, 1) 噪声过滤权重</p></div>
+      <div class="link dashed"><span>图像 Mask 清零</span></div>
+      <div class="node"><div class="t-h3">残差流写回</div><p class="t-micro">h + gate * value<br>多流 mHC 共享同一 Value</p></div>
+    </div>
+  </div>
+  <div class="anno rv">图例：实线是核心查表路径，虚线是视觉掩码规则。图像占位不参与滑窗统计，门控清零后原样放行。</div>
+  <div class="pageno">5 / 11</div>
+</section>
+
+<!-- 页 6 · 代码窗（V4.1-Flash-1017 生产源码对比） -->
+<section class="slide" id="code-v41">
+  <header class="rv"><h2 class="t-title">V4.1-Flash-1017 生产代码砍掉 ShortConv，改为融合投影与图像掩码</h2></header>
+  <div class="grid2">
+    <div class="codewin rv">
+      <div class="dots"><i class="dot r"></i><i class="dot y"></i><i class="dot g"></i></div>
+<pre><span class="cm"># DeepSeek-V4.1-Flash-1017 (model.py)</span>
+<span class="kw">class</span> <span class="cls">Engram</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, hash_ids, token_mask=<span class="kw">None</span>):
+        kv = self.<span class="fn">wkv</span>(self.<span class="fn">embed</span>(hash_ids).flatten(-<span class="num">2</span>))
+        key, val = kv.split([hc_mult * dim, dim], dim=-<span class="num">1</span>)
+        key = key.float().unflatten(-<span class="num">1</span>, (hc_mult, dim))
+        w = self.q_weight.float() * self.k_weight.float()
+        h = x.float()
+        rstd = torch.rsqrt(h.square().mean(-<span class="num">1</span>) + eps) * \
+               torch.rsqrt(key.square().mean(-<span class="num">1</span>) + eps)
+        dot = (h * w * key).sum(-<span class="num">1</span>) * rstd * (dim ** -<span class="num">0.5</span>)
+        gate = torch.sigmoid(torch.copysign(
+            dot.abs().clamp_min(<span class="num">1e-6</span>).sqrt(), dot))
+        <span class="kw">if</span> token_mask <span class="kw">is not None</span>:
+            gate = gate.masked_fill(~token_mask.unsqueeze(-<span class="num">1</span>), <span class="num">0</span>)
+        <span class="kw">return</span> (h + gate.unsqueeze(-<span class="num">1</span>) * val.float().unsqueeze(-<span class="num">2</span>))</pre>
+    </div>
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <h3 class="t-h3">对比开源 Demo 的四处生产演化</h3>
+      <p class="t-body" style="margin-top:12px">1. 查表层常驻 FP8：只在取出命中行时按块反量化。</p>
+      <p class="t-body" style="margin-top:10px">2. 算子合并：单层 wkv 一次输出 4 路 Key 与 1 路 Value。</p>
+      <p class="t-body" style="margin-top:10px">3. 去掉 ShortConv：直接残差相加，消除跨序列卷积延迟。</p>
+      <p class="t-body" style="margin-top:10px">4. 新增 token_mask：屏蔽 32 层 ViT 图像块查表。</p>
+      <p class="t-mono-md" style="margin-top:auto;padding-top:14px">DeepSeek-V4.1-Flash-1017 inference model.py</p>
+    </div>
+  </div>
+  <div class="pageno">6 / 11</div>
+</section>
+
+<!-- 页 7 · 简表（Demo vs V4.1-Flash-1017 参数配置对照） -->
+<section class="slide" id="config-diff">
+  <header class="rv"><h2 class="t-title">从演示代码到 V4.1-Flash-1017，查表扩展至 4-gram 且单头维度放大四倍</h2></header>
+  <div class="card rv">
+    <div class="dtable" data-cols="3">
+      <div class="th"><div>配置字段</div></div><div class="th"><div>论文开源 Demo</div></div><div class="th"><div>DeepSeek-V4.1-Flash-1017</div></div>
+      <div><div>挂载层位（layer_ids）</div></div><div><div>[1, 15]（共 30 层）</div></div><div><div>[1, 14]（共 40 层 CED，均落于前 20 层编码器）</div></div>
+      <div><div>N-gram 上限</div></div><div><div><span style="white-space:nowrap">max_ngram_size = 3</span>（2 / 3-gram）</div></div><div><div><span style="white-space:nowrap">engram_max_ngram_size = 4</span>（2–4-gram）</div></div>
+      <div><div>头数与单头维度</div></div><div><div>8 头 × 64 维 = 每档 512 维</div></div><div><div>3 档 N-gram × 8 头 × 256 维 = 24 列共 6,144 维</div></div>
+      <div><div>哈希素数基数</div></div><div><div>每档约 64.6 万（129,280 × 5）</div></div><div><div>基数 16,000,000（按头依次递取素数）</div></div>
+      <div><div>双层总行数与表参数</div></div><div><div>按词表比例缩放示例</div></div><div><div>合计 768,022,850 行（196.6B 参数）</div></div>
+      <div><div>局部序列短卷积</div></div><div><div>ShortConv（kernel=4, dilation=3）</div></div><div><div>已移除。依赖前后层 128 窗 CSA2 处理局部关系</div></div>
+    </div>
+  </div>
+  <div class="anno rv">来源：逐字段核对自 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/config.json" rel="noopener noreferrer" style="white-space:nowrap">官方 config.json</a> 与 GitHub 演示实现。</div>
+  <div class="pageno">7 / 11</div>
+</section>
+
+<!-- 页 8 · 构成（V4.1-Flash-1017 整网结构占比） -->
+<section class="slide" id="v41-anatomy">
+  <header class="rv"><h2 class="t-title">V4.1-Flash-1017：MoE 骨干占 73.7%，Engram 静态表占 26.3%</h2></header>
+  <div class="card rv">
+    <div class="t-label">文本端 748.6B 参数构成（552B MoE 骨干加 196.6B 静态表，不含 32 层 ViT）</div>
+    <div class="stack" style="margin-top:12px">
+      <i class="sw a" style="--v:26.3"></i><i class="sw b" style="--v:73.7"></i>
+    </div>
+    <div class="legend" style="grid-template-columns:repeat(2, minmax(0,1fr))">
+      <div><i class="sw a"></i><span class="t-body">Engram 静态记忆表&nbsp;26.3%（196.6B 参数 · 第 1/14 层）</span></div>
+      <div><i class="sw b"></i><span class="t-body">MoE 骨干网络&nbsp;73.7%（552B 参数 · 40 层 384+1 专家）</span></div>
+    </div>
+    <div class="grid3" style="margin-top:26px">
+      <div class="inset">
+        <div class="t-label">非对称 CED 骨干</div>
+        <h3 class="t-h3" style="margin-top:4px">20 因果编码器 + 20 解码器</h3>
+        <p class="t-micro" style="margin-top:6px">Pre-fill 激活约 8B · 生成激活约 16B</p>
+      </div>
+      <div class="inset">
+        <div class="t-label">混合压缩稀疏注意力</div>
+        <h3 class="t-h3" style="margin-top:4px">128 窗 CSA2 + 4 源全局 KV</h3>
+        <p class="t-micro" style="margin-top:6px">上下文 1M · YaRN 倍率 16</p>
+      </div>
+      <div class="inset">
+        <div class="t-label">原生多流与多步预测</div>
+        <h3 class="t-h3" style="margin-top:4px">4 流 mHC + 3 层 DSpark</h3>
+        <p class="t-micro" style="margin-top:6px">FP8 线性权重 + FP4 MoE 专家</p>
+      </div>
+    </div>
+  </div>
+  <div class="anno rv">口径：552B 骨干加 196.6B 静态表共 748.6B。若计入 32 层 ViT、对齐器与预测头，整网约 763B。</div>
+  <div class="pageno">8 / 11</div>
+</section>
+
+<!-- 页 9 · 多卡对比条（V4.1-Flash-1017 10 月快照实测提升） -->
+<section class="slide" id="v41-eval">
+  <header class="rv"><h2 class="t-title">1017 快照（RL 升级，非 Engram 消融）：终端编码最高再涨 11.1 分</h2></header>
+  <div class="subcard rv" style="display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px 28px;align-items:center">
+    <div class="t-label">Terminal-Bench 4.0（终端实战）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 31.2</p>
+      <div class="bar base" style="--v:31.2;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 42.3（+11.1）</p>
+      <div class="bar" style="--v:42.3;--max:100"></div>
+    </div>
+    <div class="t-label">ProgramBench（复杂编程）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 20.3</p>
+      <div class="bar base" style="--v:20.3;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 29.1（+8.8）</p>
+      <div class="bar" style="--v:29.1;--max:100"></div>
+    </div>
+    <div class="t-label">Apex Bench v1.1（工程基准）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 64.6</p>
+      <div class="bar base" style="--v:64.6;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 72.1（+7.5）</p>
+      <div class="bar" style="--v:72.1;--max:100"></div>
+    </div>
+    <div class="t-label">HLE w/o tools（学科极限）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 36.8</p>
+      <div class="bar base" style="--v:36.8;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 42.6（+5.8）</p>
+      <div class="bar" style="--v:42.6;--max:100"></div>
+    </div>
+    <div class="t-label">BabyVision w/ tools（视觉细粒度）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 89.6</p>
+      <div class="bar base" style="--v:89.6;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 92.5（+2.9）</p>
+      <div class="bar" style="--v:92.5;--max:100"></div>
+    </div>
+  </div>
+  <div class="anno rv">来源：<a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017" rel="noopener noreferrer" style="white-space:nowrap">Hugging Face 模型卡对比表</a>（MIT 开源）。架构未变，1017 涨分来自强化学习与输出提效。</div>
+  <div class="pageno">9 / 11</div>
+</section>
+
+<!-- 页 10 · 账目卡阵（部署机制与三套口径边界） -->
+<section class="slide" id="ledger">
+  <header class="rv"><h2 class="t-title">工程部署围绕 183.1 GiB 内存卸载展开，同时需严格隔离三套信息口径</h2></header>
+  <div class="grid3">
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge solid">01</span>
+        <h3 class="t-h3">主机内存卸载</h3>
+        <span class="badge good" style="margin-left:auto">已支持</span>
+      </div>
+      <p class="t-body" style="margin-top:12px">因哈希仅依赖输入 ID，表可放 CPU RAM 或 mmap。</p>
+      <div style="margin-top:auto;padding-top:12px">
+        <p class="t-micro">来源：vLLM / SGLang 集成与论文</p>
+        <p class="t-micro">实测：论文异步预取卸载吞吐损耗 &lt; 3%</p>
+      </div>
+    </div>
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge solid">02</span>
+        <h3 class="t-h3">原生 FP8 表分片</h3>
+        <span class="badge good" style="margin-left:auto">源码确认</span>
+      </div>
+      <p class="t-body" style="margin-top:12px">表按行分片跨卡均摊，查中行后再局部反量化，省掉全集同步。</p>
+      <div style="margin-top:auto;padding-top:12px">
+        <p class="t-micro">来源：V4.1-Flash-1017 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/inference/model.py" rel="noopener noreferrer">参考代码</a></p>
+        <p class="t-micro">体量：双表原始约 183.1 GiB</p>
+      </div>
+    </div>
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge solid">03</span>
+        <h3 class="t-h3">视觉序列硬屏蔽</h3>
+        <span class="badge good" style="margin-left:auto">源码确认</span>
+      </div>
+      <p class="t-body" style="margin-top:12px">图像占位打上 DEAD 哨兵并阻断移位滑窗，防止像素与文本混算哈希。</p>
+      <div style="margin-top:auto;padding-top:12px">
+        <p class="t-micro">来源：V4.1 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/inference/engram.py" rel="noopener noreferrer">哈希实现</a></p>
+        <p class="t-micro">机制：前向门控直接掩码清零</p>
+      </div>
+    </div>
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge solid">04</span>
+        <h3 class="t-h3">27B 消融实验口径</h3>
+        <span class="badge good" style="margin-left:auto">论文锁定</span>
+      </div>
+      <p class="t-body" style="margin-top:12px">第 3–4 页的 U 型分配律与涨分表来自 27B 严格对齐对照实验。</p>
+      <div style="margin-top:auto;padding-top:12px">
+        <p class="t-micro">来源：<a href="https://arxiv.org/abs/2601.07372" rel="noopener noreferrer">arXiv:2601.07372</a></p>
+        <p class="t-micro">注意：未发布公开的 V4.1 关停对照分</p>
+      </div>
+    </div>
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge solid">05</span>
+        <h3 class="t-h3">1017 与前代区别</h3>
+        <span class="badge warn" style="margin-left:auto">增量快照</span>
+      </div>
+      <p class="t-body" style="margin-top:12px">1017 共用 V4.1-Flash 主干架构，Agent 提分源于后训练与自反馈强化。</p>
+      <div style="margin-top:auto;padding-top:12px">
+        <p class="t-micro">来源：HF 权重说明 · MIT 开源</p>
+        <p class="t-micro">提示：第 9 页对比针对前后两次权重</p>
+      </div>
+    </div>
+    <div class="subcard rv" style="display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge solid">06</span>
+        <h3 class="t-h3">编码器与解码器激活</h3>
+        <span class="badge warn" style="margin-left:auto">公开口径</span>
+      </div>
+      <p class="t-body" style="margin-top:12px">Pre-fill 约 8B、生成约 16B 为公开文档汇报值，非本地压测实测。</p>
+      <div style="margin-top:auto;padding-top:12px">
+        <p class="t-micro">来源：NeMo / vLLM 配置资料</p>
+        <p class="t-micro">状态：已与 748.6B / 763B 口径分列</p>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">10 / 11</div>
+</section>
+
+<!-- 页 11 · 尾页（拍板收口） -->
+<section class="slide" id="next">
+  <header class="rv"><h2 class="t-title">下一步：请拍板 <span style="white-space:nowrap">DeepSeek-V4.1</span> 与 Engram 的收录范围</h2></header>
+  <div class="card rv" style="display:flex;flex-direction:column;gap:18px">
+    <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
+      <span class="badge solid">01</span>
+      <div style="flex:1;min-width:0">
+        <h3 class="t-h3">Atlas 模型库扩展</h3>
+        <p class="t-body">是否收录 V4.1-Flash-1017 配置，绘制 20+20 CED、CSA2 与层 1/14 结构图。</p>
+      </div>
+      <span class="badge warn">待拍板</span>
+    </div>
+    <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
+      <span class="badge solid">02</span>
+      <div style="flex:1;min-width:0">
+        <h3 class="t-h3">显存估算器支持静态表卸载</h3>
+        <p class="t-body">是否扩展显存规划器，区分计算主干显存与主机内存可卸载静态表。</p>
+      </div>
+      <span class="badge warn">待拍板</span>
+    </div>
+    <div class="inset" style="display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:20px 26px">
+      <div style="display:flex;align-items:center;gap:18px">
+        <span class="badge solid">03</span>
+        <div style="flex:1;min-width:0">
+          <h3 class="t-h3">线上学习笔记入口</h3>
+          <p class="t-body">本报告已独立归档至网站学习笔记栏目。口径核对详见<a href="#ledger" style="white-space:nowrap">第 10 页</a>。</p>
+        </div>
+        <span class="badge good">已规划</span>
+      </div>
+    </div>
+  </div>
+  <div class="anno rv">资料截止日期：2026-11-27。V4.1 配置字段经 Hugging Face 原件核验，27B 消融分归属 Engram 论文。</div>
+  <div class="pageno">11 / 11</div>
+</section>
+
+</div>
+</div>
+<script>
+(function () {
+  var W = 1920;
+  var stage = document.getElementById('stage');
+  var deck = document.getElementById('deck');
+
+  function fit() {
+    var s = Math.min(window.innerWidth / W, 1.3);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.height = deck.getBoundingClientRect().height + 'px';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  fontGuard();
+
+  function fontGuard() {
+    var nameOf = function (f) { return f.family.replace(/^["']|["']$/g, ''); };
+    var check = function (faces) {
+      var missing = ['Xiaolai', 'Excalifont'].filter(function (n) {
+        return !faces.some(function (f) { return nameOf(f) === n; });
+      });
+      Promise.all(faces.map(function (f) { return f.load().catch(function () { return null; }); })).then(function () {
+        var broken = faces.filter(function (f) { return f.status === 'error'; }).map(nameOf);
+        if (!missing.length && !broken.length) return;
+        var bar = document.createElement('div');
+        bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9;padding:10px 16px;font:16px/1.5 system-ui,sans-serif;color:#fff;background:#a8322a';
+        bar.textContent = '字体未加载，现在显示的是系统字体。'
+          + (missing.length ? '缺少字体声明：' + missing.join('、') + '。' : '')
+          + (broken.length ? '字体文件加载失败：' + broken.join('、') + '。' : '')
+          + '请把 fonts/ 目录和本页放在一起；跑一次字体子集脚本再打开。';
+        document.body.appendChild(bar);
+      });
+    };
+    var allFaces = function () {
+      var faces = [];
+      document.fonts.forEach(function (f) { faces.push(f); });
+      return faces;
+    };
+    var poll = function (tries) {
+      var faces = allFaces();
+      if (faces.length || tries <= 0) return check(faces);
+      setTimeout(function () { poll(tries - 1); }, 100);
+    };
+    if (document.readyState === 'complete') poll(20); else window.addEventListener('load', function () { poll(20); });
+  }
+
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.slide').forEach(function (s) { io.observe(s); });
+  } else {
+    document.querySelectorAll('.slide').forEach(function (s) { s.classList.add('on'); });
+  }
+})();
+</script>
+</body>
+</html>

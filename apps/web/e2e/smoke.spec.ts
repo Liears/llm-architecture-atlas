@@ -312,3 +312,34 @@ test("Flow Replay HUD, KV Cache & Memory Estimator, and Chinese overview diagram
   await page.goto("/llm-architecture-atlas/models/deepseek-ai-deepseek-v3/");
   await expect(page.locator("#kv-pertok")).toContainText("MLA");
 });
+
+test("Study Notes page and Engram + DeepSeek-V4.1 hand-drawn deck load cleanly", async ({ page }) => {
+  await page.goto("/llm-architecture-atlas/");
+  await page.click('.topbar .nav a[data-i18n="nav.notes"]');
+  await expect(page).toHaveURL(/\/llm-architecture-atlas\/notes\/$/);
+  await expect(page.locator("h1")).toHaveText("Study Notes");
+
+  // Bilingual switch updates Study Notes heading & card summary
+  await page.click("#lang-toggle");
+  await expect(page.locator("h1")).toHaveText("学习笔记");
+  await expect(page.locator(".note-card h2 a")).toContainText("Engram");
+
+  // Navigate into self-contained hand-drawn deck and verify clean load + zero console/page errors
+  const pageErrors: string[] = [];
+  page.on("pageerror", (err) => pageErrors.push(err.message));
+  await page.click('.note-card a[data-i18n="notes.openDeck"]');
+  await expect(page).toHaveURL(/\/llm-architecture-atlas\/notes\/engram-v41\/index\.html$/);
+  await expect(page.locator("section.slide")).toHaveCount(11);
+  await expect(page.locator("#cover h1")).toContainText("Engram");
+
+  const metrics = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return {
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      loadedFonts: [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family),
+    };
+  });
+  expect(pageErrors).toEqual([]);
+  expect(metrics.overflow).toBeLessThanOrEqual(1);
+  expect(metrics.loadedFonts).toEqual(expect.arrayContaining(["Xiaolai", "Excalifont", "JetBrains Mono"]));
+});
