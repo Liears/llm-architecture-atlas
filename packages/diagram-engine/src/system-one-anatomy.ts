@@ -1,6 +1,6 @@
 import type { EvidenceFile, ModelDocument } from "@atlas/architecture-ir";
 import type { EditorialPosterBlueprint } from "./poster.js";
-import { buildPosterGridBlueprint, type LensSpec } from "./poster-grid.js";
+import { buildSpinePosterBlueprint, type LensSpec } from "./poster-grid.js";
 import { buildScheduleRuns } from "./editorial-overview.js";
 import type { DiagramScene, EvidenceAnnotation, SemanticGroup, SemanticNode } from "./types.js";
 
@@ -31,7 +31,9 @@ export interface CompiledSystemOnePoster {
 
 /**
  * Compiler & poster blueprint for System One (non-autoregressive Jev-class)
- * decision models. Adapts cleanly across readout modes:
+ * decision models. Uses the unified top-to-bottom residual execution spine
+ * paired with right-hand readout/backbone mix, GeGLU/SwiGLU FFN, schedule,
+ * and calibration zooms:
  * - mask_marker_mlp (e.g. Laya: bidirectional encoder + [MASK] head + act_head)
  * - first_token_letter_logits (e.g. OpenJev: single-pass prefill + prefix KV + letter readout)
  */
@@ -73,81 +75,162 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
   const isMarkerMode = dh.readout_mode === "mask_marker_mlp";
   const attnGroups = topology.attention_groups;
   const attnSummary = attnGroups.map((g) => `${g.layers.length} ${g.label}`).join(" + ");
+  const compactAttnSummary = attnGroups
+    .map((g) => `${g.layers.length} ${g.kind === "linear_attention" ? "Lin" : g.kind === "sliding_window" ? "SWA" : "Full"}`)
+    .join(" + ");
   const primitivesText = dh.primitives?.length ? dh.primitives.join(" · ") : "choice · score · noul";
+  const ffnLabel = topology.ffn_groups[0]?.label ?? "Dense FFN";
+  const isGelu = /gelu|geglu/i.test(ffnLabel);
+  const posClaim = hasClaim("topology.position_encoding.type")
+    ? "topology.position_encoding.type"
+    : "topology.attention_groups[0]";
+  const posLabel = topology.position_encoding?.type?.toUpperCase() ?? "RoPE";
 
-  // 1. Main Spine (Zero-decode single-pass forward flow)
-  const nodes: SemanticNode[] = isMarkerMode
+  // 1. Top & Bottom Main Execution Spine + Nested Pre-Norm Block with Residual Skip Rails
+  const topSpineNodes: SemanticNode[] = isMarkerMode
     ? [
-        safeNode("input", "io", "State + Typed Q", [{ claimPath: "topology.decision_head.primitives", label: primitivesText }], undefined, "topology.paradigm"),
-        safeNode("embed", "embedding", "Token + Type Emb", [
-          { claimPath: "facts.hidden_size", label: `hidden ${commas(facts.hidden_size)}` },
-        ]),
         safeNode(
-          "backbone",
-          "stack",
-          "Bidirectional Encoder",
-          [
-            { claimPath: "facts.num_hidden_layers", label: `${facts.num_hidden_layers} layers` },
-            { label: "full + sliding" },
-          ],
-          [
-            { name: "sched", side: "bottom" },
-            { name: "cal", side: "bottom" },
-            { name: "attn", side: "bottom" },
-            { name: "readout", side: "bottom" },
-          ],
+          "input",
+          "io",
+          "State + Typed Q",
+          [{ claimPath: "topology.decision_head.primitives", label: primitivesText }],
+          [{ name: "out", side: "bottom" }],
+          "topology.paradigm",
         ),
+        safeNode(
+          "embed",
+          "embedding",
+          "Token + Type Emb",
+          [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }],
+          [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+        ),
+      ]
+    : [
+        safeNode(
+          "input",
+          "io",
+          "State + Image + Q",
+          [{ claimPath: "topology.decision_head.primitives", label: primitivesText }],
+          [{ name: "out", side: "bottom" }],
+          "topology.paradigm",
+        ),
+        safeNode(
+          "embed",
+          dh.vision_encoder ? "vision" : "embedding",
+          dh.vision_encoder ? "Embed + Vision" : "Token Embed",
+          [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }],
+          [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+          "topology.decision_head.vision_encoder",
+        ),
+      ];
+
+  const blockNodes: SemanticNode[] = [
+    safeNode(
+      "blk-in",
+      "split",
+      "Block Input",
+      [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+      "facts.hidden_size",
+    ),
+    {
+      id: "blk-norm1",
+      kind: "norm",
+      label: "Pre-Attn Norm",
+      detail: isMarkerMode ? "LayerNorm" : "RMSNorm",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+    },
+    safeNode(
+      "blk-attn",
+      "attention",
+      isMarkerMode ? "Bidirectional Attn" : "Hybrid Backbone",
+      [
+        { claimPath: "topology.attention_groups[0]", label: compactAttnSummary },
+        ...(facts.num_attention_heads ? [{ claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` }] : []),
+      ],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "mod", side: "left" }],
+      "topology.attention_groups[0]",
+    ),
+    {
+      id: "blk-add1",
+      kind: "merge",
+      label: "⊕ Residual",
+      detail: "h + attn",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+    },
+    {
+      id: "blk-fork2",
+      kind: "split",
+      label: "Attn Stream",
+      detail: "pre-FFN fork",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+    },
+    {
+      id: "blk-norm2",
+      kind: "norm",
+      label: "Pre-FFN Norm",
+      detail: isMarkerMode ? "LayerNorm" : "RMSNorm",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+    },
+    safeNode(
+      "blk-ffn",
+      "ffn",
+      ffnLabel,
+      [{ label: "gated MLP" }],
+      [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+      "topology.ffn_groups[0]",
+    ),
+    {
+      id: "blk-add2",
+      kind: "merge",
+      label: "⊕ Residual",
+      detail: "h + ffn",
+      ports: [{ name: "in", side: "top" }, { name: "out", side: "bottom" }, { name: "skip", side: "left" }],
+    },
+    safeNode("blk-mod", "attention", posLabel, [{ label: isMarkerMode ? "dual RoPE" : "pos enc" }], undefined, posClaim),
+  ];
+
+  const bottomSpineNodes: SemanticNode[] = isMarkerMode
+    ? [
         safeNode(
           "dhead",
           "decision",
           "Decision Head",
           dh.head_layers ? [{ claimPath: "topology.decision_head.head_layers", label: `${dh.head_layers}L Transformer` }] : [{ label: "cross-opt head" }],
-          undefined,
+          [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
           "topology.decision_head.readout_mode",
         ),
-        safeNode("cal", "calibration", "Calibrated Scorer", [{ label: "[MASK] -> T_q Softmax" }], undefined, "topology.decision_head.calibration"),
-        safeNode("out", "output", "Typed JSON", [{ label: "probs + act/abstain" }], undefined, "topology.paradigm"),
+        safeNode(
+          "cal",
+          "calibration",
+          "Calibrated Scorer",
+          [{ label: "[MASK] -> T_q Softmax" }],
+          [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+          "topology.decision_head.calibration",
+        ),
+        safeNode("out", "output", "Typed JSON", [{ label: "probs + act/abstain" }], [{ name: "in", side: "top" }, { name: "scale", side: "bottom" }], "topology.paradigm"),
       ]
     : [
-        safeNode("input", "io", "State + Image + Q", [{ claimPath: "topology.decision_head.primitives", label: primitivesText }], undefined, "topology.paradigm"),
         safeNode(
-          "embed",
-          dh.vision_encoder ? "vision" : "embedding",
-          dh.vision_encoder ? "Embed + Vision" : "Token Embed",
-          [
-            { claimPath: "facts.hidden_size", label: `hidden ${commas(facts.hidden_size)}` },
-          ],
-          undefined,
-          "topology.decision_head.vision_encoder",
+          "prefill",
+          "readout",
+          "Single-Pass Prefill",
+          [{ label: "1 step · no decode" }],
+          [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
+          "topology.paradigm",
         ),
-        safeNode(
-          "backbone",
-          "stack",
-          "Hybrid Backbone",
-          [
-            { claimPath: "facts.num_hidden_layers", label: `${facts.num_hidden_layers} layers` },
-            { label: "3:1 GDN + GQA" },
-          ],
-          [
-            { name: "sched", side: "bottom" },
-            { name: "cal", side: "bottom" },
-            { name: "attn", side: "bottom" },
-            { name: "readout", side: "bottom" },
-          ],
-        ),
-        safeNode("prefill", "readout", "Single-Pass Prefill", [{ label: "1 step · no decode" }], undefined, "topology.paradigm"),
         safeNode(
           "cal",
           "calibration",
           "Letter Logits + T",
           dh.max_options ? [{ claimPath: "topology.decision_head.max_options", label: `A-Z/a-z · <=${dh.max_options}` }] : [{ label: "logit slice" }],
-          undefined,
+          [{ name: "in", side: "top" }, { name: "out", side: "bottom" }],
           "topology.decision_head.calibration",
         ),
-        safeNode("out", "output", "Typed JSON", [{ label: "calibrated probs" }], undefined, "topology.paradigm"),
+        safeNode("out", "output", "Typed JSON", [{ label: "calibrated probs" }], [{ name: "in", side: "top" }, { name: "scale", side: "bottom" }], "topology.paradigm"),
       ];
 
-  const spineIds = nodes.map((n) => n.id);
+  const nodes: SemanticNode[] = [...topSpineNodes, ...blockNodes, ...bottomSpineNodes];
 
   // 2. Schedule column (shows repeating backbone pattern + decision head / vision stage)
   const schedRuns = buildScheduleRuns(facts.num_hidden_layers, attnGroups, topology.ffn_groups);
@@ -171,7 +254,7 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
         "sched-dhead",
         "schedule-decision",
         "+ Decision Head",
-        dh.head_layers ? [{ claimPath: "topology.decision_head.head_layers", label: `${dh.head_layers}L head + scorer + act` }] : [{ label: "head + scorer" }],
+        dh.head_layers ? [{ claimPath: "topology.decision_head.head_layers", label: `${dh.head_layers}L head + scorer` }] : [{ label: "head + scorer" }],
         undefined,
         "topology.decision_head.head_layers",
       ),
@@ -183,40 +266,38 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
         "sched-vision",
         "schedule-decision",
         "+ Vision Tower",
-        [{ label: "27L vision encoder · 1152d" }],
+        [{ label: "27L vision · 1152d" }],
         undefined,
         "topology.decision_head.vision_encoder",
       ),
     );
   }
 
-  // 3. Lens A: Decision Readout Anatomy
-  const readoutIds: string[] = [];
+  // 3. Lens 1 (g-readout): Decision Readout Pipeline (row 0) + Backbone Attention Mix (row 1)
+  const readoutPipelineIds: string[] = [];
   if (isMarkerMode) {
     nodes.push(
-      safeNode("r-pack", "decision", "Prompt + [MASK] Pack", [{ label: "[CLS] q [MASK] opts [SEP] state" }], undefined, "topology.decision_head.readout_mode"),
-      safeNode("r-gather", "readout", "[MASK] Gather & MLP", [{ label: "LN -> Linear -> GELU -> 1" }], undefined, "topology.decision_head.readout_mode"),
-      safeNode("r-act", "action", "Abstain Act Head", [{ label: "[CLS]+entropy -> act/escalate" }], undefined, "topology.decision_head.action_head"),
+      safeNode("r-pack", "decision", "Prompt + [MASK] Pack", [{ label: "[CLS] q [MASK] opts" }], undefined, "topology.decision_head.readout_mode"),
+      safeNode("r-gather", "readout", "[MASK] Gather & MLP", [{ label: "LN -> Linear -> GELU" }], undefined, "topology.decision_head.readout_mode"),
+      safeNode("r-act", "action", "Abstain Act Head", [{ label: "[CLS]+H -> act/esc" }], undefined, "topology.decision_head.action_head"),
     );
-    readoutIds.push("r-pack", "r-gather", "r-act");
+    readoutPipelineIds.push("r-pack", "r-gather", "r-act");
   } else {
     nodes.push(
-      safeNode("r-prefix", "cache", "Shared Prefix KV", [{ label: "page_first + block pad" }], undefined, "topology.decision_head.prefix_cache"),
+      safeNode("r-prefix", "cache", "Shared Prefix KV", [{ label: "page_first + block" }], undefined, "topology.decision_head.prefix_cache"),
       safeNode(
         "r-slice",
         "readout",
         "Pos-0 Logit Readout",
-        dh.max_options ? [{ claimPath: "topology.decision_head.max_options", label: `<= ${dh.max_options} letters / chunk` }] : [{ label: "first-token slice" }],
+        dh.max_options ? [{ claimPath: "topology.decision_head.max_options", label: `<= ${dh.max_options} letters` }] : [{ label: "first-token slice" }],
         undefined,
         "topology.decision_head.readout_mode",
       ),
       safeNode("r-scale", "calibration", "Temp Scaling", [{ label: "T_choice=0.85 · T_noul=1.83" }], undefined, "topology.decision_head.calibration"),
     );
-    readoutIds.push("r-prefix", "r-slice", "r-scale");
+    readoutPipelineIds.push("r-prefix", "r-slice", "r-scale");
   }
 
-  // 4. Lens B: Backbone Attention & FFN Mix
-  const attnIds: string[] = [];
   const g0 = attnGroups[0]!;
   const g1 = attnGroups[1];
   nodes.push(
@@ -224,10 +305,29 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
     ...(g1
       ? [safeNode("a-g1", g1.kind === "sliding_window" ? "state" : "attention", g1.label, [{ label: `${g1.layers.length} layers` }], undefined, "topology.attention_groups[1]")]
       : []),
+  );
+  const readoutRows: Array<Array<string | null>> = [
+    readoutPipelineIds,
+    ["a-g0", g1 ? "a-g1" : null, null],
+  ];
+  const readoutMemberIds = [...readoutPipelineIds, "a-g0", ...(g1 ? ["a-g1"] : [])];
+
+  // 4. Lens 2 (g-ffn): Expanded Gated FFN Diamond + Head/KV Tensor Dimensions
+  nodes.push(
     safeNode(
-      "a-ffn",
+      "ffn-gate",
       "ffn",
-      topology.ffn_groups[0]?.label ?? "Dense FFN",
+      "Gate Proj",
+      [{ claimPath: "facts.hidden_size", label: `from d=${commas(facts.hidden_size)}` }],
+      undefined,
+      "facts.hidden_size",
+    ),
+    { id: "ffn-act", kind: "ffn", label: isGelu ? "GELU Act" : "SiLU Act", detail: isGelu ? "GELU(gate)" : "σ(gate)" },
+    { id: "ffn-mul", kind: "merge", label: "⊗ Multiply", detail: "act ⊙ up", ports: [{ name: "up", side: "bottom" }] },
+    safeNode(
+      "ffn-up",
+      "ffn",
+      "Up Proj",
       [
         { claimPath: "facts.num_attention_heads", label: `${facts.num_attention_heads} Q` },
         ...(facts.num_key_value_heads ? [{ claimPath: "facts.num_key_value_heads", label: `${facts.num_key_value_heads} KV` }] : []),
@@ -236,17 +336,27 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
       undefined,
       "facts.num_attention_heads",
     ),
+    safeNode("ffn-down", "ffn", "Down Proj", [{ claimPath: "facts.hidden_size", label: `to d=${commas(facts.hidden_size)}` }], undefined, "facts.hidden_size"),
   );
-  attnIds.push("a-g0", ...(g1 ? ["a-g1"] : []), "a-ffn");
+  const ffnRows: Array<Array<string | null>> = [
+    ["ffn-gate", "ffn-act", "ffn-mul", "ffn-down"],
+    [null, "ffn-up", null, null],
+  ];
+  const ffnLensIds = ["ffn-gate", "ffn-act", "ffn-mul", "ffn-up", "ffn-down"];
+  const ffnEdges: DiagramScene["edges"] = [
+    { id: "e-ffn-1", from: "ffn-gate", to: "ffn-act", kind: "flow" },
+    { id: "e-ffn-2", from: "ffn-act", to: "ffn-mul", kind: "flow" },
+    { id: "e-ffn-up", from: "ffn-up", to: "ffn-mul.up", kind: "flow" },
+    { id: "e-ffn-down", from: "ffn-mul", to: "ffn-down", kind: "flow" },
+  ];
 
-  // 5. Lens C: Calibration Objective & Footprint
-  const calIds: string[] = [];
+  // 5. Lens 3 (g-cal): Calibration Objective & Footprint
   nodes.push(
     safeNode(
       "c-obj",
       "calibration",
-      isMarkerMode ? "RLCD Proper Scoring" : "Calibration & Shuffle",
-      [{ label: isMarkerMode ? "Log + 0.5·Sph - RPS" : "Fixed temp + order invariance" }],
+      isMarkerMode ? "RLCD Scoring" : "Calibration",
+      [{ label: isMarkerMode ? "Log + 0.5·Sph - RPS" : "Fixed T + shuffle inv." }],
       undefined,
       "topology.decision_head.calibration",
     ),
@@ -262,53 +372,87 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
       "facts.total_params",
     ),
   );
-  calIds.push("c-obj", "c-scale");
+  const calIds = ["c-obj", "c-scale"];
 
   // Edges
-  const edges: DiagramScene["edges"] = [];
-  for (let i = 0; i < spineIds.length - 1; i++) {
-    edges.push({ id: `e-spine-${i}`, from: spineIds[i]!, to: spineIds[i + 1]!, kind: "flow" });
-  }
-  edges.push(
-    { id: "c-sched", from: "backbone.sched", to: "g-schedule.in", kind: "control", claimPath: "facts.num_hidden_layers" },
-    { id: "c-readout", from: "backbone.readout", to: "g-readout.in", kind: "control", claimPath: "topology.decision_head.readout_mode" },
-    { id: "c-attn", from: "backbone.attn", to: "g-attn.in", kind: "control", claimPath: "topology.attention_groups[0]" },
-    { id: "c-cal", from: "backbone.cal", to: "g-cal.in", kind: "control", claimPath: "topology.decision_head.calibration" },
-    { id: "e-read-1", from: readoutIds[0]!, to: readoutIds[1]!, kind: "flow", claimPath: "topology.decision_head.readout_mode" },
-    { id: "e-read-2", from: readoutIds[1]!, to: readoutIds[2]!, kind: isMarkerMode ? "control" : "flow", claimPath: isMarkerMode ? "topology.decision_head.action_head" : "topology.decision_head.calibration" },
-  );
+  const bottomMidId = bottomSpineNodes[0]!.id;
+  const edges: DiagramScene["edges"] = [
+    { id: "e-spine-0", from: "input", to: "embed", kind: "flow" },
+    { id: "e-spine-in-blk", from: "embed", to: "g-block.in", kind: "flow", claimPath: "facts.num_hidden_layers" },
+    { id: "e-blk-0", from: "blk-in", to: "blk-norm1", kind: "flow" },
+    { id: "e-blk-1", from: "blk-norm1", to: "blk-attn", kind: "flow" },
+    { id: "e-blk-mod", from: "blk-mod", to: "blk-attn.mod", kind: "control", claimPath: posClaim },
+    { id: "e-blk-2", from: "blk-attn", to: "blk-add1", kind: "flow", claimPath: "topology.attention_groups[0]" },
+    { id: "e-blk-skip1", from: "blk-in.skip", to: "blk-add1.skip", kind: "skip" },
+    { id: "e-blk-3", from: "blk-add1", to: "blk-fork2", kind: "flow" },
+    { id: "e-blk-4", from: "blk-fork2", to: "blk-norm2", kind: "flow" },
+    { id: "e-blk-5", from: "blk-norm2", to: "blk-ffn", kind: "flow" },
+    { id: "e-blk-6", from: "blk-ffn", to: "blk-add2", kind: "flow" },
+    { id: "e-blk-skip2", from: "blk-fork2.skip", to: "blk-add2.skip", kind: "skip" },
+    { id: "e-blk-out", from: "g-block.out", to: bottomMidId, kind: "flow" },
+    { id: "e-bot-0", from: bottomMidId, to: "cal", kind: "flow", claimPath: "topology.decision_head.calibration" },
+    { id: "e-bot-1", from: "cal", to: "out", kind: "flow", claimPath: "topology.paradigm" },
+    { id: "c-readout", from: "g-block.attn", to: "g-readout.in", kind: "control", claimPath: "topology.decision_head.readout_mode" },
+    { id: "c-ffn", from: "g-block.ffn", to: "g-ffn.in", kind: "control" },
+    { id: "c-sched", from: "g-block.sched", to: "g-schedule.in", kind: "control", claimPath: "facts.num_hidden_layers" },
+    { id: "c-scale", from: "out.scale", to: "g-cal.in", kind: "control", claimPath: "topology.decision_head.calibration" },
+    { id: "e-read-1", from: readoutPipelineIds[0]!, to: readoutPipelineIds[1]!, kind: "flow", claimPath: "topology.decision_head.readout_mode" },
+    {
+      id: "e-read-2",
+      from: readoutPipelineIds[1]!,
+      to: readoutPipelineIds[2]!,
+      kind: isMarkerMode ? "control" : "flow",
+      claimPath: isMarkerMode ? "topology.decision_head.action_head" : "topology.decision_head.calibration",
+    },
+    ...ffnEdges,
+  ];
 
   const groups: SemanticGroup[] = [
+    {
+      id: "g-block",
+      label: `${isMarkerMode ? "Encoder Block" : "Hybrid Block"} · ${facts.num_hidden_layers} layers`,
+      kind: "inset",
+      repeat: { count: facts.num_hidden_layers, label: `${facts.num_hidden_layers} ×` },
+      members: blockNodes.map((n) => n.id),
+      ports: [
+        { id: "in", side: "top", inner: "blk-in" },
+        { id: "out", side: "bottom", inner: "blk-add2" },
+        { id: "attn", side: "right", inner: "blk-attn" },
+        { id: "ffn", side: "right", inner: "blk-ffn" },
+        { id: "sched", side: "right", inner: "blk-add2" },
+      ],
+      claimPath: "facts.num_hidden_layers",
+    },
+    {
+      id: "g-readout",
+      label: isMarkerMode ? `Marker Readout · ${attnSummary}` : `Prefix Readout · ${attnSummary}`,
+      kind: "inset",
+      members: readoutMemberIds,
+      ports: [{ id: "in", side: "left", inner: readoutPipelineIds[0]! }],
+      claimPath: "topology.decision_head.readout_mode",
+    },
+    {
+      id: "g-ffn",
+      label: `FFN Zoom · ${ffnLabel}`,
+      kind: "inset",
+      members: ffnLensIds,
+      ports: [{ id: "in", side: "left", inner: ffnLensIds[0]! }],
+      claimPath: "topology.attention_groups[0]",
+    },
     {
       id: "g-schedule",
       label: `Backbone Schedule · ${facts.num_hidden_layers}L`,
       kind: "inset",
       members: scheduleIds,
-      ports: [{ id: "in", side: "right", inner: scheduleIds[0]! }],
+      ports: [{ id: "in", side: "left", inner: scheduleIds[0]! }],
       claimPath: "facts.num_hidden_layers",
-    },
-    {
-      id: "g-readout",
-      label: isMarkerMode ? "System-1 Marker & Act Readout" : "System-1 Prefix & Letter Readout",
-      kind: "inset",
-      members: readoutIds,
-      ports: [{ id: "in", side: "left", inner: readoutIds[0]! }],
-      claimPath: "topology.decision_head.readout_mode",
-    },
-    {
-      id: "g-attn",
-      label: `Backbone Mix · ${attnSummary}`,
-      kind: "inset",
-      members: attnIds,
-      ports: [{ id: "in", side: "left", inner: attnIds[0]! }],
-      claimPath: "topology.attention_groups[0]",
     },
     {
       id: "g-cal",
       label: "Calibration & Scale",
       kind: "inset",
       members: calIds,
-      ports: [{ id: "in", side: "right", inner: calIds[0]! }],
+      ports: [{ id: "in", side: "bottom", inner: calIds[calIds.length - 1]! }],
       claimPath: "topology.decision_head.calibration",
     },
   ];
@@ -321,7 +465,7 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
     edges,
     groups,
     annotations: [],
-    constraints: [{ type: "direction", value: "left-to-right" }],
+    constraints: [{ type: "direction", value: "top-to-bottom" }],
     streams: [],
   };
 
@@ -339,24 +483,31 @@ export function compileSystemOnePoster(arch: ModelDocument, evidence: EvidenceFi
   }
 
   const lenses: LensSpec[] = [
-    { groupId: "g-readout", rows: [readoutIds] },
-    { groupId: "g-attn", rows: [attnIds] },
+    { groupId: "g-readout", rows: readoutRows },
+    { groupId: "g-ffn", rows: ffnRows },
   ];
 
-  const blueprint = buildPosterGridBlueprint({
+  const blueprint = buildSpinePosterBlueprint({
     id: `system-one-${arch.model.id}`,
     scene,
-    spine: spineIds,
-    scheduleGroupId: "g-schedule",
-    scheduleNodes: scheduleIds,
-    leftBottomGroup: { groupId: "g-cal", rows: calIds.map((id) => [id]) },
-    lenses,
-    callouts: [
-      { edgeId: "c-sched", sourceNodeId: "backbone", sourcePort: "sched", targetGroupId: "g-schedule", targetPort: "in", busY: 148, corridorX: 446 },
-      { edgeId: "c-cal", sourceNodeId: "backbone", sourcePort: "cal", targetGroupId: "g-cal", targetPort: "in", busY: 160, corridorX: 456 },
-      { edgeId: "c-attn", sourceNodeId: "backbone", sourcePort: "attn", targetGroupId: "g-attn", targetPort: "in", busY: 172, corridorX: 468 },
-      { edgeId: "c-readout", sourceNodeId: "backbone", sourcePort: "readout", targetGroupId: "g-readout", targetPort: "in", busY: 184, corridorX: 478 },
+    topSpine: ["input", "embed"],
+    bottomSpine: [bottomMidId, "cal", "out"],
+    blockGroupId: "g-block",
+    blockSpine: ["blk-in", "blk-norm1", "blk-attn", "blk-add1", "blk-fork2", "blk-norm2", "blk-ffn", "blk-add2"],
+    blockModifierId: "blk-mod",
+    blockSkips: [
+      { edgeId: "e-blk-skip1", fromId: "blk-in", toId: "blk-add1" },
+      { edgeId: "e-blk-skip2", fromId: "blk-fork2", toId: "blk-add2" },
     ],
+    lenses,
+    scheduleGroup: { groupId: "g-schedule", cols: 2, nodeIds: scheduleIds },
+    scaleGroup: { groupId: "g-cal", rows: calIds.map((id) => [id]) },
+    callouts: [
+      { edgeId: "c-readout", sourceGroupPort: "attn", targetGroupId: "g-readout", targetPort: "in", corridorX: 460 },
+      { edgeId: "c-ffn", sourceGroupPort: "ffn", targetGroupId: "g-ffn", targetPort: "in", corridorX: 473 },
+      { edgeId: "c-sched", sourceGroupPort: "sched", targetGroupId: "g-schedule", targetPort: "in", corridorX: 486 },
+    ],
+    scaleCallout: { edgeId: "c-scale", sourceNodeId: "out", sourcePort: "scale" },
   });
 
   return { scene, blueprint };

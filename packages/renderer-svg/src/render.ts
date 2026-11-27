@@ -187,7 +187,7 @@ export function renderSvg(scene: PositionedScene, opts: RenderOptions = {}): str
       `.n-detail{fill:var(--muted);font-size:12.8px;text-anchor:middle}` +
       `.n-port{fill:var(--attention);stroke:var(--panel);stroke-width:1.1}` +
       `.e-flow{fill:none;stroke:var(--ink);stroke-width:${strokeWidths.flow};stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}` +
-      `.e-skip{fill:none;stroke:var(--ink);stroke-width:1.85;stroke-dasharray:6 4;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}` +
+      `.e-skip{fill:none;stroke:var(--attention);stroke-width:1.95;stroke-dasharray:6 3.5;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow-residual)}` +
       `.e-residual{fill:none;stroke:var(--attention);stroke-width:2.35;stroke-dasharray:9 4.5;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow-residual)}` +
       `.e-control{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 3;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow-muted)}` +
       `.e-label{fill:var(--muted);font-size:11.5px;font-family:var(--font-mono);paint-order:stroke;stroke:var(--paper);stroke-width:4.5px;stroke-linejoin:round}` +

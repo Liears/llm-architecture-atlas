@@ -74,9 +74,9 @@ function composeSubviewGrid(id: string, scene: DiagramScene, bands: SubGroupLayo
     groups.push(gBox);
     groupBoxById.set(band.groupId, gBox);
 
-    const padTop = 36;
+    const padTop = band.rows.length > 1 ? 38 : 36;
     const padSide = band.rows[0]!.length >= 5 ? 16 : 22;
-    const padBottom = band.rows.length > 1 ? 22 : 20;
+    const padBottom = band.rows.length > 1 ? 18 : 20;
     const innerH = band.bandH - padTop - padBottom;
     const rowCount = band.rows.length;
     const rowGap = 14;
@@ -142,6 +142,9 @@ function composeSubviewGrid(id: string, scene: DiagramScene, bands: SubGroupLayo
     const nNode = nodeMap.get(head);
     const nBox = boxById.get(head);
     if (nNode && nBox) {
+      const targetPort = port ?? (outgoing ? "out" : "in");
+      const def = resolveSidePorts(nNode).find((p) => p.name === targetPort);
+      if (def) return nodePort(nNode, nBox, targetPort);
       if (!port || port === "in" || port === "out") {
         const side = outgoing ? "right" : "left";
         return {
@@ -554,32 +557,59 @@ function buildFfnSubgraphNodes(
     }
     tailConnectFrom = `${prefix}-merge`;
   } else {
+    const ffnLabel = ffnGrp.label ?? "SwiGLU";
+    const actName = ffnLabel.toLowerCase().includes("geglu") ? "GELU Act" : "SiLU Act";
+    const inNode = nodes.find((n) => n.id === `${prefix}-in`);
+    if (inNode) {
+      inNode.ports = [{ name: "skip", side: "top" }];
+    }
     nodes.push(
-      ctx.safeNode(`${prefix}-mlp`, "ffn", ffnGrp.label, [
-        { claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` },
-        ...(ffnGrp.module ? [{ label: ffnGrp.module }] : []),
-      ], undefined, ffnClaim),
+      ctx.safeNode(`${prefix}-gate`, "ffn", "Gate Proj", [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)}` }], undefined, ffnClaim),
+      { id: `${prefix}-act`, kind: "ffn", label: actName, detail: "gating branch" },
+      ctx.safeNode(`${prefix}-up`, "ffn", "Up Proj", [{ claimPath: "facts.hidden_size", label: `d=${commas(facts.hidden_size)} linear` }], undefined, ffnClaim),
+      { id: `${prefix}-mul`, kind: "merge", label: "⊗ Multiply", detail: "gate ⊙ up", ports: [{ name: "up", side: "bottom" }] },
+      ctx.safeNode(`${prefix}-down`, "ffn", "Down Proj", [{ claimPath: "facts.hidden_size", label: `to d=${commas(facts.hidden_size)}` }], undefined, ffnClaim),
       {
         id: `${prefix}-merge`,
         kind: "merge",
         label: "⊕ FFN Residual",
         detail: "skip + MLP",
-        ports: [{ name: "skip", side: "bottom" }],
+        ports: isTailSystemOne && topology.decision_head
+          ? [{ name: "skip", side: "top" }, { name: "dec", side: "bottom" }]
+          : [{ name: "skip", side: "top" }],
       },
     );
     edges.push(
-      { id: `e-${prefix}-1`, from: `${prefix}-in`, to: `${prefix}-mlp`, kind: "flow" },
-      { id: `e-${prefix}-2`, from: `${prefix}-mlp`, to: `${prefix}-merge`, kind: "flow" },
+      { id: `e-${prefix}-1`, from: `${prefix}-in`, to: `${prefix}-gate`, kind: "flow" },
+      { id: `e-${prefix}-act`, from: `${prefix}-gate`, to: `${prefix}-act`, kind: "flow" },
+      { id: `e-${prefix}-mul1`, from: `${prefix}-act`, to: `${prefix}-mul`, kind: "flow" },
+      { id: `e-${prefix}-up`, from: `${prefix}-up`, to: `${prefix}-mul.up`, kind: "flow" },
+      { id: `e-${prefix}-down`, from: `${prefix}-mul`, to: `${prefix}-down`, kind: "flow" },
+      { id: `e-${prefix}-2`, from: `${prefix}-down`, to: `${prefix}-merge`, kind: "flow" },
       { id: `e-${prefix}-skip`, from: `${prefix}-in.skip`, to: `${prefix}-merge.skip`, kind: "skip" },
     );
     if (isTailSystemOne && topology.decision_head) {
+      const decDetail = topology.decision_head.readout_mode === "mask_marker_mlp" ? "[MASK] + act head" : "letter logits";
       nodes.push(
-        ctx.safeNode(`${prefix}-dec`, "decision", "Decision Head", [{ claimPath: "topology.decision_head.readout_mode", label: topology.decision_head.readout_mode }], undefined, "topology.decision_head.readout_mode"),
+        ctx.safeNode(
+          `${prefix}-dec`,
+          "decision",
+          "Decision Head",
+          [{ claimPath: "topology.decision_head.readout_mode", label: decDetail }],
+          [{ name: "in", side: "top" }],
+          "topology.decision_head.readout_mode",
+        ),
       );
-      rows.push([`${prefix}-in`, `${prefix}-mlp`, `${prefix}-merge`, `${prefix}-dec`]);
-      edges.push({ id: `e-${prefix}-dec`, from: `${prefix}-merge`, to: `${prefix}-dec`, kind: "flow", claimPath: "topology.decision_head.readout_mode" });
+      rows.push(
+        [`${prefix}-in`, `${prefix}-gate`, `${prefix}-act`, `${prefix}-mul`, `${prefix}-down`, `${prefix}-merge`],
+        [null, null, `${prefix}-up`, null, null, `${prefix}-dec`],
+      );
+      edges.push({ id: `e-${prefix}-dec`, from: `${prefix}-merge.dec`, to: `${prefix}-dec.in`, kind: "flow", claimPath: "topology.decision_head.readout_mode" });
     } else {
-      rows.push([`${prefix}-in`, `${prefix}-mlp`, `${prefix}-merge`]);
+      rows.push(
+        [`${prefix}-in`, `${prefix}-gate`, `${prefix}-act`, `${prefix}-mul`, `${prefix}-down`, `${prefix}-merge`],
+        [null, null, `${prefix}-up`, null, null, null],
+      );
     }
     tailConnectFrom = `${prefix}-merge`;
   }

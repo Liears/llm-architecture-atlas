@@ -30,7 +30,8 @@ describe("layer block and module drill-down subviews (#37)", () => {
     // L0: KDA + Dense SwiGLU
     expect(l0.subtitle).toContain("KDA + Dense SwiGLU");
     expect(l0.scene.nodes.some((n) => n.id === "blk-a-qkv")).toBe(true);
-    expect(l0.scene.nodes.some((n) => n.id === "blk-f-mlp")).toBe(true);
+    expect(l0.scene.nodes.some((n) => n.id === "blk-f-gate")).toBe(true);
+    expect(l0.scene.nodes.some((n) => n.id === "blk-f-mul")).toBe(true);
 
     // L3: MLA/DSA + Sparse MoE
     expect(l3.subtitle).toContain("MLA/DSA + MoE");

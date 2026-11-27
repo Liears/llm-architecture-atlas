@@ -45,11 +45,17 @@ describe("Kimi Linear hybrid KDA + MLA + MoE template reuse (#39)", () => {
     const kdaOut = scene.nodes.find((n) => n.id === "kda-gate");
     expect(kdaOut?.detail).toContain("d=128");
     expect(scene.nodes.find((n) => n.id === "kda-decay")?.label).toBe("KDA Decay Gate");
-    // MoE includes router fan-out, 256 routed top-8, 1 shared, and weighted merge
+    // MoE includes router fan-out, 256 routed top-8, 1 shared, expert SwiGLU recipe, and weighted merge
     expect(scene.nodes.find((n) => n.id === "moe-router")?.detail).toContain("top-8");
     expect(scene.nodes.find((n) => n.id === "moe-routed")?.detail).toContain("256 total");
     expect(scene.nodes.find((n) => n.id === "moe-shared")?.detail).toContain("1 always-on");
+    expect(scene.nodes.find((n) => n.id === "moe-swiglu")?.label).toBe("Expert SwiGLU");
     expect(scene.edges.filter((e) => stripRef(e.to) === "moe-merge")).toHaveLength(2);
+    // Unified vertical Pre-Norm execution block with both residual skip rails
+    for (const id of ["blk-in", "blk-norm1", "blk-attn", "blk-add1", "blk-fork2", "blk-norm2", "blk-ffn", "blk-add2"]) {
+      expect(scene.nodes.some((n) => n.id === id)).toBe(true);
+    }
+    expect(scene.edges.filter((e) => e.kind === "skip" && e.id.startsWith("e-blk-skip"))).toHaveLength(2);
   });
 
   it("keeps KDA and MLA structurally non-isomorphic even after stripping all text labels", () => {

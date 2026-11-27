@@ -201,6 +201,8 @@ const evidencePayload = {
   model: arch.model,
   ir_version: arch.ir_version,
   paradigm: entry!.paradigm,
+  facts,
+  topology: arch.topology,
   claims: evidence.claims,
   brief: brief ?? null,
 };
@@ -255,14 +257,25 @@ const evidencePayload = {
         </div>
       </div>
 
-      <div class="canvas-controls" role="toolbar" aria-label="Diagram zoom controls">
+      <div class="canvas-controls" role="toolbar" aria-label="Diagram zoom and flow replay controls">
         <button type="button" id="reset-overview-btn" class="btn btn-subtle" hidden data-i18n="detail.resetOverview">Back to Overview</button>
+        <div class="view-modes flow-modes" role="group" data-i18n-aria="flow.toolbarLabel" aria-label="Token execution flow replay">
+          <button type="button" id="flow-toggle" class="vbtn flow-play-btn" data-i18n="flow.play">▶ Flow</button>
+          <button type="button" id="flow-prev" class="vbtn" title="Previous step" aria-label="Previous flow step">‹</button>
+          <button type="button" id="flow-next" class="vbtn" title="Next step" aria-label="Next flow step">›</button>
+        </div>
         <div class="view-modes" role="group" aria-label="Zoom mode">
           <button type="button" class="vbtn active" data-view-mode="fit" data-i18n="detail.fitView">Fit</button>
           <button type="button" class="vbtn" data-view-mode="pan" data-i18n="detail.scrollView">1:1 Pan</button>
           <button type="button" class="vbtn" data-view-mode="zoom" data-i18n="detail.zoomView">135%</button>
         </div>
       </div>
+    </div>
+
+    <div id="flow-hud" class="flow-hud" hidden aria-live="polite">
+      <span id="flow-step-badge" class="flow-badge mono">1/6</span>
+      <span id="flow-caption" class="flow-caption"></span>
+      <button type="button" id="flow-stop" class="btn btn-subtle flow-close-btn" data-i18n="flow.stop">Close</button>
     </div>
 
     <div class="stage-body">
@@ -375,6 +388,56 @@ const evidencePayload = {
         </dd>
       </button>
     </dl>
+  </section>
+
+  <section class="section kv-section" id="kv-estimator">
+    <div class="section-bar kv-header">
+      <div>
+        <h2 data-i18n="kv.title">KV Cache & Memory Estimator</h2>
+        <p class="muted small-note" data-i18n="kv.subtitle">Derived deterministically from pinned weights, layer count, and attention/KV dimensions in Architecture IR.</p>
+      </div>
+      <div class="kv-controls">
+        <div class="kv-group">
+          <span class="kv-lbl" data-i18n="kv.ctx">Context length</span>
+          <div class="view-modes" role="group" aria-label="Context length presets">
+            <button type="button" class="vbtn kv-ctx-btn" data-ctx="4096">4K</button>
+            <button type="button" class="vbtn kv-ctx-btn active" data-ctx="32768">32K</button>
+            <button type="button" class="vbtn kv-ctx-btn" data-ctx="131072">128K</button>
+            <button type="button" class="vbtn kv-ctx-btn" data-ctx="1048576">1M</button>
+          </div>
+        </div>
+        <div class="kv-group">
+          <span class="kv-lbl" data-i18n="kv.prec">Weight precision</span>
+          <div class="view-modes" role="group" aria-label="Weight precision presets">
+            <button type="button" class="vbtn kv-prec-btn active" data-bytes="2" data-prec="BF16">BF16</button>
+            <button type="button" class="vbtn kv-prec-btn" data-bytes="1" data-prec="FP8">FP8</button>
+            <button type="button" class="vbtn kv-prec-btn" data-bytes="0.5" data-prec="INT4">INT4</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="kv-grid">
+      <div class="kv-card">
+        <span class="kv-card-k" data-i18n="kv.weights">Model Weights</span>
+        <strong class="kv-card-v mono" id="kv-weights">—</strong>
+        <span class="kv-card-s muted mono" id="kv-weights-note"></span>
+      </div>
+      <div class="kv-card">
+        <span class="kv-card-k" data-i18n="kv.perTok">KV Cache / Token (BF16)</span>
+        <strong class="kv-card-v mono" id="kv-pertok">—</strong>
+        <span class="kv-card-s muted" id="kv-pertok-note"></span>
+      </div>
+      <div class="kv-card">
+        <span class="kv-card-k" data-i18n="kv.cacheTotal">KV Cache @ Context</span>
+        <strong class="kv-card-v mono" id="kv-total-cache">—</strong>
+        <span class="kv-card-s muted mono" id="kv-cache-note"></span>
+      </div>
+      <div class="kv-card">
+        <span class="kv-card-k" data-i18n="kv.totalFootprint">Weights + KV Total</span>
+        <strong class="kv-card-v mono" id="kv-total-vram">—</strong>
+        <span class="kv-card-s muted" id="kv-fit-note"></span>
+      </div>
+    </div>
   </section>
 
   {isSystemOne && dh && (
@@ -607,6 +670,23 @@ const evidencePayload = {
       model: { id: string; label: string; revision: string };
       ir_version: string;
       paradigm: string;
+      facts: {
+        num_hidden_layers: number;
+        hidden_size: number;
+        num_attention_heads: number;
+        num_key_value_heads?: number | null;
+        head_dim?: number | null;
+        vocab_size?: number | null;
+        context_tokens?: number | null;
+        total_params?: number | null;
+        active_params?: number | null;
+      };
+      topology: {
+        attention_groups: Array<{ kind: string; label: string; layers: number[] }>;
+        ffn_groups: Array<{ label: string; layers: number[] }>;
+        experts?: { routed_total?: number | null; active_routed?: number | null; shared?: number | null } | null;
+        decision_head?: { readout_mode?: string; calibration?: string | null } | null;
+      };
       claims: ClaimItem[];
       brief: { papers?: BriefPaper[] } | null;
     };
@@ -1074,6 +1154,8 @@ const evidencePayload = {
       } else {
         renderCitations(currentCitationLabel, currentClaims);
       }
+      syncFlowLang?.();
+      renderKvEstimator?.();
     });
 
     // Canonical PNG, SVG, and Evidence Manifest exporters (decoupled from view zoom/focus state)
@@ -1119,6 +1201,330 @@ const evidencePayload = {
       a.click();
       URL.revokeObjectURL(a.href);
     });
+
+    // -------------------------------------------------------------------------
+    // Token Flow Replay HUD (ModelMap-inspired deterministic execution tour)
+    // -------------------------------------------------------------------------
+    const flowToggleBtn = document.getElementById("flow-toggle") as HTMLButtonElement | null;
+    const flowPrevBtn = document.getElementById("flow-prev") as HTMLButtonElement | null;
+    const flowNextBtn = document.getElementById("flow-next") as HTMLButtonElement | null;
+    const flowStopBtn = document.getElementById("flow-stop") as HTMLButtonElement | null;
+    const flowHud = document.getElementById("flow-hud") as HTMLElement | null;
+    const flowStepBadge = document.getElementById("flow-step-badge") as HTMLElement | null;
+    const flowCaption = document.getElementById("flow-caption") as HTMLElement | null;
+
+    const pFacts = payload.facts;
+    const pTopo = payload.topology;
+    const attnGrpLabel = (pTopo.attention_groups ?? []).map((g: any) => `${g.layers.length}× ${g.label}`).join(" + ");
+    const ffnGrpLabel = (pTopo.ffn_groups ?? []).map((g: any) => `${g.layers.length}× ${g.label}`).join(" → ");
+    const isS1 = payload.paradigm === "system_one_decision";
+    const ctxVal = pFacts.context_tokens ?? 32768;
+
+    const FLOW_STEPS: Array<{ ids: string[]; claim: string; en: string; zh: string }> = isS1
+      ? [
+          {
+            ids: ["input", "embed"],
+            claim: "topology.decision_head.primitives",
+            en: `Pack State + Typed Questions into d=${(pFacts.hidden_size ?? 0).toLocaleString("en-US")} stream (zero decode loop).`,
+            zh: `将当前状态与类型化问题映射为 d=${(pFacts.hidden_size ?? 0).toLocaleString("en-US")} 向量流（无自回归解码循环）。`,
+          },
+          {
+            ids: ["blk-in", "blk-norm1", "blk-attn", "blk-mod", "blk-add1"],
+            claim: "topology.attention_groups[0]",
+            en: `Run ${pFacts.num_hidden_layers}L backbone (${attnGrpLabel}) with Pre-Norm residual skip rail.`,
+            zh: `执行 ${pFacts.num_hidden_layers} 层骨干（${attnGrpLabel}）及前置归一化跳连。`,
+          },
+          {
+            ids: ["r-pack", "r-gather", "r-act", "r-prefix", "r-slice", "r-scale", "a-g0", "a-g1"],
+            claim: "topology.decision_head.readout_mode",
+            en: `System-1 readout (${pTopo.decision_head?.readout_mode ?? "single-pass"}): extract option representations directly.`,
+            zh: `System-1 读出（${pTopo.decision_head?.readout_mode ?? "单步前向"}）：直接提取各候选决策位表示。`,
+          },
+          {
+            ids: ["blk-fork2", "blk-norm2", "blk-ffn", "blk-add2", "ffn-gate", "ffn-act", "ffn-up", "ffn-mul", "ffn-down"],
+            claim: "facts.num_attention_heads",
+            en: `Evaluate gated FFN diamond (Gate · Act ⊙ Up → Down) and merge residual stream.`,
+            zh: `执行门控 FFN 张量计算（Gate · 激活 ⊙ Up → Down）并合并主干残差流。`,
+          },
+          {
+            ids: ["dhead", "prefill", "cal", "out", "c-obj", "c-scale"],
+            claim: "topology.decision_head.calibration",
+            en: `Apply proper calibration (${pTopo.decision_head?.calibration ?? "temperature scaling"}) → emit Typed JSON.`,
+            zh: `经过严格概率校准（${pTopo.decision_head?.calibration ?? "温度缩放"}）直接输出强类型 JSON 概率。`,
+          },
+        ]
+      : [
+          {
+            ids: ["tok", "embed"],
+            claim: "facts.hidden_size",
+            en: `Embed token IDs into hidden dimension d=${(pFacts.hidden_size ?? 0).toLocaleString("en-US")}.`,
+            zh: `将输入 Token ID 经词嵌入投影为 d=${(pFacts.hidden_size ?? 0).toLocaleString("en-US")} 隐藏向量。`,
+          },
+          {
+            ids: ["blk-in", "blk-norm1", "blk-attn", "blk-mod"],
+            claim: "topology.attention_groups[0]",
+            en: `Inside Transformer Block (${pFacts.num_hidden_layers}×): fork skip rail, Pre-Attn RMSNorm → ${attnGrpLabel}.`,
+            zh: `进入 Transformer 模块（共 ${pFacts.num_hidden_layers} 层）：分出残差跳连，Pre-Attn Norm → ${attnGrpLabel}。`,
+          },
+          {
+            ids: ["attn-q", "attn-rope", "attn-kv", "attn-proj", "attn-core", "attn-out", "kda-qkv", "kda-decay", "kda-state", "kda-gate", "lin-qkv", "lin-decay", "lin-state", "lin-gate", "mla-kv", "mla-rope", "mla-core", "gqa-q", "gqa-kv", "gqa-core", "p-0", "p-1", "p-2", "p-3", "p-4"],
+            claim: "facts.num_attention_heads",
+            en: `Attention / Mixer tensors (${pFacts.num_attention_heads} Q heads): projections, positional RoPE, state/KV & O-Proj.`,
+            zh: `注意力/混合器细节（${pFacts.num_attention_heads} Q 头）：投影矩阵、位置编码、KV/循环状态更新与输出投影。`,
+          },
+          {
+            ids: ["blk-add1", "blk-fork2", "blk-norm2"],
+            claim: "facts.num_hidden_layers",
+            en: `Add post-attention residual (h + attn), fork second skip rail, apply Pre-FFN RMSNorm.`,
+            zh: `执行注意力残差相加 (h + attn)，分出第二路跳连，并执行 FFN 前 RMSNorm。`,
+          },
+          {
+            ids: ["blk-ffn", "blk-add2", "ffn-gate", "ffn-act", "ffn-up", "ffn-mul", "ffn-down", "moe-router", "moe-routed", "moe-shared", "moe-merge", "moe-swiglu", "p-5", "p-6", "p-7", "p-8", "p-9", "p-10"],
+            claim: pTopo.experts?.routed_total ? "topology.experts.routed_total" : "facts.hidden_size",
+            en: `FFN / MoE step (${ffnGrpLabel}) → elementwise SwiGLU/MoE merge & h + FFN residual.`,
+            zh: `FFN / MoE 阶段（${ffnGrpLabel}）：完成门控乘积/专家路由并相加写回残差。`,
+          },
+          {
+            ids: ["norm", "head", "scale-ctx", "scale-params"],
+            claim: "facts.vocab_size",
+            en: `Final RMSNorm → LM head maps residual vector to logits (vocab ${(pFacts.vocab_size ?? 0).toLocaleString("en-US")}).`,
+            zh: `最终 RMSNorm → LM head 将末端隐藏态映射至词表 logits（词表 ${(pFacts.vocab_size ?? 0).toLocaleString("en-US")}）。`,
+          },
+        ];
+
+    let flowIdx = -1;
+    let flowPlaying = false;
+    let flowTimer: number | null = null;
+
+    function clearFlowHighlights() {
+      document.querySelectorAll<HTMLElement>("#overview-stage .hotspot.flow-hit").forEach((el) => {
+        el.classList.remove("flow-hit");
+      });
+    }
+
+    function applyFlowStep(index: number) {
+      if (index < 0 || index >= FLOW_STEPS.length) return;
+      if (currentView !== "overview") {
+        activateSubview("overview", currentLayer, false);
+      }
+      flowIdx = index;
+      const step = FLOW_STEPS[flowIdx]!;
+      const idSet = new Set(step.ids);
+      clearFlowHighlights();
+      document.querySelectorAll<HTMLElement>("#overview-stage .hotspot[data-node-id]").forEach((hs) => {
+        if (idSet.has(hs.dataset.nodeId ?? "")) hs.classList.add("flow-hit");
+      });
+      if (flowHud) flowHud.hidden = false;
+      if (flowStepBadge) flowStepBadge.textContent = `${flowIdx + 1}/${FLOW_STEPS.length}`;
+      const lang = currentLang();
+      if (flowCaption) flowCaption.textContent = lang === "zh" ? step.zh : step.en;
+      if (claimByPath.has(step.claim)) {
+        renderCitations(lang === "zh" ? `数据流步骤 ${flowIdx + 1}` : `Flow Step ${flowIdx + 1}`, [step.claim]);
+      }
+    }
+
+    function stopFlow() {
+      flowPlaying = false;
+      flowIdx = -1;
+      if (flowTimer !== null) {
+        window.clearInterval(flowTimer);
+        flowTimer = null;
+      }
+      if (flowHud) flowHud.hidden = true;
+      if (flowToggleBtn) {
+        flowToggleBtn.classList.remove("active");
+        flowToggleBtn.textContent = t("flow.play", currentLang());
+      }
+      clearFlowHighlights();
+    }
+
+    function syncFlowLang() {
+      if (flowToggleBtn) {
+        flowToggleBtn.textContent = t(flowPlaying ? "flow.pause" : "flow.play", currentLang());
+      }
+      if (flowIdx >= 0 && flowCaption) {
+        const step = FLOW_STEPS[flowIdx]!;
+        flowCaption.textContent = currentLang() === "zh" ? step.zh : step.en;
+      }
+    }
+
+    flowToggleBtn?.addEventListener("click", () => {
+      if (flowPlaying) {
+        flowPlaying = false;
+        if (flowTimer !== null) {
+          window.clearInterval(flowTimer);
+          flowTimer = null;
+        }
+        flowToggleBtn.classList.remove("active");
+        flowToggleBtn.textContent = t("flow.play", currentLang());
+        return;
+      }
+      flowPlaying = true;
+      flowToggleBtn.classList.add("active");
+      flowToggleBtn.textContent = t("flow.pause", currentLang());
+      applyFlowStep(flowIdx >= 0 ? flowIdx : 0);
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      const intervalMs = reducedMotion ? 2600 : 1850;
+      flowTimer = window.setInterval(() => {
+        applyFlowStep((flowIdx + 1) % FLOW_STEPS.length);
+      }, intervalMs);
+    });
+
+    flowPrevBtn?.addEventListener("click", () => {
+      if (flowPlaying && flowTimer !== null) {
+        window.clearInterval(flowTimer);
+        flowTimer = null;
+        flowPlaying = false;
+        flowToggleBtn?.classList.remove("active");
+        if (flowToggleBtn) flowToggleBtn.textContent = t("flow.play", currentLang());
+      }
+      const next = flowIdx <= 0 ? FLOW_STEPS.length - 1 : flowIdx - 1;
+      applyFlowStep(next);
+    });
+
+    flowNextBtn?.addEventListener("click", () => {
+      if (flowPlaying && flowTimer !== null) {
+        window.clearInterval(flowTimer);
+        flowTimer = null;
+        flowPlaying = false;
+        flowToggleBtn?.classList.remove("active");
+        if (flowToggleBtn) flowToggleBtn.textContent = t("flow.play", currentLang());
+      }
+      const next = (flowIdx + 1) % FLOW_STEPS.length;
+      applyFlowStep(next);
+    });
+
+    flowStopBtn?.addEventListener("click", stopFlow);
+
+    // -------------------------------------------------------------------------
+    // KV Cache & Memory Estimator (100% IR Facts-Backed)
+    // -------------------------------------------------------------------------
+    const kvCtxBtns = [...document.querySelectorAll<HTMLButtonElement>(".kv-ctx-btn")];
+    const kvPrecBtns = [...document.querySelectorAll<HTMLButtonElement>(".kv-prec-btn")];
+    const kvWeightsEl = document.getElementById("kv-weights");
+    const kvWeightsNoteEl = document.getElementById("kv-weights-note");
+    const kvPerTokEl = document.getElementById("kv-pertok");
+    const kvPerTokNoteEl = document.getElementById("kv-pertok-note");
+    const kvTotalCacheEl = document.getElementById("kv-total-cache");
+    const kvCacheNoteEl = document.getElementById("kv-cache-note");
+    const kvTotalVramEl = document.getElementById("kv-total-vram");
+    const kvFitNoteEl = document.getElementById("kv-fit-note");
+
+    // Pick initial preset closest to native context window
+    let selectedCtx = [4096, 32768, 131072, 1048576].reduce((best, c) =>
+      Math.abs(c - Math.min(ctxVal, 131072)) < Math.abs(best - Math.min(ctxVal, 131072)) ? c : best,
+      32768,
+    );
+    let selectedBytesPerParam = 2;
+    let selectedPrecName = "BF16";
+
+    function fmtGiB(bytes: number): string {
+      const gib = bytes / 1024 ** 3;
+      if (gib >= 100) return `${gib.toFixed(0)} GiB`;
+      if (gib >= 10) return `${gib.toFixed(1)} GiB`;
+      return `${gib.toFixed(2)} GiB`;
+    }
+
+    function renderKvEstimator() {
+      const lang = currentLang();
+      const isZh = lang === "zh";
+      kvCtxBtns.forEach((b) => b.classList.toggle("active", Number(b.dataset.ctx) === selectedCtx));
+      kvPrecBtns.forEach((b) => b.classList.toggle("active", b.dataset.prec === selectedPrecName));
+
+      const totalParams = pFacts.total_params ?? null;
+      const activeParams = pFacts.active_params ?? null;
+      const weightsBytes = totalParams ? totalParams * selectedBytesPerParam : null;
+      const weightsGibStr = weightsBytes !== null ? fmtGiB(weightsBytes) : "—";
+      if (kvWeightsEl) kvWeightsEl.textContent = weightsGibStr;
+      if (kvWeightsNoteEl) {
+        if (totalParams && activeParams && activeParams < totalParams) {
+          kvWeightsNoteEl.textContent = isZh
+            ? `${selectedPrecName} 总权重 · 激活 ${(activeParams / 1e9).toFixed(1)}B (${fmtGiB(activeParams * selectedBytesPerParam)} 活跃)`
+            : `${selectedPrecName} total · ${(activeParams / 1e9).toFixed(1)}B active`;
+        } else {
+          kvWeightsNoteEl.textContent = totalParams ? `${selectedPrecName} (${(totalParams / 1e9).toFixed(2)}B params)` : isZh ? "缺少总参数声明" : "total_params missing";
+        }
+      }
+
+      const attnGroups: any[] = pTopo.attention_groups ?? [];
+      const linLayers = attnGroups.filter((g) => g.kind === "linear_attention").reduce((s, g) => s + g.layers.length, 0);
+      const mlaLayers = attnGroups.filter((g) => g.kind === "mla" || g.kind === "mla_sparse").reduce((s, g) => s + g.layers.length, 0);
+      const swaLayers = attnGroups.filter((g) => g.kind === "sliding_window").reduce((s, g) => s + g.layers.length, 0);
+      const stdKvLayers = attnGroups.filter((g) => g.kind === "full" || g.kind === "gqa").reduce((s, g) => s + g.layers.length, 0);
+
+      const kvHeads = pFacts.num_key_value_heads ?? null;
+      const headDim = pFacts.head_dim ?? (pFacts.hidden_size && pFacts.num_attention_heads ? Math.floor(pFacts.hidden_size / pFacts.num_attention_heads) : null);
+
+      if (mlaLayers > 0) {
+        if (kvPerTokEl) kvPerTokEl.textContent = isZh ? "低秩潜空间 MLA" : "Compressed MLA";
+        if (kvPerTokNoteEl) {
+          kvPerTokNoteEl.textContent = linLayers > 0
+            ? (isZh ? `${linLayers} 层线性(0 KV/tok) + ${mlaLayers} 层共享潜向量 KV` : `${linLayers} linear (0 KV/tok) + ${mlaLayers} MLA latent KV`)
+            : (isZh ? `${mlaLayers} 层投影低秩 KV 潜向量（IR 未额外拆分 rank 维）` : `${mlaLayers} MLA layers cache low-rank latent KV`);
+        }
+        if (kvTotalCacheEl) kvTotalCacheEl.textContent = "≪ GQA upper bound";
+        if (kvCacheNoteEl) {
+          kvCacheNoteEl.textContent = isZh
+            ? `${selectedCtx >= 1024 ? `${Math.round(selectedCtx / 1024)}K` : selectedCtx} ctx · 显著低于常规 MHA/GQA`
+            : `${selectedCtx >= 1024 ? `${Math.round(selectedCtx / 1024)}K` : selectedCtx} ctx · far below full K/V heads`;
+        }
+        if (kvTotalVramEl) kvTotalVramEl.textContent = weightsGibStr !== "—" ? `≥ ${weightsGibStr} + MLA KV` : "—";
+        if (kvFitNoteEl) {
+          const gpus80 = weightsBytes ? Math.max(1, Math.ceil(weightsBytes / (80 * 1e9))) : null;
+          kvFitNoteEl.textContent = gpus80
+            ? (isZh ? `仅权重约需 ${gpus80} × 80GB GPU (${selectedPrecName})` : `Weights ~${gpus80} × 80GB GPU (${selectedPrecName})`)
+            : "";
+        }
+        return;
+      }
+
+      if (kvHeads && headDim && (stdKvLayers > 0 || swaLayers > 0)) {
+        const bytesPerTokFull = stdKvLayers * 2 * kvHeads * headDim * 2; // BF16 K+V
+        const effectiveSwaCtx = Math.min(selectedCtx, 128); // documented sliding window w=128 in IR
+        const swaBytes = swaLayers * 2 * kvHeads * headDim * 2 * effectiveSwaCtx;
+        const totalCacheBytes = bytesPerTokFull * selectedCtx + swaBytes;
+        const perTokExact = bytesPerTokFull + (swaLayers > 0 ? swaLayers * 2 * kvHeads * headDim * 2 : 0);
+
+        if (kvPerTokEl) kvPerTokEl.textContent = `${(perTokExact / 1024).toFixed(1)} KiB/tok`;
+        if (kvPerTokNoteEl) {
+          kvPerTokNoteEl.textContent = linLayers > 0
+            ? (isZh ? `${linLayers} 线性层(0 KV) + ${stdKvLayers} GQA×2×${kvHeads}×${headDim}×2B` : `${linLayers} linear (0 KV) + ${stdKvLayers}L × 2 × ${kvHeads}kv × ${headDim}d × 2B`)
+            : swaLayers > 0
+              ? (isZh ? `${stdKvLayers} 全注意 + ${swaLayers} 滑窗 (w=128 上限)` : `${stdKvLayers} full + ${swaLayers} SWA (capped at w=128)`)
+              : `${stdKvLayers}L × 2 × ${kvHeads}kv × ${headDim}d × 2B`;
+        }
+        if (kvTotalCacheEl) kvTotalCacheEl.textContent = fmtGiB(totalCacheBytes);
+        if (kvCacheNoteEl) {
+          const ctxLbl = selectedCtx >= 1048576 ? "1M" : `${Math.round(selectedCtx / 1024)}K`;
+          kvCacheNoteEl.textContent = isZh ? `批次=1 @ ${ctxLbl} 上下文 (BF16 KV)` : `batch=1 @ ${ctxLbl} context (BF16 KV)`;
+        }
+        const combinedBytes = weightsBytes !== null ? weightsBytes + totalCacheBytes : null;
+        if (kvTotalVramEl) kvTotalVramEl.textContent = combinedBytes !== null ? fmtGiB(combinedBytes) : "—";
+        if (kvFitNoteEl && combinedBytes !== null) {
+          const g = combinedBytes / (1024 ** 3);
+          kvFitNoteEl.textContent = g <= 22
+            ? (isZh ? "适配单张 24GB 消费级 / L4 GPU" : "Fits 1 × 24GB GPU (e.g. 4090 / L4)")
+            : g <= 76
+              ? (isZh ? "适配单张 80GB A100 / H100" : "Fits 1 × 80GB A100 / H100")
+              : (isZh ? `约需 ${Math.ceil(g / 76)} × 80GB GPU (${selectedPrecName})` : `Est. ${Math.ceil(g / 76)} × 80GB H100s (${selectedPrecName})`);
+        }
+      }
+    }
+
+    kvCtxBtns.forEach((b) =>
+      b.addEventListener("click", () => {
+        selectedCtx = Number(b.dataset.ctx);
+        renderKvEstimator();
+      }),
+    );
+    kvPrecBtns.forEach((b) =>
+      b.addEventListener("click", () => {
+        selectedBytesPerParam = Number(b.dataset.bytes);
+        selectedPrecName = b.dataset.prec ?? "BF16";
+        renderKvEstimator();
+      }),
+    );
+    renderKvEstimator();
   </script>
 
   <style>
@@ -1415,6 +1821,106 @@ const evidencePayload = {
       border-color: var(--attention);
       background: color-mix(in srgb, var(--attention) 10%, transparent);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--attention) 25%, transparent);
+    }
+    :global(.hotspot.flow-hit) {
+      border-color: var(--attention);
+      background: color-mix(in srgb, var(--attention) 16%, transparent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--attention) 34%, transparent);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      :global(.hotspot.flow-hit) {
+        animation: flowPulse 1.2s ease-in-out infinite alternate;
+      }
+      @keyframes flowPulse {
+        from { box-shadow: 0 0 0 2px color-mix(in srgb, var(--attention) 28%, transparent); }
+        to { box-shadow: 0 0 0 5px color-mix(in srgb, var(--attention) 42%, transparent); }
+      }
+    }
+
+    .flow-hud {
+      margin-top: 0.55rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      padding: 0.55rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--attention) 35%, var(--line));
+      background: color-mix(in srgb, var(--attention) 6%, var(--panel));
+    }
+    .flow-badge {
+      padding: 0.14rem 0.45rem;
+      border-radius: 6px;
+      background: var(--attention);
+      color: #ffffff;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .flow-caption {
+      flex: 1;
+      min-width: 14rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .flow-close-btn {
+      min-height: 28px;
+      padding: 0.22rem 0.55rem;
+      font-size: 0.78rem;
+    }
+
+    .kv-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      align-items: center;
+    }
+    .kv-group {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .kv-lbl {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .kv-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    .kv-card {
+      padding: 0.85rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      display: grid;
+      gap: 0.25rem;
+    }
+    .kv-card-k {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .kv-card-v {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ink);
+    }
+    .kv-card-s {
+      font-size: 0.76rem;
+      line-height: 1.35;
+    }
+    @media (max-width: 900px) {
+      .kv-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 520px) {
+      .kv-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     :global(html[data-theme="dark"]) #subview-canvas :global(svg) {
