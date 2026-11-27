@@ -19,6 +19,20 @@ interface Props {
         if (savedTheme === "dark" || savedTheme === "light") {
           document.documentElement.dataset.theme = savedTheme;
         }
+        const qLang = new URLSearchParams(location.search).get("lang");
+        const savedLang = localStorage.getItem("atlas-lang");
+        const navZh = (navigator.language || "").toLowerCase().startsWith("zh");
+        const initLang =
+          qLang === "zh" || qLang === "en"
+            ? qLang
+            : savedLang === "zh" || savedLang === "en"
+              ? savedLang
+              : navZh
+                ? "zh"
+                : "en";
+        if (qLang === "zh" || qLang === "en") localStorage.setItem("atlas-lang", qLang);
+        document.documentElement.dataset.lang = initLang;
+        document.documentElement.lang = initLang === "zh" ? "zh-CN" : "en";
       } catch {}
     </script>
     <style is:global>
@@ -89,10 +103,19 @@ interface Props {
 
       html {
         scroll-behavior: smooth;
+        scroll-padding-top: 4.5rem;
       }
 
-      html {
-        scroll-padding-top: 4.5rem;
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
+          animation: none !important;
+        }
       }
 
       body {
@@ -257,7 +280,17 @@ interface Props {
           <button id="theme-toggle" type="button" class="util-btn" aria-label="Toggle color theme">
             <span id="theme-icon" aria-hidden="true">◐</span>
           </button>
-          <button id="lang-toggle" type="button" class="util-btn" aria-label="切换语言 / switch language">中文</button>
+          <button
+            id="lang-toggle"
+            type="button"
+            class="util-btn lang-btn"
+            aria-label="切换语言 / Switch language"
+            title="切换中英文 / Switch EN ↔ 中文"
+          >
+            <span class="lang-opt" data-lang-opt="zh">中</span>
+            <span class="lang-sep" aria-hidden="true">/</span>
+            <span class="lang-opt" data-lang-opt="en">EN</span>
+          </button>
         </div>
       </div>
     </header>
@@ -268,13 +301,13 @@ interface Props {
 
     <footer class="site-footer">
       <div class="footer-inner">
-        <span>LLM Architecture Atlas · Deterministic SVGs compiled from evidence-backed Architecture IR</span>
+        <span data-i18n="footer.tagline">LLM Architecture Atlas · Deterministic SVGs compiled from evidence-backed Architecture IR</span>
         <span class="mono">MIT / Apache-2.0</span>
       </div>
     </footer>
 
     <script>
-      import "../scripts/i18n";
+      import { t, currentLang } from "../scripts/i18n";
 
       const themeBtn = document.getElementById("theme-toggle");
       const themeIcon = document.getElementById("theme-icon");
@@ -287,8 +320,13 @@ interface Props {
 
       function syncThemeUI() {
         const cur = effectiveTheme();
+        const lang = currentLang();
         if (themeIcon) themeIcon.textContent = cur === "dark" ? "☀" : "☾";
-        if (themeBtn) themeBtn.title = cur === "dark" ? "Switch to light theme" : "Switch to dark theme";
+        if (themeBtn) {
+          const msg = t(cur === "dark" ? "theme.toLight" : "theme.toDark", lang);
+          themeBtn.title = msg;
+          themeBtn.setAttribute("aria-label", msg);
+        }
       }
 
       themeBtn?.addEventListener("click", () => {
@@ -300,6 +338,7 @@ interface Props {
         syncThemeUI();
       });
 
+      window.addEventListener("atlas:langchange", syncThemeUI);
       syncThemeUI();
     </script>
 
@@ -393,6 +432,29 @@ interface Props {
       .util-btn:hover {
         border-color: var(--attention);
       }
+      .lang-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.22rem;
+        padding: 0.24rem 0.5rem;
+      }
+      .lang-opt {
+        padding: 0.04rem 0.28rem;
+        border-radius: 5px;
+        color: var(--muted);
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      .lang-sep {
+        color: var(--line);
+        font-weight: 400;
+      }
+      :global(html[data-lang="zh"]) .lang-opt[data-lang-opt="zh"],
+      :global(html[data-lang="en"]) .lang-opt[data-lang-opt="en"] {
+        background: color-mix(in srgb, var(--attention) 14%, var(--surface));
+        color: var(--attention);
+        font-weight: 700;
+      }
       .site-footer {
         border-top: 1px solid var(--line);
         background: color-mix(in srgb, var(--panel) 65%, transparent);
@@ -413,10 +475,32 @@ interface Props {
           position: static;
         }
         .topbar-inner {
-          padding: 0.55rem 0.9rem;
+          padding: 0.38rem 0.75rem;
+          gap: 0.25rem 0.5rem;
+        }
+        .brand-text strong {
+          font-size: 0.9rem;
+        }
+        .nav {
+          order: 3;
+          width: 100%;
+          gap: 0.1rem;
+          justify-content: space-between;
+        }
+        .nav a {
+          padding: 0.22rem 0.42rem;
+          font-size: 0.78rem;
+          min-height: 26px;
+          display: inline-flex;
+          align-items: center;
+        }
+        .util-btn {
+          padding: 0.24rem 0.55rem;
+          font-size: 0.78rem;
+          min-height: 26px;
         }
         main.shell {
-          padding: 1.25rem 0.9rem 3.5rem;
+          padding: 0.75rem 0.8rem 3.5rem;
         }
         .brand-tag {
           display: none;

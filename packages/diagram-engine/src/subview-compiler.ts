@@ -31,8 +31,8 @@ interface SubGroupLayout {
   bandH: number;
 }
 
-const SUB_W = 1220;
-const SUB_H = 688;
+const SUB_W = 1160;
+const SUB_H = 656;
 const SUB_PAD_X = 28;
 
 function reqWidth(node: SemanticNode, minW = 108): number {
@@ -164,19 +164,53 @@ function composeSubviewGrid(id: string, scene: DiagramScene, bands: SubGroupLayo
     return null;
   };
 
-  for (const edge of scene.edges) {
-    const from = resolveEnd(edge.from, true);
-    const to = resolveEnd(edge.to, false);
+  const resolvedEnds = scene.edges.map((edge) => ({
+    edge,
+    from: resolveEnd(edge.from, true),
+    to: resolveEnd(edge.to, false),
+  }));
+
+  // Stagger same-side bypass rails (e.g., inner MLA latent skip vs outer residual bridge)
+  // by ascending span width so inner channels nest inside outer channels with zero overlap.
+  const assignTracks = (matchSide: "bottom" | "top") => {
+    const items = resolvedEnds
+      .filter((r): r is { edge: SemanticEdge; from: { point: Point; side: typeof matchSide }; to: { point: Point; side: typeof matchSide } } =>
+        Boolean(r.from && r.to && r.from.side === matchSide && r.to.side === matchSide),
+      )
+      .map((r) => ({
+        id: r.edge.id,
+        rowBucket: Math.round(Math.max(r.from.point.y, r.to.point.y) / 20),
+        span: Math.abs(r.to.point.x - r.from.point.x),
+      }));
+    const trackMap = new Map<string, number>();
+    const byBucket = new Map<number, typeof items>();
+    for (const item of items) {
+      const list = byBucket.get(item.rowBucket) ?? [];
+      list.push(item);
+      byBucket.set(item.rowBucket, list);
+    }
+    for (const list of byBucket.values()) {
+      list.sort((a, b) => a.span - b.span);
+      list.forEach((item, idx) => trackMap.set(item.id, idx));
+    }
+    return trackMap;
+  };
+  const bottomTracks = assignTracks("bottom");
+  const topTracks = assignTracks("top");
+
+  for (const { edge, from, to } of resolvedEnds) {
     if (!from || !to) continue;
     if ((from.side === "bottom" || from.side === "top") && (to.side === "left" || to.side === "right")) {
       edgeRoutes[edge.id] = [from.point, { x: from.point.x, y: to.point.y }, to.point];
     } else if ((from.side === "left" || from.side === "right") && (to.side === "top" || to.side === "bottom")) {
       edgeRoutes[edge.id] = [from.point, { x: to.point.x, y: from.point.y }, to.point];
     } else if (from.side === "bottom" && to.side === "bottom") {
-      const dy = Math.max(from.point.y, to.point.y) + 11;
+      const track = bottomTracks.get(edge.id) ?? 0;
+      const dy = Math.max(from.point.y, to.point.y) + 11 + track * 12;
       edgeRoutes[edge.id] = [from.point, { x: from.point.x, y: dy }, { x: to.point.x, y: dy }, to.point];
     } else if (from.side === "top" && to.side === "top") {
-      const ry = Math.min(from.point.y, to.point.y) - 11;
+      const track = topTracks.get(edge.id) ?? 0;
+      const ry = Math.min(from.point.y, to.point.y) - 11 - track * 12;
       edgeRoutes[edge.id] = [from.point, { x: from.point.x, y: ry }, { x: to.point.x, y: ry }, to.point];
     } else if (from.side === "bottom" && to.side === "top") {
       const midY = Math.round((from.point.y + to.point.y) / 2);
@@ -622,8 +656,8 @@ export function compileLayerBlockSubview(arch: ModelDocument, evidence: Evidence
   );
 
   const positioned = composeSubviewGrid(`sub-block-l${layerIndex}`, scene, [
-    { groupId: "g-blk-attn", rows: [attnSub.row], bandY: 54, bandH: 274 },
-    { groupId: "g-blk-ffn", rows: ffnSub.rows, bandY: 360, bandH: 294 },
+    { groupId: "g-blk-attn", rows: [attnSub.row], bandY: 50, bandH: 270 },
+    { groupId: "g-blk-ffn", rows: ffnSub.rows, bandY: 342, bandH: 274 },
   ]);
 
   return {
@@ -655,9 +689,10 @@ export function compileModuleSubview(
   if (kind === "attention") {
     const grps = topology.attention_groups;
     const bandCount = Math.min(2, grps.length);
-    const totalH = SUB_H - 80;
-    const gap = 24;
-    const eachH = Math.floor((totalH - gap * (bandCount - 1)) / bandCount);
+    const totalH = SUB_H - 76;
+    const gap = 22;
+    const eachH = bandCount === 1 ? 340 : Math.floor((totalH - gap) / 2);
+    const startY = bandCount === 1 ? 136 : 52;
     grps.slice(0, 2).forEach((g, i) => {
       const sub = buildAttentionSubgraphNodes(`att${i}`, g, i, arch, ctx, false);
       nodes.push(...sub.nodes);
@@ -670,14 +705,15 @@ export function compileModuleSubview(
         members: sub.row,
         ...(ctx.hasClaim(`topology.attention_groups[${i}]`) ? { claimPath: `topology.attention_groups[${i}]` } : {}),
       });
-      bands.push({ groupId: gid, rows: [sub.row], bandY: 56 + i * (eachH + gap), bandH: eachH });
+      bands.push({ groupId: gid, rows: [sub.row], bandY: startY + i * (eachH + gap), bandH: eachH });
     });
   } else if (kind === "ffn") {
     const grps = topology.ffn_groups;
     const bandCount = Math.min(2, grps.length);
-    const totalH = SUB_H - 80;
-    const gap = 24;
-    const eachH = Math.floor((totalH - gap * (bandCount - 1)) / bandCount);
+    const totalH = SUB_H - 76;
+    const gap = 22;
+    const eachH = bandCount === 1 ? 350 : Math.floor((totalH - gap) / 2);
+    const startY = bandCount === 1 ? 131 : 52;
     grps.slice(0, 2).forEach((g, i) => {
       const sub = buildFfnSubgraphNodes(`ffn${i}`, g, i, arch, ctx, false);
       nodes.push(...sub.nodes);
@@ -691,27 +727,89 @@ export function compileModuleSubview(
         members: flat,
         ...(ctx.hasClaim(`topology.ffn_groups[${i}]`) ? { claimPath: `topology.ffn_groups[${i}]` } : {}),
       });
-      bands.push({ groupId: gid, rows: sub.rows, bandY: 56 + i * (eachH + gap), bandH: eachH });
+      bands.push({ groupId: gid, rows: sub.rows, bandY: startY + i * (eachH + gap), bandH: eachH });
     });
   } else if (kind === "decision" && topology.decision_head) {
     const dh = topology.decision_head;
+    const isMarker = dh.readout_mode === "mask_marker_mlp";
     nodes.push(
-      ctx.safeNode("dec-pack", "readout", dh.readout_mode === "mask_marker_mlp" ? "Prompt + [MASK]" : "Shared Prefix KV", [{ label: dh.readout_mode === "mask_marker_mlp" ? "CLS q [MASK] opt SEP" : "page_first + block pad" }], undefined, "topology.decision_head.readout_mode"),
-      ctx.safeNode("dec-head", "decision", "Typed Readout", [{ claimPath: "topology.decision_head.readout_mode", label: dh.readout_mode }], undefined, "topology.decision_head.readout_mode"),
-      ctx.safeNode("dec-cal", "decision", "Calibration", [{ claimPath: "topology.decision_head.calibration", label: dh.calibration ?? "temperature scaling" }], undefined, "topology.decision_head.calibration"),
+      ctx.safeNode(
+        "dec-pack",
+        isMarker ? "decision" : "cache",
+        isMarker ? "Prompt + [MASK]" : "Shared Prefix KV",
+        [{ label: isMarker ? "CLS q [MASK] opt SEP" : "page_first + block pad" }],
+        undefined,
+        isMarker ? "topology.decision_head.readout_mode" : "topology.decision_head.prefix_cache",
+      ),
+      ctx.safeNode(
+        "dec-backbone",
+        "stack",
+        isMarker ? "Bidirectional Encoder" : "Single-Pass Prefill",
+        [{ claimPath: "facts.num_hidden_layers", label: `${facts.num_hidden_layers}L · 0 decode` }],
+        undefined,
+        "topology.paradigm",
+      ),
+      ctx.safeNode(
+        "dec-head",
+        "readout",
+        "Typed Readout",
+        [{ claimPath: "topology.decision_head.readout_mode", label: dh.readout_mode }],
+        undefined,
+        "topology.decision_head.readout_mode",
+      ),
+      ctx.safeNode(
+        "dec-prim",
+        "decision",
+        "Typed Primitives",
+        [{ claimPath: "topology.decision_head.primitives", label: dh.primitives?.join(" · ") || "choice · score · noul" }],
+        undefined,
+        "topology.paradigm",
+      ),
+      ctx.safeNode(
+        "dec-cal",
+        "calibration",
+        "Calibration",
+        [{ claimPath: "topology.decision_head.calibration", label: dh.calibration ?? "temperature scaling" }],
+        undefined,
+        "topology.decision_head.calibration",
+      ),
+      ctx.safeNode(
+        "dec-act",
+        dh.action_head ? "action" : "output",
+        dh.action_head ? "Abstain Act Head" : "Typed JSON Output",
+        dh.action_head
+          ? [{ claimPath: "topology.decision_head.action_head", label: dh.action_head }]
+          : [{ label: "calibrated probs" }],
+        undefined,
+        "topology.paradigm",
+      ),
     );
     edges.push(
-      { id: "e-d1", from: "dec-pack", to: "dec-head", kind: "flow", claimPath: "topology.decision_head.readout_mode" },
-      { id: "e-d2", from: "dec-head", to: "dec-cal", kind: "flow", claimPath: "topology.decision_head.calibration" },
+      { id: "e-d1", from: "dec-pack", to: "dec-backbone", kind: "flow", claimPath: "topology.decision_head.readout_mode" },
+      { id: "e-d2", from: "dec-backbone", to: "dec-head", kind: "flow", claimPath: "topology.decision_head.readout_mode" },
+      { id: "e-d3", from: "dec-prim", to: "dec-cal", kind: "control", claimPath: "topology.decision_head.calibration" },
+      { id: "e-d4", from: "dec-cal", to: "dec-act", kind: "flow", claimPath: dh.action_head ? "topology.decision_head.action_head" : "topology.decision_head.calibration" },
     );
-    groups.push({
-      id: "g-sub-dec",
-      label: "System-1 Decision Contract",
-      kind: "inset",
-      members: ["dec-pack", "dec-head", "dec-cal"],
-      claimPath: "topology.decision_head.readout_mode",
-    });
-    bands.push({ groupId: "g-sub-dec", rows: [["dec-pack", "dec-head", "dec-cal"]], bandY: 140, bandH: 410 });
+    groups.push(
+      {
+        id: "g-sub-dec-exec",
+        label: "Single-Pass Execution & Readout",
+        kind: "inset",
+        members: ["dec-pack", "dec-backbone", "dec-head"],
+        claimPath: "topology.decision_head.readout_mode",
+      },
+      {
+        id: "g-sub-dec-cal",
+        label: "Typed Primitives & Calibration Contract",
+        kind: "inset",
+        members: ["dec-prim", "dec-cal", "dec-act"],
+        claimPath: "topology.decision_head.calibration",
+      },
+    );
+    bands.push(
+      { groupId: "g-sub-dec-exec", rows: [["dec-pack", "dec-backbone", "dec-head"]], bandY: 54, bandH: 272 },
+      { groupId: "g-sub-dec-cal", rows: [["dec-prim", "dec-cal", "dec-act"]], bandY: 348, bandH: 272 },
+    );
   } else {
     const isMhc = topology.residual?.scheme === "mhc" && topology.residual.streams === 4;
     if (isMhc) {
@@ -821,18 +919,18 @@ export function compileModuleSubview(
         id: "sub-mhc-residual",
         size: { w: SUB_W, h: SUB_H },
         nodes: [
-          { id: "mhc-source", x: 80, y: 210, w: 140, h: 420 },
-          { id: "mhc-hpre", x: 280, y: 106, w: 150, h: 82 },
-          { id: "mhc-f", x: 495, y: 106, w: 230, h: 82 },
-          { id: "mhc-hpost", x: 790, y: 106, w: 200, h: 82 },
-          { id: "mhc-hres", x: 330, y: 210, w: 230, h: 420 },
-          { id: "mhc-add", x: 790, y: 210, w: 200, h: 420 },
-          { id: "mhc-sink", x: 1050, y: 210, w: 100, h: 420 },
+          { id: "mhc-source", x: 72, y: 244, w: 126, h: 332 },
+          { id: "mhc-hpre", x: 260, y: 118, w: 146, h: 82 },
+          { id: "mhc-f", x: 472, y: 118, w: 224, h: 82 },
+          { id: "mhc-hpost", x: 760, y: 118, w: 188, h: 82 },
+          { id: "mhc-hres", x: 312, y: 244, w: 220, h: 332 },
+          { id: "mhc-add", x: 760, y: 244, w: 188, h: 332 },
+          { id: "mhc-sink", x: 1004, y: 244, w: 92, h: 332 },
         ],
-        groups: [{ id: "g-sub-res", x: 36, y: 60, w: 1148, h: 600 }],
+        groups: [{ id: "g-sub-res", x: 34, y: 58, w: 1092, h: 554 }],
         edges: mhcEdges.map((e) => e.id),
         edgeRoutes: {
-          "mhc-pre": [{ x: 150, y: 210 }, { x: 150, y: 199 }, { x: 355, y: 199 }, { x: 355, y: 188 }],
+          "mhc-pre": [{ x: 135, y: 244 }, { x: 135, y: 222 }, { x: 333, y: 222 }, { x: 333, y: 200 }],
         },
       });
       return {
@@ -861,7 +959,7 @@ export function compileModuleSubview(
       kind: "inset",
       members: ["res-read", "res-sub", "res-write"],
     });
-    bands.push({ groupId: "g-sub-res", rows: [["res-read", "res-sub", "res-write"]], bandY: 140, bandH: 410 });
+    bands.push({ groupId: "g-sub-res", rows: [["res-read", "res-sub", "res-write"]], bandY: 130, bandH: 350 });
   }
 
   const scene = appendAnnotations(

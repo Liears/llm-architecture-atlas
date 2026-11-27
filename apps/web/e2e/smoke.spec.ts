@@ -32,7 +32,7 @@ test("GLM detail page: hierarchy, citation panel, real layer 0/3/4/44 drill-down
   const svg = await res.text();
   expect(svg).toContain('data-atlas-model="zai-org/glm-5.3-flash"');
   expect(svg).toContain("data-claim-path");
-  expect(svg).toContain('viewBox="0 0 1520 860"');
+  expect(svg).toContain('viewBox="0 0 1528 850"');
   expect(svg).toContain('data-node-id="moe-routed"');
   expect(svg).toContain("288 · top-8");
   expect(svg).toContain('data-edge-id="mhc-res-in-1"');
@@ -113,6 +113,10 @@ test("Kimi Linear reuses hybrid KDA + MLA + MoE template without model-id hacks 
   );
   await page.click('#subview-canvas .hotspot[data-edge-id="e-blk-f-route"]');
   await expect(page.locator("#citation-cards")).toContainText("topology.experts.active_routed");
+  const edgeBtnPos = await page
+    .locator('#subview-canvas .hotspot[data-edge-id="e-blk-f-route"]')
+    .evaluate((el) => getComputedStyle(el).position);
+  expect(edgeBtnPos).toBe("absolute");
 
   // ?view=moe alias opens the MoE/FFN subview (#36, #37) and preserves normalized view=ffn across URL/reload
   await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/?view=moe&layer=3");
@@ -136,23 +140,38 @@ test("mobile 390x844 shows readable structured overview cards and >=24px control
 
   const metrics = await page.evaluate(() => {
     const chain = document.querySelector(".spine-chain")!;
+    const sched = document.querySelector(".schedule-pills")!;
     const tab = document.querySelector(".vtab")!;
     const col = document.querySelector(".genome .col")!;
+    const crumb = document.querySelector(".crumb-back")!;
+    const chainBox = chain.getBoundingClientRect();
+    const schedBox = sched.getBoundingClientRect();
     const tabBox = tab.getBoundingClientRect();
     const colBox = col.getBoundingClientRect();
+    const crumbBox = crumb.getBoundingClientRect();
     return {
       fontSize: parseFloat(getComputedStyle(chain).fontSize),
+      chainBottom: chainBox.bottom,
+      schedBottom: schedBox.bottom,
       tabW: tabBox.width,
       tabH: tabBox.height,
       colW: colBox.width,
       colH: colBox.height,
+      crumbH: crumbBox.height,
     };
   });
   expect(metrics.fontSize).toBeGreaterThanOrEqual(12);
+  expect(metrics.chainBottom).toBeLessThanOrEqual(844);
+  expect(metrics.schedBottom).toBeLessThanOrEqual(844);
   expect(metrics.tabW).toBeGreaterThanOrEqual(24);
   expect(metrics.tabH).toBeGreaterThanOrEqual(24);
   expect(metrics.colW).toBeGreaterThanOrEqual(24);
   expect(metrics.colH).toBeGreaterThanOrEqual(24);
+  expect(metrics.crumbH).toBeGreaterThanOrEqual(24);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const reducedScroll = await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior);
+  expect(reducedScroll).toBe("auto");
 });
 
 test("overview edge hotspot and dark-mode contrast meet accessibility guarantees (#36, #38)", async ({ page }) => {
@@ -190,12 +209,42 @@ test("System-1 model pages render decision contract and non-autoregressive SVG p
   expect(ojSvg).toContain("Shared Prefix KV");
 });
 
-test("language toggle switches to Chinese and persists", async ({ page }) => {
+test("language toggle switches to Chinese and persists across catalog, detail, SVG diagrams, and compare", async ({ page }) => {
   await page.goto("/llm-architecture-atlas/");
   await page.click("#lang-toggle");
   await expect(page.locator("h1")).toHaveText("目录");
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
+  await expect(page.locator("html")).toHaveAttribute("data-lang", "zh");
+  await expect(page.locator(".site-footer")).toContainText("由可溯源 Architecture IR 编译生成");
+  await expect(page.locator("#catalog .pill").first()).toContainText("System-");
+
   await page.reload();
+  await expect(page.locator("h1")).toHaveText("目录");
+
+  // Navigating to detail page keeps Chinese chrome, overview SVG translation & live subview translation
+  await page.goto("/llm-architecture-atlas/models/zai-org-glm-5-3-flash/?view=ffn");
+  await expect(page.locator("#subview-title")).toHaveText("FFN 与专家路由");
+  await expect(page.locator("#subview-canvas svg")).toContainText("路由专家");
+  await expect(page.locator("#subview-canvas svg")).toContainText("42 / 45 层");
+  await expect(page.locator(".stage-footer")).toContainText("点击架构图中任意模块或连线");
+
+  // Switching to Overview translates the overview diagram cleanly as well
+  await page.click('.vtab[data-subview="overview"]');
+  await expect
+    .poll(async () => {
+      const src = await page.locator("#overview-stage img.diagram-img").getAttribute("src");
+      return decodeURIComponent(src ?? "");
+    })
+    .toContain("架构总览");
+
+  // Switching back to English restores canonical EN overview & subviews immediately
+  await page.click("#lang-toggle");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#overview-stage img.diagram-img")).toHaveAttribute(
+    "src",
+    "/llm-architecture-atlas/figures/zai-org-glm-5-3-flash-generated.svg",
+  );
+  await page.goto("/llm-architecture-atlas/?lang=zh");
   await expect(page.locator("h1")).toHaveText("目录");
   await page.click("#lang-toggle");
   await expect(page.locator("h1")).toHaveText("Catalog");

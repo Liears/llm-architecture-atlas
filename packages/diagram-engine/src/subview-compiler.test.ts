@@ -59,6 +59,15 @@ describe("layer block and module drill-down subviews (#37)", () => {
     expect(l3.subtitle).toContain("MLA + MoE");
     expect(l26.subtitle).toContain("MLA + MoE");
     expect(l26.scene.nodes.some((n) => n.id === "blk-a-kv")).toBe(true);
+    for (const blk of [l0, l3, l26]) {
+      expect([...runSceneGates(blk.positioned), ...fontGates(blk.positioned, { referenceWidth: 1150 })]).toEqual([]);
+    }
+
+    const ds = loadModel("deepseek-ai", "deepseek-v3");
+    for (const layer of [0, 3]) {
+      const dsBlk = compileLayerBlockSubview(ds.arch, ds.evidence, layer);
+      expect([...runSceneGates(dsBlk.positioned), ...fontGates(dsBlk.positioned, { referenceWidth: 1150 })]).toEqual([]);
+    }
 
     for (const [org, slug, layer] of [
       ["convaiinnovations", "laya", 27],

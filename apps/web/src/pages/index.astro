@@ -57,7 +57,7 @@ const orderedSlugs = models.map((m) => m.slug);
   <section class="paradigm-guide" aria-label="Architectural paradigms">
     <div class="paradigm-box ar-box">
       <div class="paradigm-head">
-        <span class="pill pill-ar">System-2 · Autoregressive ({arCount})</span>
+        <span class="pill pill-ar" data-i18n="catalog.badgeAr" data-n={String(arCount)}>System-2 · Autoregressive ({arCount})</span>
       </div>
       <h2 data-i18n="catalog.paradigmArTitle">Autoregressive Generative LLMs</h2>
       <p data-i18n="catalog.paradigmArDesc">
@@ -67,7 +67,7 @@ const orderedSlugs = models.map((m) => m.slug);
 
     <div class="paradigm-box s1-box">
       <div class="paradigm-head">
-        <span class="pill pill-s1">System-1 · Non-Autoregressive ({s1Count})</span>
+        <span class="pill pill-s1" data-i18n="catalog.badgeS1" data-n={String(s1Count)}>System-1 · Non-Autoregressive ({s1Count})</span>
       </div>
       <h2 data-i18n="catalog.paradigmS1Title">System-1 Non-Autoregressive Decision Models</h2>
       <p data-i18n="catalog.paradigmS1Desc">
@@ -114,7 +114,7 @@ const orderedSlugs = models.map((m) => m.slug);
             data-search={`${e.label} ${e.family} ${e.decoderType} ${e.paradigm} ${e.primitives.join(" ")} ${e.attentionTypes.join(" ")}`.toLowerCase()}
           >
             <div class="card-top">
-              <span class={`pill ${isS1 ? "pill-s1" : "pill-ar"}`}>
+              <span class={`pill ${isS1 ? "pill-s1" : "pill-ar"}`} data-i18n={isS1 ? "catalog.cardS1" : "catalog.cardAr"}>
                 {isS1 ? "System-1 · Decision" : "System-2 · Autoregressive"}
               </span>
               <span class="card-family mono">{e.family}</span>
@@ -143,7 +143,9 @@ const orderedSlugs = models.map((m) => m.slug);
                 <dt data-i18n="fact.params">Parameters</dt>
                 <dd class="mono">
                   {e.totalParams ? formatParams(e.totalParams) : "—"}
-                  {e.activeParams && e.activeParams !== e.totalParams ? ` / ${formatParams(e.activeParams)} act` : ""}
+                  {e.activeParams && e.activeParams !== e.totalParams && (
+                    <> / {formatParams(e.activeParams)}<span data-i18n-en=" act" data-i18n-zh=" 激活"> act</span></>
+                  )}
                 </dd>
               </div>
               <div>
@@ -243,6 +245,8 @@ const orderedSlugs = models.map((m) => m.slug);
       if (family.value) params.set("family", family.value);
       if (activeParadigm) params.set("paradigm", activeParadigm);
       if (sort.value !== "label") params.set("sort", sort.value);
+      const qLang = new URLSearchParams(location.search).get("lang");
+      if (qLang === "zh" || qLang === "en") params.set("lang", qLang);
       history.replaceState(null, "", params.toString() ? `?${params}` : location.pathname);
     }
 

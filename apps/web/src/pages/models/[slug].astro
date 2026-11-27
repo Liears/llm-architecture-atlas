@@ -63,12 +63,20 @@ const spineSummary = isSystemOne
     ? ["State + Typed Q", "Token + Type Emb", `${facts.num_hidden_layers}L Encoder`, `${dh.head_layers ?? 2}L Decision Head`, "Calibrated Scorer", "Typed JSON"]
     : ["State + Image + Q", "Embed + Vision", `${facts.num_hidden_layers}L Hybrid`, "1-Step Prefill", "Letter Logits + T", "Typed JSON"]
   : ["Token ids", "Token embedding", `${facts.num_hidden_layers}L Decoder`, "Final RMSNorm", "LM head"];
+const spineSummaryZh = isSystemOne
+  ? dh?.readout_mode === "mask_marker_mlp"
+    ? ["状态 + 问题", "词嵌入 + 类型编码", `${facts.num_hidden_layers}L 编码器`, `${dh.head_layers ?? 2}L 决策头`, "校准评分器", "强类型 JSON"]
+    : ["状态 + 图像 + 问题", "词嵌入 + 视觉塔", `${facts.num_hidden_layers}L 混合骨干`, "单步预填充", "字母 Logits + T", "强类型 JSON"]
+  : ["输入 Token ID", "词嵌入层", `${facts.num_hidden_layers}L 解码器`, "最终 RMSNorm", "词表输出头"];
 
 const attnSummaryStr = attnGroups.map((g) => `${g.layers.length} ${g.label}`).join(" + ");
 const ffnSummaryStr = ffnGroups.map((g) => `${g.layers.length} ${g.label}`).join(" → ");
 const archSummaryLine = isSystemOne
   ? `${facts.num_hidden_layers}-layer non-autoregressive System-1 encoder (${attnSummaryStr}; readout: ${dh?.readout_mode ?? "decision head"}) · ${formatParams(facts.total_params)} params.`
   : `${facts.num_hidden_layers}-layer autoregressive decoder (${attnSummaryStr}; ${ffnSummaryStr}${arch.topology.residual?.scheme === "mhc" ? `; ${arch.topology.residual.streams}-stream mHC` : ""}) · ${formatParams(facts.total_params)}${facts.active_params && facts.active_params !== facts.total_params ? ` / ${formatParams(facts.active_params)} active` : ""}.`;
+const archSummaryLineZh = isSystemOne
+  ? `${facts.num_hidden_layers} 层非自回归 System-1 编码器（${attnSummaryStr}；读出模式：${dh?.readout_mode ?? "决策头"}）· 总参数 ${formatParams(facts.total_params)}。`
+  : `${facts.num_hidden_layers} 层自回归解码器（${attnSummaryStr}；${ffnSummaryStr}${arch.topology.residual?.scheme === "mhc" ? `；${arch.topology.residual.streams} 流 mHC` : ""}）· 总参数 ${formatParams(facts.total_params)}${facts.active_params && facts.active_params !== facts.total_params ? ` / 激活 ${formatParams(facts.active_params)}` : ""}。`;
 
 // Build-time overview hotspot boxes + real compiled per-layer & module subviews (#36, #37)
 const overviewScene = compileForModel(arch, evidence);
@@ -202,18 +210,18 @@ const evidencePayload = {
   <div class="crumb-row">
     <a class="crumb-back" href="/llm-architecture-atlas/" data-i18n="detail.backCatalog">← Catalog</a>
     <div class="crumb-meta">
-      <span class={`pill ${isSystemOne ? "pill-s1" : "pill-ar"}`}>
+      <span class={`pill ${isSystemOne ? "pill-s1" : "pill-ar"}`} data-i18n={isSystemOne ? "detail.pillS1" : "detail.pillAr"}>
         {isSystemOne ? "System-1 · Non-Autoregressive" : "System-2 · Autoregressive"}
       </span>
       <span class="pill">{arch.model.family ?? "Other"}</span>
-      {arch.model.license && <span class="pill mono">{arch.model.license}</span>}
+      {arch.model.license && <span class="pill pill-license mono">{arch.model.license}</span>}
     </div>
   </div>
 
   <header class="detail-head">
     <div class="head-copy">
       <h1>{arch.model.label}</h1>
-      <p class="arch-summary">{archSummaryLine}</p>
+      <p class="arch-summary" data-i18n-en={archSummaryLine} data-i18n-zh={archSummaryLineZh}>{archSummaryLine}</p>
       <p class="muted meta-line">
         <span data-i18n="detail.generatedFrom">Architecture IR</span> {arch.ir_version} ·
         <span data-i18n="detail.revision">Revision</span> <code class="rev-chip">{arch.model.revision}</code> ·
@@ -247,18 +255,12 @@ const evidencePayload = {
         </div>
       </div>
 
-      <div class="canvas-controls" role="toolbar" aria-label="Diagram zoom and export controls">
+      <div class="canvas-controls" role="toolbar" aria-label="Diagram zoom controls">
         <button type="button" id="reset-overview-btn" class="btn btn-subtle" hidden data-i18n="detail.resetOverview">Back to Overview</button>
         <div class="view-modes" role="group" aria-label="Zoom mode">
           <button type="button" class="vbtn active" data-view-mode="fit" data-i18n="detail.fitView">Fit</button>
           <button type="button" class="vbtn" data-view-mode="pan" data-i18n="detail.scrollView">1:1 Pan</button>
           <button type="button" class="vbtn" data-view-mode="zoom" data-i18n="detail.zoomView">135%</button>
-        </div>
-        <div class="export-btns">
-          <a class="btn" href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download data-i18n="detail.downloadSvg">Download SVG</a>
-          <button type="button" class="btn png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={model.slug} data-i18n="detail.downloadPng">Download PNG</button>
-          <button type="button" class="btn copy-svg-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-i18n="detail.copySvg">Copy SVG</button>
-          <button type="button" id="export-manifest-btn" class="btn" data-name={model.slug} data-i18n="detail.exportManifest">Manifest</button>
         </div>
       </div>
     </div>
@@ -270,6 +272,7 @@ const evidencePayload = {
             <img
               class="diagram-img"
               src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
+              data-en-src={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`}
               alt={`Architecture overview of ${arch.model.label}, generated from the Architecture IR`}
             />
             <div class="hotspot-layer" aria-label="Interactive diagram node and edge claims">
@@ -298,7 +301,7 @@ const evidencePayload = {
             <strong id="subview-title"></strong>
             <span id="subview-subtitle" class="muted mono"></span>
           </div>
-          <span class="muted small-hint">Click any node for source citation · Esc returns to overview</span>
+          <span class="muted small-hint" data-i18n="detail.subviewHint">Click any node for source citation · Esc returns to overview</span>
         </div>
         <div id="subview-canvas" class="figure-wrap mode-fit" data-atlas-scroll="x" tabindex="0"></div>
       </div>
@@ -315,30 +318,40 @@ const evidencePayload = {
         </div>
         <div class="reading-cards-grid">
           <article class="reading-card">
-            <span class="eyebrow">Main Execution Spine</span>
-            <p class="spine-chain">{spineSummary.join(" → ")}</p>
+            <span class="eyebrow" data-i18n="detail.mobileSpine">Main Execution Spine</span>
+            <p class="spine-chain" data-i18n-en={spineSummary.join(" → ")} data-i18n-zh={spineSummaryZh.join(" → ")}>{spineSummary.join(" → ")}</p>
           </article>
           <article class="reading-card">
-            <span class="eyebrow">Layer Schedule · {facts.num_hidden_layers}L</span>
+            <span class="eyebrow" data-i18n="detail.mobileSchedule" data-n={String(facts.num_hidden_layers)}>Layer Schedule · {facts.num_hidden_layers}L</span>
             <ul class="schedule-pills">
               {scheduleRuns.map((r) => (
                 <li><strong>{r.label}</strong>: <span class="mono">{r.detail}</span></li>
               ))}
             </ul>
             <div class="mobile-subview-triggers">
-              <button type="button" class="btn m-sub-btn" data-jump-subview="attention">Attention diagram →</button>
-              <button type="button" class="btn m-sub-btn" data-jump-subview="ffn">MoE / FFN diagram →</button>
-              <button type="button" class="btn m-sub-btn" data-jump-subview="block">Inspect L0 block →</button>
+              <button type="button" class="btn m-sub-btn" data-jump-subview="attention" data-i18n="detail.mobileBtnAttn">Attention diagram →</button>
+              <button type="button" class="btn m-sub-btn" data-jump-subview="ffn" data-i18n="detail.mobileBtnFfn">MoE / FFN diagram →</button>
+              <button type="button" class="btn m-sub-btn" data-jump-subview="block" data-i18n="detail.mobileBtnBlock">Inspect L0 block →</button>
             </div>
           </article>
           {isSystemOne && dh && (
             <article class="reading-card reading-card-s1">
-              <span class="eyebrow">System-1 Readout & Calibration</span>
+              <span class="eyebrow" data-i18n="detail.mobileS1">System-1 Readout & Calibration</span>
               <p class="mini-note">{dh.note}</p>
             </article>
           )}
         </div>
       </section>
+
+      <div class="stage-footer" role="toolbar" aria-label="Diagram export controls">
+        <span class="muted small-note" data-i18n="detail.stageHint">Click any block or wire to inspect pinned source evidence.</span>
+        <div class="export-btns">
+          <a class="btn" href={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} download data-i18n="detail.downloadSvg">Download SVG</a>
+          <button type="button" class="btn png-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-name={model.slug} data-i18n="detail.downloadPng">Download PNG</button>
+          <button type="button" class="btn copy-svg-btn" data-fig={`/llm-architecture-atlas/figures/${model.slug}-generated.svg`} data-i18n="detail.copySvg">Copy SVG</button>
+          <button type="button" id="export-manifest-btn" class="btn" data-name={model.slug} data-i18n="detail.exportManifest">Manifest</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -350,7 +363,17 @@ const evidencePayload = {
       <button type="button" class="fact-btn" data-claim-paths="facts.num_attention_heads,facts.num_key_value_heads,facts.head_dim" data-label="Attn / KV heads"><dt data-i18n="fact.heads">Attn / KV heads</dt><dd class="mono">{facts.num_attention_heads}{facts.num_key_value_heads ? ` · KV ${facts.num_key_value_heads}` : ""}{facts.head_dim ? ` · d=${facts.head_dim}` : ""}</dd></button>
       <button type="button" class="fact-btn" data-claim-paths="facts.vocab_size" data-label="Vocab size"><dt data-i18n="fact.vocab">Vocab size</dt><dd class="mono">{facts.vocab_size?.toLocaleString("en-US") ?? "—"}</dd></button>
       <button type="button" class="fact-btn" data-claim-paths="facts.context_tokens" data-label="Context"><dt data-i18n="fact.context">Context</dt><dd class="mono">{formatContext(facts.context_tokens)}</dd></button>
-      <button type="button" class="fact-btn" data-claim-paths="facts.total_params,facts.active_params" data-label="Parameters"><dt data-i18n="fact.params">Parameters</dt><dd class="mono">{facts.total_params ? `${formatParams(facts.total_params)} total` : "—"}{facts.active_params && facts.active_params !== facts.total_params ? ` / ${formatParams(facts.active_params)} active` : ""}</dd></button>
+      <button type="button" class="fact-btn" data-claim-paths="facts.total_params,facts.active_params" data-label="Parameters">
+        <dt data-i18n="fact.params">Parameters</dt>
+        <dd class="mono">
+          {facts.total_params ? (
+            <>{formatParams(facts.total_params)}<span data-i18n-en=" total" data-i18n-zh=" 总计"> total</span></>
+          ) : "—"}
+          {facts.active_params && facts.active_params !== facts.total_params && (
+            <> / {formatParams(facts.active_params)}<span data-i18n-en=" active" data-i18n-zh=" 激活"> active</span></>
+          )}
+        </dd>
+      </button>
     </dl>
   </section>
 
@@ -434,7 +457,7 @@ const evidencePayload = {
 
     <div id="layer-detail" class="layer-detail" hidden data-testid="layer-detail">
       <div class="ld-top">
-        <strong>Layer <span id="ld-index" class="mono"></span></strong>
+        <strong><span data-i18n="detail.layerPrefix">Layer</span> <span id="ld-index" class="mono"></span></strong>
         <span class="pill pill-ar" id="ld-attention"></span>
         <span class="pill pill-moe" id="ld-ffn"></span>
       </div>
@@ -443,10 +466,10 @@ const evidencePayload = {
     </div>
 
     <p class="legend muted">
-      <span class="key"><span class="cell" style="background:var(--attention)" /> attention (GQA / MLA / Full)</span>
-      <span class="key"><span class="cell" style="background:var(--state)" /> linear / sliding window</span>
-      <span class="key"><span class="cell" style="background:var(--compute)" /> MoE</span>
-      <span class="key"><span class="cell" style={`background:${isSystemOne ? "var(--decision)" : "var(--line)"}`} /> {isSystemOne ? "dense FFN (System-1)" : "dense FFN"}</span>
+      <span class="key"><span class="cell" style="background:var(--attention)" /> <span data-i18n="detail.legendAttn">attention (GQA / MLA / Full)</span></span>
+      <span class="key"><span class="cell" style="background:var(--state)" /> <span data-i18n="detail.legendLinear">linear / sliding window</span></span>
+      <span class="key"><span class="cell" style="background:var(--compute)" /> <span data-i18n="detail.legendMoe">MoE</span></span>
+      <span class="key"><span class="cell" style={`background:${isSystemOne ? "var(--decision)" : "var(--line)"}`} /> <span data-i18n={isSystemOne ? "detail.legendDenseS1" : "detail.legendDense"}>{isSystemOne ? "dense FFN (System-1)" : "dense FFN"}</span></span>
     </p>
   </section>
 
@@ -459,18 +482,18 @@ const evidencePayload = {
           Select any diagram node, specification card, or genome layer to inspect exact-model sources vs mechanism references.
         </p>
       </div>
-      <button type="button" id="clear-citation" class="btn btn-subtle" hidden>Clear selection</button>
+      <button type="button" id="clear-citation" class="btn btn-subtle" hidden data-i18n="detail.clearCitation">Clear selection</button>
     </div>
 
     <div id="citation-cards" class="citation-cards">
       {brief && (
         <div class="provenance-overview">
           <div class="prov-group">
-            <span class="eyebrow">Exact-Model Primary Sources</span>
+            <span class="eyebrow" data-i18n="detail.provPrimary">Exact-Model Primary Sources</span>
             <ul class="prov-list">
               {brief.primary_sources.map((src) => (
                 <li>
-                  <span class="scope-pill scope-exact">✓ exact model</span>
+                  <span class="scope-pill scope-exact" data-i18n="detail.scopeExact">✓ exact model</span>
                   <a href={src.url} rel="noopener noreferrer">{src.kind}</a>
                   <code class="rev-chip">{src.revision.slice(0, 10)}</code>
                   {src.sha256 && <span class="muted mono small-hash">sha256:{src.sha256.slice(0, 12)}</span>}
@@ -480,11 +503,14 @@ const evidencePayload = {
           </div>
           {brief.papers.length > 0 && (
             <div class="prov-group">
-              <span class="eyebrow">Paper References & Mechanism Scope</span>
+              <span class="eyebrow" data-i18n="detail.provPapers">Paper References & Mechanism Scope</span>
               <ul class="prov-list">
                 {brief.papers.map((p) => (
                   <li>
-                    <span class={`scope-pill ${p.role === "model-specific" ? "scope-exact" : "scope-mech"}`}>
+                    <span
+                      class={`scope-pill ${p.role === "model-specific" ? "scope-exact" : "scope-mech"}`}
+                      data-i18n={p.role === "model-specific" ? "detail.scopeModelSpecific" : "detail.scopeMech"}
+                    >
                       {p.role === "model-specific" ? "✓ model-specific" : "◐ mechanism-only"}
                     </span>
                     <a href={p.url} rel="noopener noreferrer">{p.title}</a>
@@ -506,7 +532,7 @@ const evidencePayload = {
         <div>
           <div>
             <strong data-i18n="detail.advancedLedger">Advanced: Full Evidence Ledger</strong>
-            <span class="muted mono">({evidence.claims.length} claims)</span>
+            <span class="muted mono" data-i18n="detail.claimsCount" data-n={String(evidence.claims.length)}>({evidence.claims.length} claims)</span>
           </div>
           <p class="muted small-note" data-i18n="detail.evidenceNote">
             Every visible number resolves to an immutable source claim. Expand to filter or audit raw paths.
@@ -521,7 +547,7 @@ const evidencePayload = {
           </button>
           {Object.entries(statusCounts).map(([st, cnt]) => (
             <button type="button" class="ev-tab" data-status={st}>
-              {st} ({cnt})
+              <span data-i18n={`statusWord.${st}`}>{st}</span> ({cnt})
             </button>
           ))}
         </div>
@@ -566,6 +592,9 @@ const evidencePayload = {
   </section>
 
   <script>
+    import { currentLang, t, translateRoot } from "../../scripts/i18n";
+    import { localizeSvg, localizeSvgText } from "../../scripts/svg-i18n";
+
     type SubviewEntry = { title: string; subtitle: string; svg: string };
     type ClaimItem = {
       path: string;
@@ -636,13 +665,40 @@ const evidencePayload = {
     let currentView = "overview";
     let currentLayer: number | null = null;
     let currentClaims: string[] = [];
+    let currentCitationLabel = "";
     let activeStatusFilter = "";
+    let cachedOverviewSvg: string | null = null;
+
+    async function syncOverviewDiagramLang() {
+      const img = document.querySelector<HTMLImageElement>("#overview-stage img.diagram-img");
+      if (!img) return;
+      const enSrc = img.dataset.enSrc ?? img.getAttribute("src") ?? "";
+      if (!enSrc) return;
+      const lang = currentLang();
+      if (lang === "en") {
+        if (img.getAttribute("src") !== enSrc) img.setAttribute("src", enSrc);
+        return;
+      }
+      try {
+        if (!cachedOverviewSvg) {
+          cachedOverviewSvg = await fetch(enSrc).then((r) => r.text());
+        }
+        const zhSvg = localizeSvg(cachedOverviewSvg, "zh");
+        if (currentLang() === "zh") {
+          img.setAttribute("src", `data:image/svg+xml;charset=utf-8,${encodeURIComponent(zhSvg)}`);
+        }
+      } catch {
+        // fallback cleanly to English SVG if fetch fails
+      }
+    }
 
     function syncUrl(push = false) {
       const params = new URLSearchParams();
       if (currentView !== "overview") params.set("view", currentView);
       if (currentLayer !== null) params.set("layer", String(currentLayer));
       if (currentClaims.length > 0) params.set("claim", currentClaims[0]!);
+      const qLang = new URLSearchParams(location.search).get("lang");
+      if (qLang === "zh" || qLang === "en") params.set("lang", qLang);
       const next = params.toString() ? `?${params}` : location.pathname;
       if (push) history.pushState(null, "", next);
       else history.replaceState(null, "", next);
@@ -682,6 +738,7 @@ const evidencePayload = {
     };
 
     function renderCitations(label: string, paths: string[]) {
+      currentCitationLabel = label;
       currentClaims = paths.filter((p) => claimByPath.has(p));
       applyEvidenceFilter();
 
@@ -690,12 +747,12 @@ const evidencePayload = {
         hs.classList.toggle("active", Boolean(label) && hsPaths.some((p) => currentClaims.includes(p)));
       });
 
-      const isZh = document.documentElement.lang.startsWith("zh");
+      const lang = currentLang();
+      const isZh = lang === "zh";
       if (!currentClaims.length) {
-        citSubtitle.textContent = isZh
-          ? "点击任意架构图节点、连线、规格卡或层序列，可查看精确源码或机制论文。"
-          : defaultCitSubtitle;
+        citSubtitle.textContent = isZh ? t("detail.citationDefaultNote", "zh") : defaultCitSubtitle;
         citCards.innerHTML = defaultCitationHtml;
+        translateRoot(citCards, lang);
         if (clearCitBtn) clearCitBtn.hidden = true;
         return;
       }
@@ -714,9 +771,7 @@ const evidencePayload = {
           const url = c.source?.url;
           const glyph = STATUS_GLYPHS[c.status] ?? "?";
           const statusLabel = isZh ? (STATUS_ZH[c.status] ?? c.status) : c.status;
-          const scopeLabel = isExact
-            ? (isZh ? "✓ 精确模型" : "✓ exact model")
-            : (isZh ? "◐ 仅机制" : "◐ mechanism-only");
+          const scopeLabel = isExact ? t("detail.scopeExact", lang) : t("detail.scopeMech", lang);
           const ledgerBtnLabel = isZh ? "台账 ↗" : "Ledger ↗";
           return `
             <article class="cit-card">
@@ -743,7 +798,8 @@ const evidencePayload = {
         btn.addEventListener("click", () => {
           if (ledgerDetails) ledgerDetails.open = true;
           const targetRow = evidenceRows.find((r) => r.dataset.claimRow === btn.dataset.jumpPath);
-          targetRow?.scrollIntoView({ block: "center", behavior: "smooth" });
+          const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+          targetRow?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
         });
       });
     }
@@ -849,9 +905,13 @@ const evidencePayload = {
       }
       overviewStage.hidden = true;
       subviewStage.hidden = false;
-      subTitle.textContent = view === "block" && currentLayer !== null ? `Layer ${currentLayer} Block` : sub.title;
-      subSubtitle.textContent = sub.subtitle;
-      subviewCanvas!.innerHTML = `<div class="figure-inner">${sub.svg}<div class="hotspot-layer" aria-label="Interactive subview edge claims"></div></div>`;
+      const lang = currentLang();
+      subTitle.textContent =
+        view === "block" && currentLayer !== null
+          ? t("subview.block", lang, { n: String(currentLayer) })
+          : localizeSvgText(sub.title, lang);
+      subSubtitle.textContent = localizeSvgText(sub.subtitle, lang);
+      subviewCanvas!.innerHTML = `<div class="figure-inner">${localizeSvg(sub.svg, lang)}<div class="hotspot-layer" aria-label="Interactive subview edge claims"></div></div>`;
       attachSvgInteractivity(subviewCanvas!);
       if (push) syncUrl(true);
     }
@@ -865,6 +925,7 @@ const evidencePayload = {
       col.setAttribute("aria-selected", "true");
       tabBlockIdx.textContent = `L${layerNum}`;
 
+      const lang = currentLang();
       const attn = col.dataset.attention!;
       const ffn = col.dataset.ffn!;
       const aMod = col.dataset.attnModule ?? "";
@@ -872,19 +933,23 @@ const evidencePayload = {
       document.getElementById("ld-index")!.textContent = String(layerNum);
       document.getElementById("ld-attention")!.textContent = attn;
       document.getElementById("ld-ffn")!.textContent = ffn;
-      document.getElementById("ld-modules")!.textContent = `attention: ${aMod} · ffn: ${fMod}`;
+      document.getElementById("ld-modules")!.textContent =
+        lang === "zh" ? `注意力模块: ${aMod} · FFN 模块: ${fMod}` : `attention: ${aMod} · ffn: ${fMod}`;
 
       const matchedPaths = [
         `topology.attention_groups[${attnLabels.indexOf(attn)}]`,
         `topology.ffn_groups[${ffnLabels.indexOf(ffn)}]`,
       ].filter((p) => !p.includes("-1"));
       document.getElementById("ld-evidence")!.textContent = matchedPaths.length
-        ? `linked claims: ${matchedPaths.join(", ")}`
+        ? `${lang === "zh" ? "关联声明" : "linked claims"}: ${matchedPaths.join(", ")}`
         : "";
       detail.hidden = false;
       if (clearLayerBtn) clearLayerBtn.hidden = false;
 
-      renderCitations(`Layer ${layerNum} (${attn} + ${ffn})`, matchedPaths);
+      renderCitations(
+        lang === "zh" ? `第 ${layerNum} 层 (${attn} + ${ffn})` : `Layer ${layerNum} (${attn} + ${ffn})`,
+        matchedPaths,
+      );
       if (opts.switchView !== false) {
         activateSubview("block", layerNum, opts.push ?? true);
       } else if (opts.push) {
@@ -997,7 +1062,19 @@ const evidencePayload = {
     }
 
     restoreFromUrl();
+    syncOverviewDiagramLang();
     window.addEventListener("popstate", restoreFromUrl);
+    window.addEventListener("atlas:langchange", () => {
+      syncOverviewDiagramLang();
+      if (currentView !== "overview") {
+        activateSubview(currentView, currentLayer, false);
+      }
+      if (currentLayer !== null) {
+        selectLayer(currentLayer, { switchView: false, push: false });
+      } else {
+        renderCitations(currentCitationLabel, currentClaims);
+      }
+    });
 
     // Canonical PNG, SVG, and Evidence Manifest exporters (decoupled from view zoom/focus state)
     document.querySelectorAll<HTMLButtonElement>(".png-btn").forEach((btn) => {
@@ -1025,11 +1102,11 @@ const evidencePayload = {
 
     document.querySelectorAll<HTMLButtonElement>(".copy-svg-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const text = await fetch(btn.dataset.fig!).then((r) => r.text());
+        const rawText = await fetch(btn.dataset.fig!).then((r) => r.text());
+        const text = localizeSvg(rawText, currentLang());
         await navigator.clipboard?.writeText(text);
-        const orig = btn.textContent;
-        btn.textContent = "✓ Copied";
-        setTimeout(() => { btn.textContent = orig; }, 1400);
+        btn.textContent = `✓ ${t("detail.copied")}`;
+        setTimeout(() => { btn.textContent = t("detail.copySvg"); }, 1400);
       });
     });
 
@@ -1062,6 +1139,9 @@ const evidencePayload = {
       margin-bottom: 0.75rem;
     }
     .crumb-back {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
       font-weight: 700;
       text-decoration: none;
       font-size: 0.9rem;
@@ -1276,12 +1356,12 @@ const evidencePayload = {
       width: 100%;
     }
 
-    .hotspot-layer {
+    :global(.hotspot-layer) {
       position: absolute;
       inset: 0;
       pointer-events: none;
     }
-    .hotspot {
+    :global(.hotspot) {
       position: absolute;
       pointer-events: auto;
       min-width: 24px;
@@ -1292,26 +1372,118 @@ const evidencePayload = {
       border-radius: 8px;
       cursor: pointer;
       padding: 0;
+      transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
     }
-    .hotspot-edge {
+    :global(.hotspot-edge) {
       z-index: 1;
       transform: translate(-50%, -50%);
       border-radius: 999px;
+    }
+    :global(.hotspot-edge)::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      background: color-mix(in srgb, var(--attention) 35%, transparent);
+      opacity: 0;
+      transition: opacity 140ms ease;
+    }
+    :global(.hotspot-edge:hover)::after,
+    :global(.hotspot-edge:focus-visible)::after,
+    :global(.hotspot-edge.active)::after {
+      opacity: 1;
     }
     #subview-canvas :global(svg path[data-edge-id][data-claim-path]) {
       cursor: pointer;
       pointer-events: all;
     }
-    .hotspot:hover {
+    #subview-canvas :global(svg .node[role="button"]:hover .n-box),
+    #subview-canvas :global(svg .node[role="button"]:focus-visible .n-box) {
+      stroke-width: 2.6;
+    }
+    :global(.hotspot:hover) {
       border-color: color-mix(in srgb, var(--attention) 55%, transparent);
       background: color-mix(in srgb, var(--attention) 6%, transparent);
     }
-    .hotspot:focus-visible,
-    .hotspot.active {
+    :global(.hotspot:focus-visible),
+    :global(.hotspot.active) {
       outline: none;
       border-color: var(--attention);
       background: color-mix(in srgb, var(--attention) 10%, transparent);
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--attention) 25%, transparent);
+    }
+
+    :global(html[data-theme="dark"]) #subview-canvas :global(svg) {
+      --paper: #0b1220;
+      --ink: #e6ebf4;
+      --muted: #97a3b8;
+      --panel: #111b2e;
+      --surface: #17243c;
+      --grid: #1e2d4a;
+      --line: #3a465c;
+      --attention: #6ea8ff;
+      --state: #2dd4bf;
+      --compute: #f5a623;
+      --decision: #b89aff;
+      --conflict: #ff8a96;
+      --focus: #9ec1ff;
+      --attention-bg: #13223b;
+      --state-bg: #0f282c;
+      --compute-bg: #281c0f;
+      --decision-bg: #211738;
+    }
+    :global(html[data-theme="light"]) #subview-canvas :global(svg) {
+      --paper: #f5f7fa;
+      --ink: #172033;
+      --muted: #586377;
+      --panel: #ffffff;
+      --surface: #edf1f7;
+      --grid: #d7dfec;
+      --line: #b9c2d2;
+      --attention: #1769e0;
+      --state: #007a7a;
+      --compute: #b45309;
+      --decision: #6d28d9;
+      --conflict: #b3383f;
+      --focus: #1769e0;
+      --attention-bg: #f2f7ff;
+      --state-bg: #eefaf8;
+      --compute-bg: #fef7ed;
+      --decision-bg: #f6f2ff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :global(html:not([data-theme="light"])) #subview-canvas :global(svg) {
+        --paper: #0b1220;
+        --ink: #e6ebf4;
+        --muted: #97a3b8;
+        --panel: #111b2e;
+        --surface: #17243c;
+        --grid: #1e2d4a;
+        --line: #3a465c;
+        --attention: #6ea8ff;
+        --state: #2dd4bf;
+        --compute: #f5a623;
+        --decision: #b89aff;
+        --conflict: #ff8a96;
+        --focus: #9ec1ff;
+        --attention-bg: #13223b;
+        --state-bg: #0f282c;
+        --compute-bg: #281c0f;
+        --decision-bg: #211738;
+      }
+    }
+
+    .stage-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      padding: 0.15rem 0.2rem 0;
     }
 
     .subview-banner {
@@ -1772,6 +1944,9 @@ const evidencePayload = {
       .mobile-cards {
         order: -1;
       }
+      .stage-footer {
+        order: 3;
+      }
       .figure-wrap.mode-fit .figure-inner,
       .figure-wrap.mode-fit svg {
         width: 78rem;
@@ -1780,6 +1955,92 @@ const evidencePayload = {
     }
 
     @media (max-width: 640px) {
+      /* #36 first-screen budget on 390x844: keep Spine + Schedule readable above y=844px */
+      .crumb-row {
+        margin-bottom: 0.35rem;
+        gap: 0.3rem;
+      }
+      .crumb-meta .pill-license,
+      .compare-picker {
+        display: none;
+      }
+      .detail-head {
+        gap: 0.35rem;
+        padding-bottom: 0.55rem;
+        margin-bottom: 0.65rem;
+      }
+      .detail-head h1 {
+        font-size: 1.38rem;
+        margin-bottom: 0.15rem;
+      }
+      .arch-summary {
+        font-size: 0.84rem;
+        line-height: 1.32;
+        margin-bottom: 0.2rem;
+      }
+      .meta-line {
+        font-size: 0.74rem;
+      }
+      .section {
+        margin-bottom: 1.35rem;
+      }
+      .section-bar {
+        gap: 0.4rem;
+        margin-bottom: 0.45rem;
+      }
+      .stage-heading {
+        gap: 0.3rem;
+      }
+      .stage-heading h2 {
+        font-size: 1.02rem;
+      }
+      .view-tabs {
+        gap: 0.25rem;
+      }
+      .vtab {
+        padding: 0.22rem 0.52rem;
+        font-size: 0.75rem;
+        min-height: 26px;
+      }
+      .vbtn {
+        padding: 0.24rem 0.52rem;
+        font-size: 0.75rem;
+        min-height: 26px;
+      }
+      .mobile-cards .section-bar,
+      .mobile-cards .small-note {
+        display: none;
+      }
+      .reading-cards-grid {
+        gap: 0.45rem;
+        margin-top: 0;
+      }
+      .reading-card {
+        padding: 0.6rem 0.8rem;
+      }
+      .reading-card .eyebrow {
+        margin-bottom: 0.15rem;
+        font-size: 0.68rem;
+      }
+      .spine-chain {
+        margin-top: 0.1rem;
+        font-size: 0.86rem;
+        line-height: 1.35;
+      }
+      .schedule-pills {
+        margin-top: 0.2rem;
+        font-size: 0.8rem;
+        gap: 0.15rem;
+      }
+      .mobile-subview-triggers {
+        margin-top: 0.45rem;
+        gap: 0.35rem;
+      }
+      .m-sub-btn {
+        min-height: 26px;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.76rem;
+      }
       /* #38 mobile citation table: stack each row cleanly with zero horizontal scroll */
       .evidence thead {
         display: none;
@@ -1810,9 +2071,10 @@ const evidencePayload = {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
+      :global(html),
+      :global(*),
+      :global(*::before),
+      :global(*::after) {
         scroll-behavior: auto !important;
         transition: none !important;
         animation: none !important;

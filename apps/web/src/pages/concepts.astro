@@ -4,6 +4,7 @@ import Base from "../layouts/Base.astro";
 const groups = [
   {
     key: "concepts.groupSystemOne",
+    badgeKey: "concepts.badgeSystemOne",
     title: "System-1 / Jev-Class Decision Paradigm",
     badgeClass: "pill-s1",
     badge: "Non-Autoregressive",
@@ -32,6 +33,7 @@ const groups = [
   },
   {
     key: "concepts.groupAttention",
+    badgeKey: "concepts.badgeAttention",
     title: "Attention & Sequence State",
     badgeClass: "pill-ar",
     badge: "Sequence Core",
@@ -65,6 +67,7 @@ const groups = [
   },
   {
     key: "concepts.groupCompute",
+    badgeKey: "concepts.badgeCompute",
     title: "FFN, Residual & Auxiliary Heads",
     badgeClass: "pill-moe",
     badge: "Compute & Flow",
@@ -108,7 +111,7 @@ const groups = [
       <section class="concept-section">
         <div class="section-head">
           <h2 data-i18n={grp.key}>{grp.title}</h2>
-          <span class={`pill ${grp.badgeClass}`}>{grp.badge}</span>
+          <span class={`pill ${grp.badgeClass}`} data-i18n={grp.badgeKey}>{grp.badge}</span>
         </div>
         <dl class="concept-grid">
           {grp.items.map((c) => (
