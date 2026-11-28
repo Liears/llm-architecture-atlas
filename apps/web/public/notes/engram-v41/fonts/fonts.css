@@ -1,7 +1,7 @@
 /* 自托管字体：改字体/改本文件后，index.html 里 <link> 的 ?v= 由本脚本自动同步 */
 @font-face {
   font-family: 'Xiaolai';
-  src: url('Xiaolai-subset.woff2?v=14a30435') format('woff2');
+  src: url('Xiaolai-subset.woff2?v=21549da7') format('woff2');
   font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {

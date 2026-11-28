@@ -329,17 +329,27 @@ test("Study Notes page and Engram + DeepSeek-V4.1 hand-drawn deck load cleanly",
   page.on("pageerror", (err) => pageErrors.push(err.message));
   await page.click('.note-card a[data-i18n="notes.openDeck"]');
   await expect(page).toHaveURL(/\/llm-architecture-atlas\/notes\/engram-v41\/index\.html$/);
-  await expect(page.locator("section.slide")).toHaveCount(11);
+  await expect(page.locator("section.slide")).toHaveCount(13);
   await expect(page.locator("#cover h1")).toContainText("Engram");
+
+  // Interactive stepper walkthrough switches SVG focus and example steps cleanly
+  await page.click('#arch-explorer [data-step-trigger="engram"]');
+  await expect(page.locator('#arch-explorer [data-step-panel="engram"]')).toBeVisible();
+  await page.click('#example-stepper [data-step-trigger="s4"]');
+  await expect(page.locator('#example-stepper [data-step-panel="s4"]').first()).toBeVisible();
 
   const metrics = await page.evaluate(async () => {
     await document.fonts.ready;
+    const imgs = [...document.querySelectorAll(".slide img")].map((i) => (i as HTMLImageElement).naturalWidth);
     return {
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       loadedFonts: [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family),
+      imgWidths: imgs,
     };
   });
   expect(pageErrors).toEqual([]);
   expect(metrics.overflow).toBeLessThanOrEqual(1);
   expect(metrics.loadedFonts).toEqual(expect.arrayContaining(["Xiaolai", "Excalifont", "JetBrains Mono"]));
+  expect(metrics.imgWidths.length).toBe(3);
+  expect(metrics.imgWidths.every((w) => w > 0)).toBeTruthy();
 });
