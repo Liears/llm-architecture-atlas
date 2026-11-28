@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="data-as-of" content="2026-11-28">
 <title>Engram 条件记忆与 DeepSeek-V4.1-Flash-1017 学习笔记</title>
-<link rel="stylesheet" href="fonts/fonts.css?v=2e6be038">
+<link rel="stylesheet" href="fonts/fonts.css?v=5c1b6a53">
 <style>
 :root {
   --ink:#2b2418;
@@ -326,21 +326,22 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
           <!-- 输入词元 -->
           <g data-step-node="old engram">
-            <rect class="nbox" x="14" y="138" width="186" height="114" rx="10"/>
-            <text x="107" y="182" font-size="22" text-anchor="middle">输入固定常识</text>
-            <text class="accent" x="107" y="218" font-size="22" text-anchor="middle">“中国 四大发明”</text>
+            <rect class="nbox" x="14" y="128" width="196" height="134" rx="10"/>
+            <text x="112" y="168" font-size="22" text-anchor="middle">输入拆碎词片</text>
+            <text class="accent" x="112" y="204" font-size="22" text-anchor="middle">“中国·四大·发明”</text>
+            <text class="muted" x="112" y="238" font-size="21" text-anchor="middle">接答：造纸术/火药</text>
           </g>
 
           <!-- 上路：传统老架构现算路径 -->
           <g data-step-node="old">
             <rect class="nbox bad" x="250" y="22" width="490" height="130" rx="12"/>
-            <text class="bad" x="495" y="60" font-size="22" text-anchor="middle">旧思路（Pure MoE）：前 1~6 层现场算一遍</text>
-            <text x="495" y="96" font-size="22" text-anchor="middle">路由器挑专家 → 多层矩阵乘法现拼“四大发明”</text>
-            <text class="muted" x="495" y="128" font-size="22" text-anchor="middle">痛点：扩参数就得涨显存与算力，挤占深层推理</text>
+            <text class="bad" x="495" y="60" font-size="22" text-anchor="middle">旧思路 (MoE)：前 1~6 层拼词 + 背常识</text>
+            <text x="495" y="96" font-size="22" text-anchor="middle">先耗算力把碎词拼成“四大发明”完整概念</text>
+            <text class="muted" x="495" y="128" font-size="22" text-anchor="middle">才能开始推造纸术/火药；扩知识还得涨算力</text>
           </g>
           <g data-step-node="old">
             <rect class="nbox" x="786" y="34" width="248" height="106" rx="10"/>
-            <text class="bad" x="910" y="76" font-size="22" text-anchor="middle">有效推理层被压缩</text>
+            <text class="bad" x="910" y="76" font-size="22" text-anchor="middle">有效推理层被挤占</text>
             <text class="muted" x="910" y="112" font-size="22" text-anchor="middle">检索基线停在 84.2</text>
           </g>
 
@@ -348,25 +349,25 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
           <g data-step-node="engram">
             <rect class="nbox hi" x="250" y="216" width="276" height="148" rx="12"/>
             <text class="accent" x="388" y="256" font-size="22" text-anchor="middle">Engram O(1) 查表旁路</text>
-            <text x="388" y="294" font-size="22" text-anchor="middle">按词直接去内存取向量</text>
+            <text x="388" y="294" font-size="22" text-anchor="middle">见“四大发明”直取概念向量</text>
             <text class="good" x="388" y="330" font-size="22" text-anchor="middle">V4.1 单独承载 196.6B</text>
           </g>
           <g data-step-node="engram">
             <rect class="nbox good" x="570" y="216" width="234" height="148" rx="12"/>
             <text class="good" x="687" y="256" font-size="22" text-anchor="middle">省出前段神经层</text>
-            <text x="687" y="294" font-size="22" text-anchor="middle">免除重复构造常识</text>
-            <text class="muted" x="687" y="330" font-size="22" text-anchor="middle">等效多出计算深度</text>
+            <text x="687" y="294" font-size="22" text-anchor="middle">跳过前层认词背概念</text>
+            <text class="muted" x="687" y="330" font-size="22" text-anchor="middle">直接拿语义继续往后</text>
           </g>
           <g data-step-node="engram">
             <rect class="nbox good" x="844" y="226" width="190" height="128" rx="10"/>
-            <text class="good" x="939" y="274" font-size="22" text-anchor="middle">深层专心推理</text>
+            <text class="good" x="939" y="274" font-size="22" text-anchor="middle">专注续写与推理</text>
             <text class="accent" x="939" y="312" font-size="22" text-anchor="middle">NIAH +12.8</text>
           </g>
 
           <!-- 连线动画 -->
-          <path data-step-node="old" class="edge bad flow-dash" d="M 200 170 L 246 92" marker-end="url(#g-arr-bad)"/>
+          <path data-step-node="old" class="edge bad flow-dash" d="M 210 165 L 246 92" marker-end="url(#g-arr-bad)"/>
           <path data-step-node="old" class="edge bad flow-dash" d="M 740 87 L 782 87" marker-end="url(#g-arr-bad)"/>
-          <path data-step-node="engram" class="edge accent flow-dash" d="M 200 220 L 246 286" marker-end="url(#g-arr-acc)"/>
+          <path data-step-node="engram" class="edge accent flow-dash" d="M 210 225 L 246 286" marker-end="url(#g-arr-acc)"/>
           <path data-step-node="engram" class="edge good flow-dash" d="M 526 290 L 566 290" marker-end="url(#g-arr-good)"/>
           <path data-step-node="engram" class="edge good flow-dash" d="M 804 290 L 840 290" marker-end="url(#g-arr-good)"/>
         </svg>
@@ -375,18 +376,18 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
       <div class="subcard" style="display:flex;flex-direction:column;gap:14px">
         <div data-step-panel="old">
           <span class="badge bad">核心问题 · 算力与记忆死绑</span>
-          <h3 class="t-h3" style="margin-top:10px">为什么传统大模型必须“死记靠现算”？</h3>
-          <p class="t-body" style="margin-top:8px">普通 Transformer/MoE 没有“查词典”通路：遇到“四大发明 / Alexander the Great”也得在前几层调专家重新拼算一次。</p>
-          <div class="inset" style="margin-top:14px">
-            <p class="t-micro">后果：想多记点世界知识，就得把参数、显存和计算路由绑在一起涨，根本停不下来。</p>
+          <h3 class="t-h3" style="margin-top:10px">输入已经是“四大发明”，前层还要算什么？</h3>
+          <p class="t-body" style="margin-top:8px">读入“中国”“四大”“发明”三个拆碎的词片后，老架构必须先烧前几层算力去认出概念并从权重里硬背答案，才能接着推出造纸术、火药或解后续难题。</p>
+          <div class="inset" style="margin-top:12px">
+            <p class="t-micro">后果：前层深度被“认死词+死记”占满，想多记知识就只能连着显存和计算量一起暴涨。</p>
           </div>
         </div>
         <div data-step-panel="engram" hidden>
           <span class="badge good">终极目标 + 适用边界</span>
           <h3 class="t-h3" style="margin-top:10px">目标：计算归计算，记忆归查表</h3>
-          <p class="t-body" style="margin-top:8px">每步计算量不涨的前提下，把 196.6B 静态常识放进 CPU 内存查表，让神经网络专心做复杂推理（27B 多针检索 84.2→97.0）。</p>
-          <div class="inset" style="margin-top:14px">
-            <p class="t-micro">适用边界（Non-Goal）：只适 > 100B 高并发、主存充裕集群；端侧微型模型装不下百 G 表。</p>
+          <p class="t-body" style="margin-top:8px">看到固定短语就去 CPU 内存表 O(1) 取出现成概念向量（V4.1 达 196.6B），前层不用再重算死知识，把深度还给答案生成与长文推理（27B 检索 84.2→97.0）。</p>
+          <div class="inset" style="margin-top:12px">
+            <p class="t-micro">适用边界（Non-Goal）：只适 &gt; 100B 高并发、主存充裕集群；端侧微型模型装不下百 G 表。</p>
           </div>
         </div>
       </div>
