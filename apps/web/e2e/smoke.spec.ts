@@ -330,7 +330,7 @@ test("Study Notes page and Engram + DeepSeek-V4.1 hand-drawn deck load cleanly",
   await page.click('.note-card a[data-i18n="notes.openDeck"]');
   await expect(page).toHaveURL(/\/llm-architecture-atlas\/notes\/engram-v41\/index\.html$/);
   await expect(page.locator("section.slide")).toHaveCount(13);
-  await expect(page.locator("#cover h1")).toContainText("Engram");
+  await expect(page.locator("#goal h1")).toContainText("Engram");
 
   // Interactive stepper walkthrough switches SVG focus and example steps cleanly
   await page.click('#arch-explorer [data-step-trigger="engram"]');

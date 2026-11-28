@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="data-as-of" content="2026-11-27">
+<meta name="data-as-of" content="2026-11-28">
 <title>Engram 条件记忆与 DeepSeek-V4.1-Flash-1017 学习笔记</title>
-<link rel="stylesheet" href="fonts/fonts.css?v=0d3c3cca">
+<link rel="stylesheet" href="fonts/fonts.css?v=1299f207">
 <style>
 :root {
   --ink:#2b2418;
@@ -136,25 +136,6 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 }
 .bar.base { border-color:var(--alt); border-radius:6px 4px 7px 5px; background:var(--hachure-alt), var(--paper); }
 
-.stack {
-  display:flex;
-  height:44px;
-  border:2px solid var(--ink);
-  border-radius:8px 11px 9px 10px / 10px 9px 11px 8px;
-  overflow:hidden;
-  background:var(--paper-2);
-}
-.stack > i { flex:var(--v); min-width:0; border-right:2px solid var(--paper-2); }
-.stack > i:last-child { border-right:none; }
-.sw { display:block; }
-.sw.a { background:var(--accent); }
-.sw.b { background:var(--hachure-alt), var(--paper-2); }
-.sw.c { background:var(--paper-3); }
-.sw.d { background:var(--paper-3); }
-.legend { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px 28px; margin-top:22px; }
-.legend > div { display:flex; align-items:center; gap:14px; }
-.legend i.sw { width:32px; height:24px; border:1.5px solid var(--ink); border-radius:4px 6px 5px 7px; flex:none; }
-
 .flow { display:flex; align-items:stretch; }
 .flow > .node {
   flex:1 1 0; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:6px;
@@ -204,8 +185,8 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 .dtable { display:grid; }
 .dtable[data-cols="2"] { grid-template-columns:340px minmax(0,1fr); }
-.dtable[data-cols="3"] { grid-template-columns:300px minmax(0,1fr) minmax(0,1fr); }
-.dtable[data-cols="4"] { grid-template-columns:320px repeat(3, minmax(0,1fr)); }
+.dtable[data-cols="3"] { grid-template-columns:280px minmax(0,1fr) minmax(0,1fr); }
+.dtable[data-cols="4"] { grid-template-columns:270px repeat(3, minmax(0,1fr)); }
 .dtable > div {
   display:flex;
   align-items:center;
@@ -220,7 +201,6 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 .dtable[data-cols="3"] > div:nth-last-child(-n+3),
 .dtable[data-cols="4"] > div:nth-last-child(-n+4) { border-bottom:none; }
 
-/* ---- 原图相框、手绘风 SVG 结构图与交互动画演示 ---- */
 .figframe {
   padding:18px 20px;
   border:2px solid var(--ink);
@@ -295,77 +275,105 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <div class="stage" id="stage">
 <div class="deck" id="deck">
 
-<!-- 页 1 · 结论首屏 -->
-<section class="slide" id="cover">
+<!-- 页 1 · 阶段 1+2：目标、核心问题与适用前提（Non-Goals） -->
+<section class="slide" id="goal">
   <header class="rv" style="display:flex;align-items:center;gap:20px">
-    <h1 class="t-title">Engram 把静态知识改成 O(1) 查表，在 DeepSeek-V4.1 承载近 2,000 亿静态参数</h1>
+    <h1 class="t-title">为实现零增算力扩容知识，Engram 解除「前层动态重构静态常识」的结构矛盾</h1>
     <span class="badge good" style="margin-left:auto">源码与原图核对</span>
   </header>
   <div class="card rv">
     <div class="grid3">
       <div class="subcard">
-        <div class="t-label">V4.1-Flash-1017 静态表</div>
+        <div class="t-label">1. 终极目标（容量解耦）</div>
         <div class="t-stat">196.6B</div>
-        <p class="t-micro">第 1 与第 14 层合计 7.68 亿行<br>表权重保持 FP8 约占 183.1 GiB</p>
+        <p class="t-micro">V4.1 静态查表参数规模<br>为深层推理腾出算力深度</p>
       </div>
       <div class="subcard">
-        <div class="t-label">词表规范化压缩</div>
-        <div class="t-stat">-23.35%</div>
-        <p class="t-micro">V4.1 与论文同为 129,280→99,092<br>大小写与全半角共享哈希键</p>
-      </div>
-      <div class="subcard">
-        <div class="t-label">27B 长上下文检索跃升</div>
+        <div class="t-label">2. 核心目标收益（27B 验证）</div>
         <div class="t-stat">+12.8</div>
-        <p class="t-micro">Multi-Query NIAH 由 84.2 升至 97.0<br>等总参 26.7B / 激活 3.8B 口径</p>
+        <p class="t-micro">Multi-Query NIAH 84.2→97.0<br>等总参 26.7B / 激活 3.8B 口径</p>
+      </div>
+      <div class="subcard">
+        <div class="t-label">3. 适用前提与边界</div>
+        <div class="t-stat">&gt;&nbsp;100B</div>
+        <p class="t-micro">面向高并发、CPU RAM 宽裕集群<br>端侧微型模型属 Non-Goal</p>
       </div>
     </div>
   </div>
-  <div class="anno rv">脉络导览：先看<a href="#paper-arch">第 2 页论文原图</a>与<a href="#v41-arch">第 3 页 V4.1 结构图</a>，再到<a href="#walkthrough">第 4 页动态例题演示</a>；拍板项见<a href="#next">第 13 页</a>。</div>
+  <div class="anno rv">主线逻辑：先看<a href="#tension">第 2 页事实 × 约束</a>与<a href="#candidates">第 3 页方案取舍</a>，再到<a href="#v41-arch">第 4–9 页实现归因</a>与<a href="#gaps">第 12–13 页差距突破</a>。</div>
   <div class="pageno">1 / 13</div>
 </section>
 
-<!-- 页 2 · 论文原图 Figure 1（核心机制与架构分工） -->
-<section class="slide" id="paper-arch">
-  <header class="rv"><h2 class="t-title">MoE 负责条件计算，Engram 补齐条件记忆，消除前层静态重构浪费</h2></header>
-  <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
-    <div class="figframe blend rv">
-      <img src="images/arch.png" alt="Engram 论文 Figure 1 原图：2/3-gram 哈希查表与条件门控写入残差">
-      <p class="figcap">图 1 · 来源：<a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer">deepseek-ai/Engram</a>（Apache-2.0），见 <a href="https://arxiv.org/abs/2601.07372" rel="noopener noreferrer">arXiv:2601.07372</a>。右框演示 2-gram 与 3-gram 查表经门控融回。</p>
-    </div>
-    <div class="card rv" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px">
-      <div class="t-label">双轴稀疏为何缺一不可</div>
-      <div class="subcard">
-        <h3 class="t-h3">1. 纯 MoE 的前层浪费</h3>
-        <p class="t-body" style="margin-top:6px">遇固定实体（Alexander the Great）时，纯 MoE 仍要每层路由算常识。</p>
-      </div>
-      <div class="subcard">
-        <h3 class="t-h3">2. Engram 的 O(1) 静态直达</h3>
-        <p class="t-body" style="margin-top:6px">按后缀 N-gram 哈希直取表征，不消耗动态专家计算量。</p>
+<!-- 页 2 · 阶段 3+4：客观事实 × 关键约束双栏受力推演 -->
+<section class="slide" id="tension">
+  <header class="rv"><h2 class="t-title">三条客观事实与三条硬约束，共同锁死了唯一可行架构区间</h2></header>
+  <div class="grid2">
+    <div class="subcard rv" style="display:flex;flex-direction:column;gap:14px">
+      <div class="t-label">客观事实（不可违背的数据与硬件规律）</div>
+      <div class="inset">
+        <h3 class="t-h3">事实 A · 高频短语属静态局部模式</h3>
+        <p class="t-micro" style="margin-top:4px">“四大发明 / Alexander the Great”实为固定词组查找，无需逐层路由现算。</p>
       </div>
       <div class="inset">
-        <p class="t-micro">关键实证：前排卸载记忆后，深层更专注于多步组合推理。</p>
+        <h3 class="t-h3">事实 B · 查表地址仅依赖输入 Token ID</h3>
+        <p class="t-micro" style="margin-top:4px">词组哈希只看明文词序，推理期可在计算隐藏态之前就提前确定并预取。</p>
+      </div>
+      <div class="inset">
+        <h3 class="t-h3">事实 C · HBM 极贵，CPU 主存廉价宽裕</h3>
+        <p class="t-micro" style="margin-top:4px">主机内存容量成本比显存低一个数量级，但受限 PCIe 传输带宽。</p>
+      </div>
+    </div>
+    <div class="card rv" style="display:flex;flex-direction:column;gap:14px">
+      <div class="t-label">关键约束（必须同时满足的工程红线）</div>
+      <div class="inset">
+        <h3 class="t-h3">约束 1 · 激活算力 FLOPs 预算封顶</h3>
+        <p class="t-micro" style="margin-top:4px">新增知识记忆不能净增单步算力，只能从既有稀疏专家预算中置换配额。</p>
+      </div>
+      <div class="inset">
+        <h3 class="t-h3">约束 2 · 显存装不下千亿级静态表</h3>
+        <p class="t-micro" style="margin-top:4px">近 2,000 亿参数表必须原生保持低精度（FP8），并支持跨卡分片与主存卸载。</p>
+      </div>
+      <div class="inset">
+        <h3 class="t-h3">约束 3 · 视觉占位隔离与噪声阻断</h3>
+        <p class="t-micro" style="margin-top:4px">哈希碰撞噪声须受门控抑制，且 32 层 ViT 图像块不得混入 N-gram 滑窗。</p>
       </div>
     </div>
   </div>
   <div class="pageno">2 / 13</div>
 </section>
 
-<!-- 页 3 · 手绘 SVG 结构图（DeepSeek-V4.1-Flash-1017 整网拓扑与交互切层） -->
+<!-- 页 3 · 阶段 5：前人试错、备选淘汰对比与新代价承接 -->
+<section class="slide" id="candidates">
+  <header class="rv"><h2 class="t-title">前人方案均踩中约束红线，唯有 Engram 门控双轴兼顾算力与显存边界</h2></header>
+  <div class="card rv">
+    <div class="dtable" data-cols="4">
+      <div class="th"><div>候选路线</div></div><div class="th"><div>满足的约束</div></div><div class="th"><div>踩中的红线 / 淘汰原因</div></div><div class="th"><div>引入的新代价</div></div>
+      <div><div>方案一 · 纯扩 MoE 专家数</div></div><div><div>无哈希冲突</div></div><div><div>记忆与算路绑定，仍迫使前层路由器重算（违背目标与约束 2）</div></div><div><div>HBM 与通信负载暴涨</div></div>
+      <div><div>方案二 · OverEncoding（无门控查表）</div></div><div><div>零增推理算力</div></div><div><div>N-gram 直接硬叠加，撞桶噪声与错配破坏推理精度（违背约束 3）</div></div><div><div>精度被长尾冲突拖垮</div></div>
+      <div><div>方案三 · 外部 RAG 检索增强</div></div><div><div>知识完全外置</div></div><div><div>跨文本检索延迟抖动大，无法融入每 Token O(1) 主干前向</div></div><div><div>长序列延迟与系统割裂</div></div>
+      <div><div>胜出方案 · Engram 条件记忆</div></div><div><div>同时过约束 1 / 2 / 3</div></div><div><div>按 U 型曲线置换预算 + O(1) 预取 + RMS 点积门控</div></div><div><div>引入 183.1 GiB 搬运与撞桶风险</div></div>
+    </div>
+  </div>
+  <div class="anno rv">核心取舍：没有任何方案只有收益没有代价；右侧引入的新代价将由第 4 至 9 页的各生产模块逐一消化。</div>
+  <div class="pageno">3 / 13</div>
+</section>
+
+<!-- 页 4 · 阶段 6a：V4.1 整网架构与模块归因（交互 SVG · 字号 >= 20px） -->
 <section class="slide" id="v41-arch">
-  <header class="rv"><h2 class="t-title">DeepSeek-V4.1-Flash-1017 把双层 Engram 精准嵌进前 20 层非对称编码器</h2></header>
+  <header class="rv"><h2 class="t-title">DeepSeek-V4.1-Flash-1017 把每个模块精确焊在约束缺口上</h2></header>
   <div class="stepper card rv" id="arch-explorer">
     <div class="step-bar">
-      <span class="t-label">切换视角点亮结构流向：</span>
-      <button type="button" class="step-btn accent is-active" data-step-trigger="overview">全局主干流向</button>
-      <button type="button" class="step-btn accent" data-step-trigger="engram">聚焦层 1 / 14 静态查表</button>
-      <button type="button" class="step-btn accent" data-step-trigger="csa">聚焦 CSA2 与 4 源 KV</button>
-      <button type="button" class="step-btn accent" data-step-trigger="vit">聚焦 4 流 mHC 与 ViT 隔离</button>
+      <span class="t-label">点选组件看为何存在：</span>
+      <button type="button" class="step-btn accent is-active" data-step-trigger="overview">全局协同流向</button>
+      <button type="button" class="step-btn accent" data-step-trigger="engram">层 1/14 查表（应目标+约束 1/2）</button>
+      <button type="button" class="step-btn accent" data-step-trigger="csa">CSA2 与 4 源 KV（替 ShortConv）</button>
+      <button type="button" class="step-btn accent" data-step-trigger="vit">4 流 mHC + ViT 屏蔽（应约束 3）</button>
       <button type="button" class="step-btn" data-step-next>下一步 →</button>
     </div>
 
-    <div class="grid2" style="grid-template-columns:1.65fr 1fr;align-items:center">
+    <div class="grid2" style="grid-template-columns:1.72fr 1fr;align-items:center">
       <div class="archsvg subcard">
-        <svg viewBox="0 0 1120 500" role="img" aria-label="DeepSeek-V4.1-Flash-1017 架构结构图">
+        <svg viewBox="0 0 980 460" role="img" aria-label="DeepSeek-V4.1-Flash-1017 架构与约束归因图">
           <defs>
             <marker id="arr-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M 0 1 L 9 5 L 0 9 z" fill="#2b2418"/>
@@ -378,122 +386,149 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
             </marker>
           </defs>
 
-          <!-- 左侧多模态输入 -->
+          <!-- 左侧多模态输入与 mHC -->
           <g data-step-node="overview vit">
-            <rect class="nbox alt" x="15" y="60" width="175" height="90" rx="10"/>
-            <text x="102" y="96" font-size="21" text-anchor="middle">32 层 ViT</text>
-            <text class="muted" x="102" y="126" font-size="19" text-anchor="middle">DEAD=-1 掩码</text>
+            <rect class="nbox alt" x="12" y="42" width="184" height="90" rx="10"/>
+            <text x="104" y="80" font-size="22" text-anchor="middle">32 层 ViT</text>
+            <text class="muted" x="104" y="112" font-size="20" text-anchor="middle">DEAD=-1 掩码</text>
           </g>
           <g data-step-node="overview engram vit">
-            <rect class="nbox" x="15" y="205" width="175" height="105" rx="10"/>
-            <text x="102" y="248" font-size="21" text-anchor="middle">词表 Embedding</text>
-            <text class="mono muted" x="102" y="280" font-size="19" text-anchor="middle">129,280 → 5120</text>
+            <rect class="nbox" x="12" y="176" width="184" height="100" rx="10"/>
+            <text x="104" y="216" font-size="22" text-anchor="middle">词表 Embedding</text>
+            <text class="mono muted" x="104" y="250" font-size="20" text-anchor="middle">129,280→5120</text>
           </g>
           <g data-step-node="overview vit">
-            <rect class="nbox hi" x="15" y="365" width="175" height="90" rx="10"/>
-            <text class="accent" x="102" y="404" font-size="21" text-anchor="middle">4 流 mHC 残差</text>
-            <text class="mono muted" x="102" y="434" font-size="19" text-anchor="middle">Sinkhorn-20</text>
+            <rect class="nbox hi" x="12" y="320" width="184" height="90" rx="10"/>
+            <text class="accent" x="104" y="358" font-size="22" text-anchor="middle">4 流 mHC 残差</text>
+            <text class="mono muted" x="104" y="390" font-size="20" text-anchor="middle">Sinkhorn-20</text>
           </g>
 
-          <!-- 中部 前 20 层非对称编码器 CED -->
+          <!-- 中部：20 层因果编码器 -->
           <g data-step-node="overview engram csa">
-            <rect class="nbox soft" x="245" y="30" width="420" height="440" rx="14"/>
-            <text x="455" y="66" font-size="21" text-anchor="middle">Causal Encoder · 前 20 层（L0–L19）</text>
+            <rect class="nbox soft" x="232" y="20" width="372" height="416" rx="14"/>
+            <text x="418" y="54" font-size="21" text-anchor="middle">Causal Encoder · L0–L19</text>
           </g>
 
           <!-- Engram 双层旁路 -->
           <g data-step-node="overview engram">
-            <rect class="nbox hi" x="270" y="96" width="370" height="126" rx="10"/>
-            <text class="accent" x="455" y="134" font-size="21" text-anchor="middle">Engram 静态查表 ×2（Layer 1 &amp; 14）</text>
-            <text x="455" y="168" font-size="19" text-anchor="middle">2–4-gram × 8 头 · 7.68 亿行 FP8</text>
-            <text class="muted" x="455" y="200" font-size="19" text-anchor="middle">总计 196.6B 参数 · 无 ShortConv 写回</text>
+            <rect class="nbox hi" x="250" y="76" width="336" height="126" rx="10"/>
+            <text class="accent" x="418" y="114" font-size="22" text-anchor="middle">Engram ×2（Layer 1 &amp; 14）</text>
+            <text x="418" y="150" font-size="20" text-anchor="middle">2–4-gram × 8 头 · 7.68 亿行</text>
+            <text class="muted" x="418" y="182" font-size="20" text-anchor="middle">196.6B FP8 · 无 ShortConv</text>
           </g>
 
           <!-- CED CSA2 + 384+1 MoE -->
           <g data-step-node="overview csa">
-            <rect class="nbox" x="270" y="256" width="370" height="106" rx="10"/>
-            <text x="455" y="298" font-size="21" text-anchor="middle">CSA2 压缩稀疏注 + 384+1 MoE</text>
-            <text class="muted" x="455" y="332" font-size="19" text-anchor="middle">局部窗 w=128 · Top-6 + 1 Shared</text>
+            <rect class="nbox" x="250" y="224" width="336" height="98" rx="10"/>
+            <text x="418" y="264" font-size="22" text-anchor="middle">CSA2 + 384+1 MoE</text>
+            <text class="muted" x="418" y="298" font-size="20" text-anchor="middle">w=128 · Top-6 + 1 Shared</text>
           </g>
           <g data-step-node="overview csa">
-            <rect class="nbox alt" x="270" y="388" width="370" height="58" rx="8"/>
-            <text class="alt" x="455" y="424" font-size="19" text-anchor="middle">4 源全局 KV 缓存：Layer [2, 8, 14, 20]</text>
+            <rect class="nbox alt" x="250" y="344" width="336" height="72" rx="8"/>
+            <text class="alt" x="418" y="388" font-size="20" text-anchor="middle">编码器 KV 源：Layer 2, 8, 14</text>
           </g>
 
-          <!-- 右侧 后 20 层解码器 + 3 层 DSpark -->
+          <!-- 右侧：20 层解码器 + L20 第四源 + 3 层 DSpark -->
           <g data-step-node="overview csa vit">
-            <rect class="nbox" x="715" y="95" width="210" height="270" rx="12"/>
-            <text x="820" y="145" font-size="23" text-anchor="middle">Decoder 20 层</text>
-            <text class="muted" x="820" y="185" font-size="20" text-anchor="middle">L20 – L39</text>
-            <text x="820" y="232" font-size="20" text-anchor="middle">共享 4 源 KV</text>
-            <text class="muted" x="820" y="266" font-size="19" text-anchor="middle">跨层交叉注意力</text>
-            <text class="mono accent" x="820" y="310" font-size="19" text-anchor="middle">1M ctx · YaRN 16×</text>
-            <text class="muted" x="820" y="342" font-size="19" text-anchor="middle">FP8 Linear / FP4 MoE</text>
+            <rect class="nbox" x="636" y="70" width="184" height="304" rx="12"/>
+            <text x="728" y="116" font-size="22" text-anchor="middle">Decoder L20–39</text>
+            <text class="alt" x="728" y="154" font-size="20" text-anchor="middle">L20 兼第 4 源 KV</text>
+            <text x="728" y="200" font-size="20" text-anchor="middle">共享压缩 KV</text>
+            <text class="muted" x="728" y="236" font-size="20" text-anchor="middle">因果稀疏 CSA2</text>
+            <text class="mono accent" x="728" y="286" font-size="20" text-anchor="middle">1M · YaRN 16×</text>
+            <text class="muted" x="728" y="324" font-size="20" text-anchor="middle">FP8 / FP4 专家</text>
           </g>
           <g data-step-node="overview">
-            <rect class="nbox hi" x="965" y="160" width="140" height="140" rx="10"/>
-            <text class="accent" x="1035" y="218" font-size="21" text-anchor="middle">3 层 DSpark</text>
-            <text class="muted" x="1035" y="254" font-size="19" text-anchor="middle">多步预测 MTP</text>
+            <rect class="nbox hi" x="850" y="150" width="122" height="140" rx="10"/>
+            <text class="accent" x="911" y="206" font-size="21" text-anchor="middle">3 层</text>
+            <text class="accent" x="911" y="238" font-size="21" text-anchor="middle">DSpark</text>
+            <text class="muted" x="911" y="272" font-size="20" text-anchor="middle">MTP 预测</text>
           </g>
 
-          <!-- 动态流向连线（留足边距不压字） -->
-          <path data-step-node="overview engram vit" class="edge accent flow-dash" d="M 190 250 L 266 175" marker-end="url(#arr-acc)"/>
-          <path data-step-node="overview vit" class="edge alt flow-dash" d="M 190 105 L 266 142" marker-end="url(#arr-alt)"/>
-          <path data-step-node="overview vit" class="edge accent" d="M 190 410 L 241 410" marker-end="url(#arr-acc)"/>
-          <path data-step-node="overview engram csa" class="edge flow-dash" d="M 455 222 L 455 252" marker-end="url(#arr-ink)"/>
-          <path data-step-node="overview csa" class="edge alt flow-dash" d="M 640 416 L 711 268" marker-end="url(#arr-alt)"/>
-          <path data-step-node="overview csa vit" class="edge flow-dash" d="M 665 308 L 711 224" marker-end="url(#arr-ink)"/>
-          <path data-step-node="overview" class="edge accent flow-dash" d="M 925 230 L 961 230" marker-end="url(#arr-acc)"/>
+          <!-- 箭头（留足边距） -->
+          <path data-step-node="overview engram vit" class="edge accent flow-dash" d="M 196 226 L 246 156" marker-end="url(#arr-acc)"/>
+          <path data-step-node="overview vit" class="edge alt flow-dash" d="M 196 86 L 246 122" marker-end="url(#arr-alt)"/>
+          <path data-step-node="overview vit" class="edge accent" d="M 196 365 L 228 365" marker-end="url(#arr-acc)"/>
+          <path data-step-node="overview engram csa" class="edge flow-dash" d="M 418 202 L 418 220" marker-end="url(#arr-ink)"/>
+          <path data-step-node="overview csa" class="edge alt flow-dash" d="M 586 380 L 632 230" marker-end="url(#arr-alt)"/>
+          <path data-step-node="overview csa vit" class="edge flow-dash" d="M 604 270 L 632 200" marker-end="url(#arr-ink)"/>
+          <path data-step-node="overview" class="edge accent flow-dash" d="M 820 220 L 846 220" marker-end="url(#arr-acc)"/>
         </svg>
       </div>
 
       <div class="subcard" style="display:flex;flex-direction:column;gap:14px">
         <div data-step-panel="overview">
-          <span class="badge solid">全局骨架</span>
-          <h3 class="t-h3" style="margin-top:10px">非对称 CED + 双层查表</h3>
-          <p class="t-body" style="margin-top:10px">全网共 40 层（20 编码 + 20 解码），文本端 748.6B。Pre-fill 激活约 8B，生成约 16B。</p>
-          <p class="t-micro" style="margin-top:12px">原始 ID 直通第 1/14 层 Engram，与 ViT 隔离后并入 4 流残差。</p>
+          <span class="badge solid">整体骨架 · 文本 748.6B</span>
+          <h3 class="t-h3" style="margin-top:10px">非对称 CED + 双层静态旁路</h3>
+          <p class="t-body" style="margin-top:10px">骨干 40 层（20 编码 + 20 解码），公开 Pre-fill 激活约 8B / 生成约 16B。输入 ID 提前预取静态表。</p>
+          <p class="t-micro" style="margin-top:12px">模块分工：编码器层 1/14 承担静态记忆，后段聚焦复杂解码推理。</p>
         </div>
         <div data-step-panel="engram" hidden>
-          <span class="badge bad">静态记忆核</span>
-          <h3 class="t-h3" style="margin-top:10px">为什么只放在第 1 和第 14 层？</h3>
-          <p class="t-body" style="margin-top:10px">两张表全部位于前 20 层编码器（第 1 与 14 层），浅层直补静态实体，不拖累解码器。</p>
-          <p class="t-micro" style="margin-top:12px">层 1：384,006,168 行 · 层 14：384,016,682 行（合计 196.6B 参数）。</p>
+          <span class="badge bad">对应目标 + 约束 1 / 2</span>
+          <h3 class="t-h3" style="margin-top:10px">为何只挂前 20 层的第 1 与 14 层？</h3>
+          <p class="t-body" style="margin-top:10px">在编码前段就把 196.6B 静态实体一次性取出写回残差，避免拖到 L20–39 解码期消耗宝贵 KV 与带宽。</p>
+          <p class="t-micro" style="margin-top:12px">保持原生 FP8（183.1 GiB），命中后才反量化，守住显存红线。</p>
         </div>
         <div data-step-panel="csa" hidden>
-          <span class="badge warn">长文省显存</span>
-          <h3 class="t-h3" style="margin-top:10px">CSA2 与 4 源 KV 协同</h3>
-          <p class="t-body" style="margin-top:10px">仅编码器第 [2, 8, 14, 20] 层存全局 KV，供解码器复用，搭配 128 窗支撑 1M 上下文。</p>
-          <p class="t-micro" style="margin-top:12px">取消 ShortConv 后，由层 14 附近的 CSA2 接力处理局部组合。</p>
+          <span class="badge warn">对应时延与长文约束</span>
+          <h3 class="t-h3" style="margin-top:10px">为何能砍掉论文中的 ShortConv？</h3>
+          <p class="t-body" style="margin-top:10px">全网由 L2, 8, 14, 20 四层充当全局压缩 KV 源，配合 w=128 CSA2 局部窗直接吸收相邻词序，不再额外加卷积延迟。</p>
+          <p class="t-micro" style="margin-top:12px">说明：L2, 8, 14 属编码器，L20 为解码器首层，共同服务共享压缩 KV。</p>
         </div>
         <div data-step-panel="vit" hidden>
-          <span class="badge good">多模态安全阀</span>
-          <h3 class="t-h3" style="margin-top:10px">4 流 mHC + ViT 硬隔离</h3>
-          <p class="t-body" style="margin-top:10px">4 路隐藏态按 Sinkhorn 混合；遇到 32 层 ViT 图像块时，写入 DEAD=-1 截断 N-gram 滑窗。</p>
-          <p class="t-micro" style="margin-top:12px">随后 forward() 用 token_mask 将对应位置门控直接归零。</p>
+          <span class="badge good">对应约束 3 · 隔离噪声</span>
+          <h3 class="t-h3" style="margin-top:10px">4 流 mHC + ViT 硬屏蔽</h3>
+          <p class="t-body" style="margin-top:10px">遇到 32 层 ViT 图像块时注入 DEAD=-1 截断 N-gram 键生成，并在前向门控阶段用 token_mask 强制清零。</p>
+          <p class="t-micro" style="margin-top:12px">四流各自计算点积门控 alpha，彻底防止图像像素与哈希碰撞污染文本。</p>
         </div>
       </div>
     </div>
   </div>
-  <div class="pageno">3 / 13</div>
+  <div class="pageno">4 / 13</div>
 </section>
 
-<!-- 页 4 · 动画步进例题演示（真实中英文 & 多模态实例逐帧跑通 Engram） -->
+<!-- 页 5 · 阶段 6b：论文原图 Figure 1（内部门控如何消除 OverEncoding 冲突代价） -->
+<section class="slide" id="paper-arch">
+  <header class="rv"><h2 class="t-title">从论文 Figure 1 看微观机制：为什么每个子模块必须同时存在</h2></header>
+  <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
+    <div class="figframe blend rv">
+      <img src="images/arch.png" alt="Engram 论文 Figure 1 原图：2/3-gram 哈希查表与条件门控写入残差">
+      <p class="figcap">图 1 · 来源：<a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer">deepseek-ai/Engram</a>（Apache-2.0），见 <a href="https://arxiv.org/abs/2601.07372" rel="noopener noreferrer">arXiv:2601.07372</a>。</p>
+    </div>
+    <div class="card rv" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px">
+      <div class="t-label">消解“引入新代价”的两道阀门</div>
+      <div class="subcard">
+        <h3 class="t-h3">1. 多头素数哈希（对付撞桶概率）</h3>
+        <p class="t-body" style="margin-top:6px">同个 2-gram / 3-gram 同步过 h 组互异素数桶，把单个桶碰巧撞车的概率指数摊薄。</p>
+      </div>
+      <div class="subcard">
+        <h3 class="t-h3">2. 上下文点积门控（对付误触发）</h3>
+        <p class="t-body" style="margin-top:6px">查出来的表征必须先跟 Input Hidden 点积过门：语境对得上才放行，对不上当场归零。</p>
+      </div>
+      <div class="inset">
+        <p class="t-micro">直觉：Hash 管 O(1) 找得到，Gate 管找错了不沾身，这才真正超越 OverEncoding。</p>
+      </div>
+    </div>
+  </div>
+  <div class="pageno">5 / 13</div>
+</section>
+
+<!-- 页 6 · 阶段 6c：五步实例动画演练（具体双语与视觉占位轨迹） -->
 <section class="slide" id="walkthrough">
-  <header class="rv"><h2 class="t-title">实例动画演练：一句话如何走完折叠、哈希、门控与残差写回</h2></header>
+  <header class="rv"><h2 class="t-title">实例动画演练：一句话如何步步过关并甩掉多模态干扰</h2></header>
   <div class="stepper card rv" id="example-stepper">
     <div class="step-bar">
       <span class="t-label">步进演示：</span>
       <button type="button" class="step-btn accent is-active" data-step-trigger="s1">1. 词表折叠</button>
       <button type="button" class="step-btn accent" data-step-trigger="s2">2. 滑窗与 DEAD 哨兵</button>
-      <button type="button" class="step-btn accent" data-step-trigger="s3">3. 8 头素数哈希查表</button>
-      <button type="button" class="step-btn accent" data-step-trigger="s4">4. 4 流点积门控 alpha</button>
-      <button type="button" class="step-btn accent" data-step-trigger="s5">5. 掩码清零写回残差</button>
+      <button type="button" class="step-btn accent" data-step-trigger="s3">3. 8 头哈希查表</button>
+      <button type="button" class="step-btn accent" data-step-trigger="s4">4. 4 流门控 alpha</button>
+      <button type="button" class="step-btn accent" data-step-trigger="s5">5. 掩码清零累加</button>
       <button type="button" class="step-btn" data-step-next>播放下一步 →</button>
     </div>
 
     <div class="subcard" style="display:flex;flex-direction:column;gap:16px">
-      <div class="t-label">追踪样例（双语与视觉占位）：[ "中国" , "四大" , "发明" , "DeepSeek" , &lt;img&gt; , "V4.1" ]</div>
+      <div class="t-label">追踪样例（双语与图像块）：[ "中国" , "四大" , "发明" , "DeepSeek" , &lt;img&gt; , "V4.1" ]</div>
       <div class="token-strip" data-step-panel="s1" style="display:grid;grid-template-columns:repeat(6, minmax(0,1fr));gap:14px">
         <div class="tok" style="--heat:.15"><span class="tok-txt">中国</span><span class="tok-sub">id:8102 → 8102</span></div>
         <div class="tok" style="--heat:.15"><span class="tok-txt">四大</span><span class="tok-sub">id:4419 → 4419</span></div>
@@ -548,109 +583,63 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
     <div class="inset">
       <div data-step-panel="s1" style="display:flex;align-items:center;gap:18px">
-        <span class="badge solid">Step 1 · O(1) 映射预处理</span>
-        <p class="t-body">把写法差异先压平 23.35%：NFKC 与大小写折叠将变形并入同 ID，压低无效哈希桶碎片。</p>
+        <span class="badge solid">为何要词表折叠</span>
+        <p class="t-body">压缩 -23.35% 规范词表，把大小写、全半角变形合并进同 ID，大幅减少冷门冗余桶。</p>
       </div>
       <div data-step-panel="s2" hidden style="display:flex;align-items:center;gap:18px">
-        <span class="badge bad">Step 2 · 边界安全截断</span>
-        <p class="t-body">防止跨图像拼接假 N-gram：V4.1 在视觉边界插入 -1，含负值键一律跳过。</p>
+        <span class="badge bad">为何插 DEAD 哨兵</span>
+        <p class="t-body">严守约束 3：防止跨越图像像素拼出假 N-gram；V4.1 凡见负值键一律跳过不查。</p>
       </div>
       <div data-step-panel="s3" hidden style="display:flex;align-items:center;gap:18px">
-        <span class="badge warn">Step 3 · 内存友好检索</span>
-        <p class="t-body">2/3/4-gram 各用 8 个互异素数索引 7.68 亿行 FP8 表，命中后经 wkv 输出 4K + 1V。</p>
+        <span class="badge warn">为何查中才反量化</span>
+        <p class="t-body">严守约束 2：仅取回命中 FP8 行局部还原，经单矩阵 wkv 一次性切出 4 路 Key + 1 路 Value。</p>
       </div>
       <div data-step-panel="s4" hidden style="display:flex;align-items:center;gap:18px">
-        <span class="badge solid">Step 4 · 消除哈希撞桶噪声</span>
-        <p class="t-body">四路 mHC 隐藏态分别与 Key 做 RMSNorm 点积，如“发明”结尾处门控强激活。</p>
+        <span class="badge solid">为何用 RMS 点积门控</span>
+        <p class="t-body">消化第 3 页撞桶代价：只有“发明”等实体末尾与隐藏态吻合，alpha 才飙至 0.9+。</p>
       </div>
       <div data-step-panel="s5" hidden style="display:flex;align-items:center;gap:18px">
-        <span class="badge good">Step 5 · 生产简化落盘</span>
-        <p class="t-body">token_mask 先把 &lt;img&gt; 门控置 0，再直接累加写回残差，交由 CSA2 接手局部上下文。</p>
+        <span class="badge good">为何敢删 ShortConv</span>
+        <p class="t-body">token_mask 归零图像位后直接写入残差，后续紧邻的 w=128 CSA2 顺手完成局部组合。</p>
       </div>
     </div>
   </div>
-  <div class="pageno">4 / 13</div>
-</section>
-
-<!-- 页 5 · 论文原图 Figure 6（门控热力实例验证） -->
-<section class="slide" id="paper-case">
-  <header class="rv"><h2 class="t-title">论文门控实测证明：Engram 总在实体和固定短语末尾强激活</h2></header>
-  <div class="grid2" style="grid-template-columns:1.45fr 1fr;align-items:stretch">
-    <div class="figframe blend rv">
-      <img src="images/case.png" alt="Engram 论文 Figure 6 原图：中英文序列门控标量 alpha 热力可视化">
-      <p class="figcap">图 2 · 来源：<a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer">deepseek-ai/Engram</a> Figure 6（Apache-2.0）。颜色越深代表门控标量 alpha 越接近 1.0。</p>
-    </div>
-    <div class="card rv" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px">
-      <div class="t-label">如何读懂这组官方热力实例</div>
-      <div class="subcard">
-        <h3 class="t-h3">1. 后缀 N-gram 的词尾规律</h3>
-        <p class="t-body" style="margin-top:6px">“Alexander the Great”、“Diana, Princess of Wales”均在末词标红——读完末尾才凑齐完整键。</p>
-      </div>
-      <div class="subcard">
-        <h3 class="t-h3">2. 中文成语与专名同样精准</h3>
-        <p class="t-body" style="margin-top:6px">中文“造纸术、指南针、印刷术”及“张仲景 / 医圣 / 《伤寒杂病论》”末字激活最强。</p>
-      </div>
-      <div class="inset">
-        <p class="t-micro">结论：一旦门控发现语境不符，alpha 自动趋近 0，阻断撞桶噪声。</p>
-      </div>
-    </div>
-  </div>
-  <div class="pageno">5 / 13</div>
-</section>
-
-<!-- 页 6 · 简表（27B 对齐评测全览） -->
-<section class="slide" id="bench-27b">
-  <header class="rv"><h2 class="t-title">在 26.7B 等总参、3.8B 等激活约束下，Engram 各项评测全线压过 MoE 基线</h2></header>
-  <div class="card rv">
-    <div class="dtable" data-cols="4">
-      <div class="th"><div>评测任务</div></div><div class="th"><div>MoE-27B 基线</div></div><div class="th"><div>Engram-27B</div></div><div class="th"><div>净提升（百分点）</div></div>
-      <div><div>MMLU（综合知识）</div></div><div><div>57.4</div></div><div><div>60.4</div></div><div><div>+3.0</div></div>
-      <div><div>CMMLU（中文知识）</div></div><div><div>57.9</div></div><div><div>61.9</div></div><div><div>+4.0</div></div>
-      <div><div>BBH（复杂多步推理）</div></div><div><div>50.9</div></div><div><div>55.9</div></div><div><div>+5.0</div></div>
-      <div><div>ARC-Challenge（科学推理）</div></div><div><div>70.1</div></div><div><div>73.8</div></div><div><div>+3.7</div></div>
-      <div><div>HumanEval（代码生成）</div></div><div><div>37.8</div></div><div><div>40.8</div></div><div><div>+3.0</div></div>
-      <div><div>MATH（数学解题）</div></div><div><div>28.3</div></div><div><div>30.7</div></div><div><div>+2.4</div></div>
-      <div><div>Multi-Query NIAH（长文检索）</div></div><div><div>84.2</div></div><div><div>97.0</div></div><div><div>+12.8</div></div>
-    </div>
-  </div>
-  <div class="anno rv">口径：两组共享 26.7B 总参、3.8B 每 token 激活与 262B 训练量。代码与数学同步涨分，说明浅层减负直接利好通用推理。</div>
   <div class="pageno">6 / 13</div>
 </section>
 
-<!-- 页 7 · 论文原图 Figure 3（U 型稀疏分配律与无限内存扩展律） -->
-<section class="slide" id="scaling">
-  <header class="rv"><h2 class="t-title">稀疏配比存在清晰 U 型最优区间，且记忆槽扩到千万级仍保持对数下降</h2></header>
-  <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:start">
+<!-- 页 7 · 阶段 6d：论文原图 Figure 6（中英文门控激活真例验证） -->
+<section class="slide" id="paper-case">
+  <header class="rv"><h2 class="t-title">门控行为验证（Figure 6）：Engram 总在实体与成语结尾词元放行</h2></header>
+  <div class="grid2" style="grid-template-columns:1.45fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
-      <img src="images/scaling_law.png" alt="Engram 论文 Figure 3 原图：U 型分配率曲线与嵌入槽位对数扩展律">
-      <p class="figcap">图 3 · 来源：<a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer">deepseek-ai/Engram</a> Figure 3。左图 rho 为 MoE 路由占比，Engram 即 1 - rho。右图展示槽位对数扩展律。</p>
+      <img src="images/case.png" alt="Engram 论文 Figure 6 原图：中英文序列门控标量 alpha 热力可视化">
+      <p class="figcap">图 2 · 来源：<a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer">deepseek-ai/Engram</a> Figure 6（Apache-2.0）。红色越深说明 alpha 越近 1.0。</p>
     </div>
-    <div class="card rv" style="display:flex;flex-direction:column;gap:14px">
+    <div class="card rv" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px">
+      <div class="t-label">这组热力图证明了什么设计预设</div>
       <div class="subcard">
-        <div class="t-label">最优稀疏分配区（左图）</div>
-        <div class="t-readout" style="margin-top:4px">20%–25%</div>
-        <p class="t-micro">MoE 占比 rho 落在 75%–80%，对应 Engram 占 20%–25%。两条 FLOPs 曲线均在此取最低 Loss。</p>
+        <h3 class="t-h3">1. 后缀 N-gram 的词尾规律</h3>
+        <p class="t-body" style="margin-top:6px">“Alexander the Great”、“Diana, Princess of Wales”均在末词深红：读完结尾才凑齐键。</p>
       </div>
       <div class="subcard">
-        <div class="t-label">27B 对应切分方案</div>
-        <div class="t-readout" style="margin-top:4px">72 → 55 专家</div>
-        <p class="t-micro">划出 5.7B 给 Engram 查表，在相同 3.8B 激活算力下全项反超 72 专家纯 MoE。</p>
+        <h3 class="t-h3">2. 中文专名同样只在末字激亮</h3>
+        <p class="t-body" style="margin-top:6px">“造纸术、指南针、印刷术”及“张仲景 / 医圣 / 《伤寒杂病论》”末字呈现强门控。</p>
       </div>
       <div class="inset">
-        <p class="t-micro">口径桥接：20%–25% 是稀疏配比。按 V4.1 文本端 748.6B 总参算，196.6B 表占 26.3%。</p>
+        <p class="t-micro">反证验证：普通介词、连接词 alpha 维持在低值，不干扰骨干动态注意力。</p>
       </div>
     </div>
   </div>
   <div class="pageno">7 / 13</div>
 </section>
 
-<!-- 页 8 · 代码窗（model.py 交互行高亮解剖） -->
+<!-- 页 8 · 阶段 6e：从演示走向 V4.1-Flash-1017 生产源码（演进与裁剪交互高亮） -->
 <section class="slide" id="prod-code">
-  <header class="rv"><h2 class="t-title">V4.1-Flash-1017 生产代码砍掉 ShortConv，改为融合投影与图像掩码</h2></header>
+  <header class="rv"><h2 class="t-title">从开源 Demo 走向 V4.1 生产代码：为延迟与多模态做的 4 项硬裁剪</h2></header>
   <div class="stepper rv" id="code-stepper">
     <div class="codewin">
       <div class="dots"><i class="dot r"></i><i class="dot y"></i><i class="dot g"></i></div>
-<pre><span class="cm"># DeepSeek-V4.1-Flash-1017 (model.py · hc_mult=4)</span>
+<pre><span class="cm"># DeepSeek-V4.1-Flash-1017 (inference/model.py · hc_mult=4)</span>
 <span class="kw">class</span> <span class="cls">Engram</span>(nn.Module):
     <span class="kw">def</span> <span class="fn">forward</span>(self, x, hash_ids, token_mask=<span class="kw">None</span>):
 <span class="code-line step-node" data-step-node="c1 c2">        kv = self.<span class="fn">wkv</span>(self.<span class="fn">embed</span>(hash_ids).flatten(-<span class="num">2</span>))</span>
@@ -675,233 +664,179 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
         <button type="button" class="step-btn accent" data-step-trigger="c4">4. 图像掩码</button>
       </div>
       <div class="inset" data-step-panel="c1">
-        <h3 class="t-h3">1. 查表层常驻原生 FP8</h3>
-        <p class="t-body" style="margin-top:8px">embed() 按行分片取回 FP8 权重后，仅在命中行上按 128 块比例缩放反量化，省掉半数常驻显存。</p>
+        <h3 class="t-h3">1. 查表层常驻原生 FP8（回扣约束 2 显存）</h3>
+        <p class="t-body" style="margin-top:8px">embed() 按行分片取回 FP8 权重后，仅对命中行按块反量化，避免 196.6B 表以 BF16 常驻。</p>
       </div>
       <div class="inset" data-step-panel="c2" hidden>
-        <h3 class="t-h3">2. 单矩阵 wkv 一次出 4 路 Key + 1 路 Value</h3>
-        <p class="t-body" style="margin-top:8px">hc_mult = 4（对应 4 流 mHC），直接切片切出 4 组流专属 Key 和 1 份广播共享 Value。</p>
+        <h3 class="t-h3">2. 单矩阵 wkv 一次出 4 路 Key + 1 路 Value（回扣计算开销）</h3>
+        <p class="t-body" style="margin-top:8px">把论文中的多路分立线性投影压成一次矩阵乘，再沿最后一维切给 4 流 mHC 隐藏态。</p>
       </div>
       <div class="inset" data-step-panel="c3" hidden>
-        <h3 class="t-h3">3. 直接累加残差，彻底移除 ShortConv</h3>
-        <p class="t-body" style="margin-top:8px">砍掉论文 Demo 中的短卷积及残差同步开销，局部语义交由前后紧邻的 128 窗 CSA2 吸收。</p>
+        <h3 class="t-h3">3. 删去 ShortConv 直接累加残差（回扣推理延迟）</h3>
+        <p class="t-body" style="margin-top:8px">省掉跨序列卷积同步与额外内核启动，局部上下文由前后层 w=128 CSA2 顺手吸收。</p>
       </div>
       <div class="inset" data-step-panel="c4" hidden>
-        <h3 class="t-h3">4. 新增 token_mask 屏蔽视觉区</h3>
-        <p class="t-body" style="margin-top:8px">32 层 ViT 输入位置传 False，直接将 4 路 gate 置零，保证多模态输入零交叉污染。</p>
+        <h3 class="t-h3">4. 新增 token_mask 屏蔽视觉区（回扣约束 3）</h3>
+        <p class="t-body" style="margin-top:8px">32 层 ViT 图像位置传 False，配合 engram.py 的 DEAD=-1 彻底锁死非文本查表入口。</p>
       </div>
-      <p class="t-mono-md" style="margin-top:auto">DeepSeek-V4.1-Flash-1017 inference model.py</p>
     </div>
   </div>
   <div class="pageno">8 / 13</div>
 </section>
 
-<!-- 页 9 · 简表（Demo vs V4.1-Flash-1017 配置参数对照） -->
+<!-- 页 9 · 阶段 6f：从论文 Demo 到 V4.1 配置演化详单 -->
 <section class="slide" id="config-diff">
-  <header class="rv"><h2 class="t-title">从演示代码到 V4.1-Flash-1017，查表扩展至 4-gram 且单头维度放大四倍</h2></header>
+  <header class="rv"><h2 class="t-title">参数落地全对照：从 Demo 扩至 4-gram，文本端承载 26.3% 静态参数</h2></header>
   <div class="card rv">
     <div class="dtable" data-cols="3">
-      <div class="th"><div>配置字段</div></div><div class="th"><div>论文开源 Demo</div></div><div class="th"><div>DeepSeek-V4.1-Flash-1017</div></div>
-      <div><div>挂载层位（layer_ids）</div></div><div><div>[1, 15]（共 30 层）</div></div><div><div>[1, 14]（共 40 层 CED，均落于前 20 层编码器）</div></div>
-      <div><div>N-gram 上限</div></div><div><div><span style="white-space:nowrap">max_ngram_size = 3</span>（2 / 3-gram）</div></div><div><div><span style="white-space:nowrap">engram_max_ngram_size = 4</span>（2–4-gram）</div></div>
-      <div><div>头数与单头维度</div></div><div><div>8 头 × 64 维 = 每档 512 维</div></div><div><div>3 档 N-gram × 8 头 × 256 维 = 24 列共 6,144 维</div></div>
-      <div><div>哈希素数基数</div></div><div><div>每档约 64.6 万（129,280 × 5）</div></div><div><div>基数 16,000,000（按头依次递取素数）</div></div>
-      <div><div>双层总行数与表参数</div></div><div><div>按词表比例缩放示例</div></div><div><div>合计 768,022,850 行（196.6B 参数）</div></div>
-      <div><div>局部序列短卷积</div></div><div><div>ShortConv（kernel=4, dilation=3）</div></div><div><div>已移除。依赖前后层 128 窗 CSA2 处理局部关系</div></div>
+      <div class="th"><div>配置维度</div></div><div class="th"><div>论文开源 Demo（engram_demo_v1）</div></div><div class="th"><div>DeepSeek-V4.1-Flash-1017 生产实现</div></div>
+      <div><div>挂载层位（layer_ids）</div></div><div><div>[1, 15]（共 30 层）</div></div><div><div>[1, 14]（40 层 CED 中前 20 编码器；196.6B / 748.6B 占 26.3%）</div></div>
+      <div><div>N-gram 阶数上限</div></div><div><div><span style="white-space:nowrap">max_ngram_size = 3</span>（2 / 3-gram）</div></div><div><div><span style="white-space:nowrap">engram_max_ngram_size = 4</span>（2–4-gram，增强长短语覆盖）</div></div>
+      <div><div>头数与拼接维度</div></div><div><div>8 头 × 64 维 = 每档 512 维</div></div><div><div>3 档 N-gram × 8 头 × 256 维 = 24 列共 6,144 维</div></div>
+      <div><div>哈希素数基数</div></div><div><div>每档约 64.6 万（129,280 × 5）</div></div><div><div>engram_vocab_size = 16,000,000（按头递增素数）</div></div>
+      <div><div>总行数与多步协同</div></div><div><div>按词表比例示例</div></div><div><div>双表 768,022,850 行；搭配 384+1 MoE、3 层 DSpark 与 32 层 ViT</div></div>
+      <div><div>局部序列短卷积</div></div><div><div>ShortConv（k=4, d=3）</div></div><div><div>已移除（交由 128 窗 CSA2 + 4 源全局 KV 处理局部关系）</div></div>
     </div>
   </div>
-  <div class="anno rv">来源：逐字段核对自 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/config.json" rel="noopener noreferrer" style="white-space:nowrap">官方 config.json</a> 与 GitHub 演示实现。</div>
+  <div class="anno rv">来源：逐字段核对 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/config.json" rel="noopener noreferrer" style="white-space:nowrap">config.json</a>。文本端 748.6B = 552B MoE 骨干 + 196.6B 静态表（含 ViT 整网约 763B）。</div>
   <div class="pageno">9 / 13</div>
 </section>
 
-<!-- 页 10 · 构成（V4.1-Flash-1017 整网结构占比） -->
-<section class="slide" id="v41-anatomy">
-  <header class="rv"><h2 class="t-title">V4.1-Flash-1017：MoE 骨干占 73.7%，Engram 静态表占 26.3%</h2></header>
-  <div class="card rv">
-    <div class="t-label">文本端 748.6B 参数构成（552B MoE 骨干加 196.6B 静态表，不含 32 层 ViT）</div>
-    <div class="stack" style="margin-top:12px">
-      <i class="sw a" style="--v:26.3"></i><i class="sw b" style="--v:73.7"></i>
+<!-- 页 10 · 阶段 7a：受控验证（Figure 3 U 型分配规律与扩展率 + 副作用核验） -->
+<section class="slide" id="scaling">
+  <header class="rv"><h2 class="t-title">受控实验验证：20%–25% 配比最优，且主存异步卸载损耗低于 3%</h2></header>
+  <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
+    <div class="figframe blend rv">
+      <img src="images/scaling_law.png" alt="Engram 论文 Figure 3 原图：U 型分配率曲线与嵌入槽位对数扩展律">
+      <p class="figcap">图 3 · 来源：<a href="https://github.com/deepseek-ai/Engram" rel="noopener noreferrer">deepseek-ai/Engram</a>（Apache-2.0）。左图 rho 为 MoE 占比，Engram 即 1 - rho。</p>
     </div>
-    <div class="legend" style="grid-template-columns:repeat(2, minmax(0,1fr))">
-      <div><i class="sw a"></i><span class="t-body">Engram 静态记忆表&nbsp;26.3%（196.6B 参数 · 第 1/14 层）</span></div>
-      <div><i class="sw b"></i><span class="t-body">MoE 骨干网络&nbsp;73.7%（552B 参数 · 40 层 384+1 专家）</span></div>
-    </div>
-    <div class="grid3" style="margin-top:26px">
-      <div class="inset">
-        <div class="t-label">非对称 CED 骨干</div>
-        <h3 class="t-h3" style="margin-top:4px">20 因果编码器 + 20 解码器</h3>
-        <p class="t-micro" style="margin-top:6px">Pre-fill 激活约 8B · 生成激活约 16B</p>
+    <div class="card rv" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px">
+      <div class="subcard">
+        <div class="t-label">稀疏最优配比（2e20 / 6e20 FLOPs）</div>
+        <div class="t-readout" style="margin-top:4px">20%–25%</div>
+        <p class="t-micro">27B 实验把 72 路由专家减至 55 个，匀出 5.7B 给 Engram，Loss 远低于纯 MoE。</p>
+      </div>
+      <div class="subcard">
+        <div class="t-label">副作用与代价核验（约束 2）</div>
+        <div class="t-readout" style="margin-top:4px">&lt;&nbsp;3% 损耗</div>
+        <p class="t-micro">论文测得全量静态表卸载至 CPU 内存并异步预取，端到端吞吐降幅不到 3%。</p>
       </div>
       <div class="inset">
-        <div class="t-label">混合压缩稀疏注意力</div>
-        <h3 class="t-h3" style="margin-top:4px">128 窗 CSA2 + 4 源全局 KV</h3>
-        <p class="t-micro" style="margin-top:6px">上下文 1M · YaRN 倍率 16</p>
-      </div>
-      <div class="inset">
-        <div class="t-label">原生多流与多步预测</div>
-        <h3 class="t-h3" style="margin-top:4px">4 流 mHC + 3 层 DSpark</h3>
-        <p class="t-micro" style="margin-top:6px">FP8 线性权重 + FP4 MoE 专家</p>
+        <p class="t-micro">口径桥接：20%–25% 是稀疏内部配比；V4.1 占文本端 748.6B 总参为 26.3%。</p>
       </div>
     </div>
   </div>
-  <div class="anno rv">口径：552B 骨干加 196.6B 静态表共 748.6B。若计入 32 层 ViT、对齐器与预测头，整网约 763B。</div>
   <div class="pageno">10 / 13</div>
 </section>
 
-<!-- 页 11 · 多组对比条（V4.1-Flash-1017 10 月快照实测提升） -->
-<section class="slide" id="v41-eval">
-  <header class="rv"><h2 class="t-title">1017 快照（RL 升级，非 Engram 消融）：终端编码最高再涨 11.1 分</h2></header>
-  <div class="subcard rv" style="display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px 28px;align-items:center">
-    <div class="t-label">Terminal-Bench 4.0（终端实战）</div>
+<!-- 页 11 · 阶段 7b：受控能力改善（27B 对照全线提升 + 严格剔除 1017 RL 混杂项） -->
+<section class="slide" id="eval">
+  <header class="rv"><h2 class="t-title">严格等激活对照：Engram 不仅涨知识，推理与代码同步大涨</h2></header>
+  <div class="subcard rv" style="display:grid;grid-template-columns:380px minmax(0,1fr);gap:18px 28px;align-items:center">
+    <div class="t-label">Multi-Query NIAH（长文多针检索）</div>
     <div>
-      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 31.2</p>
+      <p class="t-micro" style="margin-bottom:4px">MoE-27B 基线 · 84.2（总参 26.7B / 激活 3.8B）</p>
+      <div class="bar base" style="--v:84.2;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">Engram-27B · 97.0（净增 +12.8）</p>
+      <div class="bar" style="--v:97.0;--max:100"></div>
+    </div>
+    <div class="t-label">BBH / ARC-C（复杂推理 · 科学）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">MoE-27B · BBH 50.9 / ARC-C 70.1</p>
+      <div class="bar base" style="--v:50.9;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">Engram-27B · BBH 55.9 (+5.0) / ARC-C 73.8 (+3.7)</p>
+      <div class="bar" style="--v:55.9;--max:100"></div>
+    </div>
+    <div class="t-label">MMLU / CMMLU / HumanEval / MATH</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">MoE-27B · 57.4 / 57.9 / 37.8 / 28.3</p>
+      <div class="bar base" style="--v:57.4;--max:100"></div>
+      <p class="t-micro" style="margin:8px 0 4px">Engram-27B · 60.4(+3.0) / 61.9(+4.0) / 40.8(+3.0) / 30.7(+2.4)</p>
+      <div class="bar" style="--v:60.4;--max:100"></div>
+    </div>
+    <div class="t-label">剔除混杂：V4.1 1017 迭代分（非 Engram）</div>
+    <div>
+      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 → 1017 快照 Terminal-Bench 4.0（RL 提升）</p>
       <div class="bar base" style="--v:31.2;--max:100"></div>
-      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 42.3（+11.1）</p>
+      <p class="t-micro" style="margin:8px 0 4px">42.3（+11.1 · 模型卡注明同架构仅靠 RL 与输出提效）</p>
       <div class="bar" style="--v:42.3;--max:100"></div>
     </div>
-    <div class="t-label">ProgramBench（复杂编程）</div>
-    <div>
-      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 20.3</p>
-      <div class="bar base" style="--v:20.3;--max:100"></div>
-      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 29.1（+8.8）</p>
-      <div class="bar" style="--v:29.1;--max:100"></div>
-    </div>
-    <div class="t-label">Apex Bench v1.1（工程基准）</div>
-    <div>
-      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 64.6</p>
-      <div class="bar base" style="--v:64.6;--max:100"></div>
-      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 72.1（+7.5）</p>
-      <div class="bar" style="--v:72.1;--max:100"></div>
-    </div>
-    <div class="t-label">HLE w/o tools（学科极限）</div>
-    <div>
-      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 36.8</p>
-      <div class="bar base" style="--v:36.8;--max:100"></div>
-      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 42.6（+5.8）</p>
-      <div class="bar" style="--v:42.6;--max:100"></div>
-    </div>
-    <div class="t-label">BabyVision w/ tools（视觉细粒度）</div>
-    <div>
-      <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 · 89.6</p>
-      <div class="bar base" style="--v:89.6;--max:100"></div>
-      <p class="t-micro" style="margin:8px 0 4px">V4.1-Flash-1017 · 92.5（+2.9）</p>
-      <div class="bar" style="--v:92.5;--max:100"></div>
-    </div>
   </div>
-  <div class="anno rv">来源：<a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017" rel="noopener noreferrer" style="white-space:nowrap">Hugging Face 模型卡对比表</a>（MIT 开源）。架构未变，1017 涨分来自强化学习与输出提效。</div>
+  <div class="anno rv">归因严明：前 3 组取自 Engram 论文 262B 词元严格消融；第 4 组单独隔离为 RL 快照收益，绝不混入架构功劳。</div>
   <div class="pageno">11 / 13</div>
 </section>
 
-<!-- 页 12 · 账目卡阵（部署机制与三套口径边界） -->
-<section class="slide" id="ledger">
-  <header class="rv"><h2 class="t-title">工程部署围绕 183.1 GiB 内存卸载展开，同时需严格隔离三套信息口径</h2></header>
+<!-- 页 12 · 阶段 8：目前距离第 1 页目标还有多远（能力缺口与实证盲区） -->
+<section class="slide" id="gaps">
+  <header class="rv"><h2 class="t-title">对照「零代价语义扩容」目标，当前仍在泛化粒度与生产实证存在缺口</h2></header>
   <div class="grid3">
     <div class="subcard rv" style="display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:12px">
         <span class="badge solid">01</span>
-        <h3 class="t-h3">主机内存卸载</h3>
-        <span class="badge good" style="margin-left:auto">已支持</span>
+        <h3 class="t-h3">仅覆局部字面键</h3>
+        <span class="badge bad" style="margin-left:auto">能力缺口</span>
       </div>
-      <p class="t-body" style="margin-top:12px">因哈希仅依赖输入 ID，表可放 CPU RAM 或 mmap。</p>
+      <p class="t-body" style="margin-top:12px">N-gram 只看 2–4 个连续词元。同义长句改写与跨段隐知识，仍要骨干现算。</p>
       <div style="margin-top:auto;padding-top:12px">
-        <p class="t-micro">来源：vLLM / SGLang 集成与论文</p>
-        <p class="t-micro">实测：论文异步预取卸载吞吐损耗 &lt; 3%</p>
+        <p class="t-micro">差距：尚未走向抽象语义记忆</p>
       </div>
     </div>
     <div class="subcard rv" style="display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:12px">
         <span class="badge solid">02</span>
-        <h3 class="t-h3">原生 FP8 表分片</h3>
-        <span class="badge good" style="margin-left:auto">源码确认</span>
+        <h3 class="t-h3">层位与配比手工定</h3>
+        <span class="badge warn" style="margin-left:auto">调优受限</span>
       </div>
-      <p class="t-body" style="margin-top:12px">表按行分片跨卡均摊，查中行后再局部反量化，省掉全集同步。</p>
+      <p class="t-body" style="margin-top:12px">层 [1, 14] 与配比依赖离线先验，难按多领域分布动态重分配容量。</p>
       <div style="margin-top:auto;padding-top:12px">
-        <p class="t-micro">来源：V4.1-Flash-1017 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/inference/model.py" rel="noopener noreferrer">参考代码</a></p>
-        <p class="t-micro">体量：双表原始约 183.1 GiB</p>
+        <p class="t-micro">差距：缺端到端动态预算学习</p>
       </div>
     </div>
     <div class="subcard rv" style="display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:12px">
         <span class="badge solid">03</span>
-        <h3 class="t-h3">视觉序列硬屏蔽</h3>
-        <span class="badge good" style="margin-left:auto">源码确认</span>
+        <h3 class="t-h3">748B 级尚缺公开消融</h3>
+        <span class="badge warn" style="margin-left:auto">证据盲区</span>
       </div>
-      <p class="t-body" style="margin-top:12px">图像占位打上 DEAD 哨兵并阻断移位滑窗，防止像素与文本混算哈希。</p>
+      <p class="t-body" style="margin-top:12px">DeepSeek 未发布 V4.1 关停 Engram 的对照分，且约 8B/16B 激活仅见公开资料。</p>
       <div style="margin-top:auto;padding-top:12px">
-        <p class="t-micro">来源：V4.1 <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/inference/engram.py" rel="noopener noreferrer">哈希实现</a></p>
-        <p class="t-micro">机制：前向门控直接掩码清零</p>
-      </div>
-    </div>
-    <div class="subcard rv" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="badge solid">04</span>
-        <h3 class="t-h3">27B 消融实验口径</h3>
-        <span class="badge good" style="margin-left:auto">论文锁定</span>
-      </div>
-      <p class="t-body" style="margin-top:12px">第 6–7 页的 U 型分配律与涨分表来自 27B 严格对齐对照实验。</p>
-      <div style="margin-top:auto;padding-top:12px">
-        <p class="t-micro">来源：<a href="https://arxiv.org/abs/2601.07372" rel="noopener noreferrer">arXiv:2601.07372</a></p>
-        <p class="t-micro">注意：未发布公开的 V4.1 关停对照分</p>
-      </div>
-    </div>
-    <div class="subcard rv" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="badge solid">05</span>
-        <h3 class="t-h3">1017 与前代区别</h3>
-        <span class="badge warn" style="margin-left:auto">增量快照</span>
-      </div>
-      <p class="t-body" style="margin-top:12px">1017 共用 V4.1-Flash 主干架构，Agent 提分源于后训练与自反馈强化。</p>
-      <div style="margin-top:auto;padding-top:12px">
-        <p class="t-micro">来源：HF 权重说明 · MIT 开源</p>
-        <p class="t-micro">提示：第 11 页对比针对前后两次权重</p>
-      </div>
-    </div>
-    <div class="subcard rv" style="display:flex;flex-direction:column">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span class="badge solid">06</span>
-        <h3 class="t-h3">编码器与解码器激活</h3>
-        <span class="badge warn" style="margin-left:auto">公开口径</span>
-      </div>
-      <p class="t-body" style="margin-top:12px">Pre-fill 约 8B、生成约 16B 为公开文档汇报值，非本地压测实测。</p>
-      <div style="margin-top:auto;padding-top:12px">
-        <p class="t-micro">来源：NeMo / vLLM 配置资料</p>
-        <p class="t-micro">状态：已与 748.6B / 763B 口径分列</p>
+        <p class="t-micro">差距：生产 183.1 GiB 端侧仍受限</p>
       </div>
     </div>
   </div>
   <div class="pageno">12 / 13</div>
 </section>
 
-<!-- 页 13 · 尾页（拍板收口） -->
+<!-- 页 13 · 阶段 9：下一步应该突破什么（近期落盘 + 中长期突破点） -->
 <section class="slide" id="next">
-  <header class="rv"><h2 class="t-title">下一步：请拍板 <span style="white-space:nowrap">DeepSeek-V4.1</span> 与 Engram 的收录范围</h2></header>
+  <header class="rv"><h2 class="t-title">围绕三大缺口，下一步分「近期工程落盘」与「中长期突破」推进</h2></header>
   <div class="card rv" style="display:flex;flex-direction:column;gap:18px">
     <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
       <span class="badge solid">01</span>
       <div style="flex:1;min-width:0">
-        <h3 class="t-h3">Atlas 模型库扩展</h3>
-        <p class="t-body">是否收录 V4.1-Flash-1017 配置，绘制 20+20 CED、CSA2 与层 1/14 结构图。</p>
+        <h3 class="t-h3">近期工程落盘 · Atlas 图谱与混合显存/内存规划</h3>
+        <p class="t-body">收录 V4.1-Flash-1017 20+20 CED、CSA2 与层 1/14 结构，并将静态表从 GPU 显存预算剥离。</p>
       </div>
       <span class="badge warn">待拍板</span>
     </div>
     <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
       <span class="badge solid">02</span>
       <div style="flex:1;min-width:0">
-        <h3 class="t-h3">显存估算器支持静态表卸载</h3>
-        <p class="t-body">是否扩展显存规划器，区分计算主干显存与主机内存可卸载静态表。</p>
+        <h3 class="t-h3">中期算法突破 · 解决缺口 02 与超大规模验证</h3>
+        <p class="t-body">探索随输入难度与领域自适应调度查表层位与 U 型容量分配，补齐百 B 以上直接消融。</p>
       </div>
-      <span class="badge warn">待拍板</span>
+      <span class="badge bad">中期攻关</span>
     </div>
     <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
       <span class="badge solid">03</span>
       <div style="flex:1;min-width:0">
-        <h3 class="t-h3">线上学习笔记入口</h3>
-        <p class="t-body">本报告已搭配论文原图与动画演示归档至学习笔记栏目。口径详见<a href="#ledger">第 12 页</a>。</p>
+        <h3 class="t-h3">长期原理突破 · 解决缺口 01 从字面走向语义查表</h3>
+        <p class="t-body">把局部 2–4-gram 词表哈希升级为可预取的轻量语义键索引，把“静态记忆”扩及同义知识。</p>
       </div>
-      <span class="badge good">已规划</span>
+      <span class="badge bad">长期研究</span>
     </div>
   </div>
-  <div class="anno rv">资料截止日期：2026-11-27。V4.1 配置与代码经 Hugging Face 原件核验，原图与 27B 消融取自 Apache-2.0 Engram 仓库。</div>
+  <div class="anno rv">资料截止日期：2026-11-28。全篇按模式 B（目标→问题→事实×约束→选型取舍→实现归因→受控验证→差距→突破）组织。</div>
   <div class="pageno">13 / 13</div>
 </section>
 
