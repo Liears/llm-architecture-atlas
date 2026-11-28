@@ -2,7 +2,7 @@
 const { title = "LLM Architecture Atlas", active = "catalog" } = Astro.props;
 interface Props {
   title?: string;
-  active?: "catalog" | "concepts" | "compare" | "detail";
+  active?: "catalog" | "concepts" | "compare" | "notes" | "detail";
 }
 ---
 
@@ -272,6 +272,7 @@ interface Props {
           <a href="/llm-architecture-atlas/" class={active === "catalog" ? "active" : ""} data-i18n="nav.catalog">Catalog</a>
           <a href="/llm-architecture-atlas/concepts/" class={active === "concepts" ? "active" : ""} data-i18n="nav.concepts">Concepts</a>
           <a href="/llm-architecture-atlas/compare/zai-org-glm-5-3-flash--vs--convaiinnovations-laya/" class={active === "compare" ? "active" : ""} data-i18n="nav.compare">Compare</a>
+          <a href="/llm-architecture-atlas/notes/" class={active === "notes" ? "active" : ""} data-i18n="nav.notes">Notes</a>
           <a href="/llm-architecture-atlas/changes.xml" data-i18n="nav.changes">RSS</a>
           <a href="https://github.com/Liears/llm-architecture-atlas" rel="noopener noreferrer" data-i18n="nav.source">GitHub</a>
         </nav>
@@ -469,6 +470,18 @@ interface Props {
         flex-wrap: wrap;
         font-size: 0.82rem;
         color: var(--muted);
+      }
+      @media (max-width: 940px) {
+        .topbar-inner {
+          gap: 0.5rem;
+        }
+        .brand-tag {
+          display: none;
+        }
+        .nav a {
+          padding: 0.28rem 0.45rem;
+          font-size: 0.84rem;
+        }
       }
       @media (max-width: 640px) {
         .topbar {

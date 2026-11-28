@@ -1,0 +1,118 @@
+---
+import Base from "../../layouts/Base.astro";
+---
+
+<Base title="Study Notes — LLM Architecture Atlas" active="notes">
+  <section class="notes-head">
+    <p class="eyebrow" data-i18n="notes.eyebrow">Architecture Research Notes</p>
+    <h1 data-i18n="notes.title">Study Notes</h1>
+    <p class="lede" data-i18n="notes.subtitle">
+      Self-contained technical research briefs and hand-drawn engineering decks backed by source code and pinned model configurations.
+    </p>
+  </section>
+
+  <ul class="notes-grid">
+    <li class="note-card">
+      <div class="note-top">
+        <span class="pill pill-state" data-i18n-en="Hand-Drawn Deck · 13 Slides" data-i18n-zh="手绘风单页报告 · 13 页">Hand-Drawn Deck · 13 Slides</span>
+        <span class="note-date mono">2026-11-28</span>
+      </div>
+      <h2>
+        <a
+          href="/llm-architecture-atlas/notes/engram-v41/index.html"
+          data-i18n-en="Engram Conditional Memory & DeepSeek-V4.1-Flash-1017 Engineering Analysis"
+          data-i18n-zh="Engram 条件记忆机制与 DeepSeek-V4.1-Flash-1017 工程落地笔记"
+        >
+          Engram Conditional Memory & DeepSeek-V4.1-Flash-1017 Engineering Analysis
+        </a>
+      </h2>
+      <p
+        class="note-summary"
+        data-i18n-en="Structured via First-Principles 9-step framework: Goal/Constraints, candidate trade-offs, Apache-2.0 paper figures, interactive V4.1 SVG explorer, 5-step walkthrough, controlled 27B eval, and remaining gaps."
+        data-i18n-zh="按「目标→问题→事实×约束→选型取舍→实现归因→受控验证→差距→突破」9 步推演，附论文原图、V4.1 交互 SVG 结构图与 5 步实例动画。"
+      >
+        Structured via First-Principles 9-step framework: Goal/Constraints, candidate trade-offs, Apache-2.0 paper figures, interactive V4.1 SVG explorer, 5-step walkthrough, controlled 27B eval, and remaining gaps.
+      </p>
+      <div class="note-foot">
+        <a class="btn btn-primary" href="/llm-architecture-atlas/notes/engram-v41/index.html" data-i18n="notes.openDeck">Open Hand-Drawn Deck →</a>
+      </div>
+    </li>
+  </ul>
+</Base>
+
+<style>
+  .notes-head {
+    margin-bottom: 1.8rem;
+  }
+  .eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--attention);
+  }
+  .notes-head h1 {
+    margin: 0 0 0.55rem;
+    font-size: 2rem;
+    letter-spacing: -0.025em;
+  }
+  .lede {
+    margin: 0;
+    max-width: 52rem;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .notes-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+    gap: 1.25rem;
+  }
+  .note-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem 1.35rem;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: var(--shadow-sm);
+  }
+  .note-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .note-date {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .note-card h2 {
+    margin: 0;
+    font-size: 1.18rem;
+    line-height: 1.38;
+  }
+  .note-card h2 a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .note-card h2 a:hover {
+    color: var(--attention);
+    text-decoration: underline;
+  }
+  .note-summary {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.58;
+  }
+  .note-foot {
+    margin-top: auto;
+    padding-top: 0.45rem;
+  }
+</style>

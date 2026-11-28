@@ -37,6 +37,7 @@ import { parseCommittedReview, resolveEffectiveReview, reviewLabel, reviewSatisf
 const ROUTES = [
   "/llm-architecture-atlas/",
   "/llm-architecture-atlas/concepts/",
+  "/llm-architecture-atlas/notes/",
   "/llm-architecture-atlas/models/zai-org-glm-5-3-flash/",
   "/llm-architecture-atlas/models/convaiinnovations-laya/",
   "/llm-architecture-atlas/models/openjev-openjev/",
