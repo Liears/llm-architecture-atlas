@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="data-as-of" content="2026-11-28">
 <title>Engram 条件记忆与 DeepSeek-V4.1-Flash-1017 学习笔记</title>
-<link rel="stylesheet" href="fonts/fonts.css?v=43d2c361">
+<link rel="stylesheet" href="fonts/fonts.css?v=b221ef13">
 <style>
 :root {
   --ink:#2b2418;
@@ -62,7 +62,8 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
   font-size:var(--fs-body);
   line-height:1.6;
   color:var(--ink);
-  word-break:keep-all;
+  word-break:normal;
+  line-break:strict;
 }
 .slide + .slide { border-top:2px dashed var(--ink-50); }
 .pageno { position:absolute; right:80px; bottom:30px; font-size:var(--fs-label); color:var(--muted); }
@@ -283,7 +284,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
       <span class="t-label">框架主线：目标·问题 → 事实×约束 → 方案取舍 → 具体实现 → 受控验证 → 差距 → 下一步突破</span>
       <span class="badge good" style="margin-left:auto">源码与原图核对</span>
     </div>
-    <h1 class="t-title">一、目标与核心问题：Engram 把“死记”从“现算”里拆出来，不加推理算力也能扩容知识</h1>
+    <h1 class="t-title">一、目标与核心问题：Engram 把“死记”从“现算”里拆出来，<br>不加推理算力也能扩容知识</h1>
   </header>
   <div class="card rv">
     <div class="grid3">
@@ -304,7 +305,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
       </div>
     </div>
   </div>
-  <div class="anno rv">主线逻辑：第 2 页看懂为何只能走“预取+门控查表” → 第 3 页淘汰备选方案 → 第 4–9 页看模块如何消化代价 → 第 10–13 页看实测、差距与下一步。</div>
+  <div class="anno rv">主线逻辑：第&nbsp;2&nbsp;页看懂为何只能走“预取+门控查表” → 第&nbsp;3&nbsp;页淘汰备选方案 →<br>第&nbsp;4–9&nbsp;页看模块如何消化代价 → 第&nbsp;10–13&nbsp;页看实测、差距与下一步。</div>
   <div class="pageno">1 / 13</div>
 </section>
 
@@ -312,14 +313,14 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="tension">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">3–4 / 9 · 客观事实 × 关键约束</span></div>
-    <h2 class="t-title">二、客观事实 × 关键约束：三条规律与三条红线，共同指向「内存预取 + 门控查表」</h2>
+    <h2 class="t-title">二、客观事实 × 关键约束：<br>三条规律与三条红线，共同指向「内存预取 + 门控查表」</h2>
   </header>
   <div class="grid2">
     <div class="subcard rv" style="display:flex;flex-direction:column;gap:14px">
       <div class="t-label">客观事实（不可违背的数据与硬件规律）</div>
       <div class="inset">
         <h3 class="t-h3">事实 A · 固定短语不用靠神经网络现算</h3>
-        <p class="t-micro" style="margin-top:4px">“四大发明 / Alexander the Great”本质是固定词组，查到对应条目即可，无需逐层推导。</p>
+        <p class="t-micro" style="margin-top:4px">“四大发明 / Alexander the Great”实为固定词组，直接查词条即可，不必逐层现算。</p>
       </div>
       <div class="inset">
         <h3 class="t-h3">事实 B · 要查哪几行，看输入词就能提前确定</h3>
@@ -334,15 +335,15 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
       <div class="t-label">关键约束（必须同时满足的工程红线）</div>
       <div class="inset">
         <h3 class="t-h3">约束 1 · 单步推理激活算力（FLOPs）封顶</h3>
-        <p class="t-micro" style="margin-top:4px">新增知识记忆不能净增推理计算量，只能从现有 MoE 稀疏专家预算里匀出一部分配额。</p>
+        <p class="t-micro" style="margin-top:4px">新增知识记忆不能净增推理计算，只能从现有 MoE 稀疏专家预算里匀出配额。</p>
       </div>
       <div class="inset">
         <h3 class="t-h3">约束 2 · GPU 显存放不下近 2,000 亿静态表</h3>
-        <p class="t-micro" style="margin-top:4px">近 2,000 亿静态表必须原生用 FP8 低精度存储，支持跨卡分片并按需从 CPU 主存预取。</p>
+        <p class="t-micro" style="margin-top:4px">近 2,000 亿静态表须原生保持 FP8 低精度，支持跨卡分片并从 CPU 内存异步预取。</p>
       </div>
       <div class="inset">
         <h3 class="t-h3">约束 3 · 查错词噪声与图片输入必须隔离</h3>
-        <p class="t-micro" style="margin-top:4px">哈希撞桶查出的无关噪声须靠门控挡住；且 32 层 ViT 视觉块绝不能混入文本短语滑窗。</p>
+        <p class="t-micro" style="margin-top:4px">哈希撞桶查出的噪声须靠门控挡住；32 层 ViT 图像块也不能混进文本滑窗。</p>
       </div>
     </div>
   </div>
@@ -353,7 +354,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="candidates">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">5 / 9 · 方案推导与取舍</span></div>
-    <h2 class="t-title">三、方案推导与取舍：淘汰纯扩 MoE、无门控查表与 RAG，选定 Engram 并直面新代价</h2>
+    <h2 class="t-title">三、方案推导与取舍：<br>淘汰纯扩 MoE、无门控查表与 RAG，选定 Engram 并直面新代价</h2>
   </header>
   <div class="card rv">
     <div class="dtable" data-cols="4">
@@ -372,7 +373,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="v41-arch">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 1/6</span><span class="t-label">全局拓扑与模块约束归因</span></div>
-    <h2 class="t-title">四、具体实现（1/6）整网架构：每个模块如何落位，逐一解决前文的约束与新代价</h2>
+    <h2 class="t-title">四、具体实现（1/6）整网架构：<br>每个模块如何落位，逐一解决前文的约束与新代价</h2>
   </header>
   <div class="stepper card rv" id="arch-explorer">
     <div class="step-bar">
@@ -504,7 +505,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="paper-arch">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 2/6</span><span class="t-label">论文微观机理（Figure 1）</span></div>
-    <h2 class="t-title">四、具体实现（2/6）单层原理：多头哈希解决“找得快”，点积门控解决“防查错”</h2>
+    <h2 class="t-title">四、具体实现（2/6）单层原理：<br>多头哈希解决“找得快”，点积门控解决“防查错”</h2>
   </header>
   <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
@@ -533,7 +534,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="walkthrough">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 3/6</span><span class="t-label">五步交互动画实例</span></div>
-    <h2 class="t-title">四、具体实现（3/6）数据流演示：一句图文混合输入，如何走完压缩、隔离与写回五步</h2>
+    <h2 class="t-title">四、具体实现（3/6）数据流演示：<br>一句图文混合输入，如何走完压缩、隔离与写回五步</h2>
   </header>
   <div class="stepper card rv" id="example-stepper">
     <div class="step-bar">
@@ -630,7 +631,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="paper-case">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 4/6</span><span class="t-label">门控热力实证（Figure 6）</span></div>
-    <h2 class="t-title">四、具体实现（4/6）门控实证：Figure 6 热力图证明，只在专名或短语结尾才高分放行</h2>
+    <h2 class="t-title">四、具体实现（4/6）门控实证：<br>Figure 6 热力图证明，只在专名或短语结尾才高分放行</h2>
   </header>
   <div class="grid2" style="grid-template-columns:1.45fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
@@ -659,7 +660,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="prod-code">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 5/6</span><span class="t-label">Demo → V4.1 生产源码裁剪</span></div>
-    <h2 class="t-title">四、具体实现（5/6）工程落地：从论文 Demo 到 V4.1 源码的三处精简与图像防护</h2>
+    <h2 class="t-title">四、具体实现（5/6）工程落地：<br>从论文 Demo 到 V4.1 源码的三处精简与图像防护</h2>
   </header>
   <div class="stepper rv" id="code-stepper">
     <div class="codewin">
@@ -713,7 +714,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="config-diff">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 6/6</span><span class="t-label">配置字段与参数比例</span></div>
-    <h2 class="t-title">四、具体实现（6/6）规模与参数：V4.1 扩至 4-gram 与千六百万桶，静态表占文本端 26.3%</h2>
+    <h2 class="t-title">四、具体实现（6/6）规模与参数：<br>V4.1 扩至 <span style="white-space:nowrap">4-gram</span> 与千六百万桶，静态表占文本端 26.3%</h2>
   </header>
   <div class="card rv">
     <div class="dtable" data-cols="3">
@@ -734,7 +735,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="scaling">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">7 / 9 · 受控验证 1/2</span><span class="t-label">U 型分配律与内存卸载代价（Figure 3）</span></div>
-    <h2 class="t-title">五、受控验证（1/2）配比与代价：给静态表分 20%–25% 预算最优，CPU 卸载仅慢不到 3%</h2>
+    <h2 class="t-title">五、受控验证（1/2）配比与代价：<br>给静态表分 20%–25% 预算最优，CPU 卸载仅慢不到 3%</h2>
   </header>
   <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
@@ -750,7 +751,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
       <div class="subcard">
         <div class="t-label">副作用与代价核验（约束 2）</div>
         <div class="t-readout" style="margin-top:4px">&lt;&nbsp;3% 损耗</div>
-        <p class="t-micro">论文测得全量静态表卸载至 CPU 内存并异步预取，端到端吞吐降幅不到 3%。</p>
+        <p class="t-micro">论文测得全量静态表卸载至 CPU 内存并异步预取，<br>端到端吞吐降幅不到 3%。</p>
       </div>
       <div class="inset">
         <p class="t-micro">口径桥接：20%–25% 是稀疏内部配比；V4.1 占文本端 748.6B 总参为 26.3%。</p>
@@ -764,7 +765,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="eval">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">7 / 9 · 受控验证 2/2</span><span class="t-label">27B 对照改善与 1017 RL 混杂项隔离</span></div>
-    <h2 class="t-title">五、受控验证（2/2）能力增益：同等算力下 27B 全面涨分，并单独剥离 1017 强化学习涨幅</h2>
+    <h2 class="t-title">五、受控验证（2/2）能力增益：<br>同等算力下 27B 全面涨分，并单独剥离 1017 强化学习涨幅</h2>
   </header>
   <div class="subcard rv" style="display:grid;grid-template-columns:380px minmax(0,1fr);gap:18px 28px;align-items:center">
     <div class="t-label">Multi-Query NIAH（长文多针检索）</div>
@@ -788,7 +789,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
       <p class="t-micro" style="margin:8px 0 4px">Engram-27B · 60.4(+3.0) / 61.9(+4.0) / 40.8(+3.0) / 30.7(+2.4)</p>
       <div class="bar" style="--v:60.4;--max:100"></div>
     </div>
-    <div class="t-label">剔除混杂：V4.1 1017 迭代分（非 Engram）</div>
+    <div class="t-label">剔除混杂：V4.1 1017 迭代分<span style="white-space:nowrap">（非 Engram）</span></div>
     <div>
       <p class="t-micro" style="margin-bottom:4px">V4.1-Flash 原版 → 1017 快照 Terminal-Bench 4.0（RL 提升）</p>
       <div class="bar base" style="--v:31.2;--max:100"></div>
@@ -804,7 +805,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="gaps">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">8 / 9 · 距离目标的差距</span><span class="t-label">对照第 1 页目标盘点能力缺口与实证盲区</span></div>
-    <h2 class="t-title">六、距离目标的差距：只会记连续短语、挂载位置靠人工定，且缺少 748B 级直接消融</h2>
+    <h2 class="t-title">六、距离目标的差距：<br>只会记连续短语、挂载位置靠人工定，且缺少 748B 级直接消融</h2>
   </header>
   <div class="grid3">
     <div class="subcard rv" style="display:flex;flex-direction:column">
@@ -848,7 +849,7 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 <section class="slide" id="next">
   <header class="rv">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">9 / 9 · 下一步突破方向</span><span class="t-label">一一映射第 12 页三大缺口</span></div>
-    <h2 class="t-title">七、下一步突破方向：近期落盘架构与内存卸载，中长期攻动态调配与语义查表</h2>
+    <h2 class="t-title">七、下一步突破方向：<br>近期落盘架构与内存卸载，中长期攻动态调配与语义查表</h2>
   </header>
   <div class="card rv" style="display:flex;flex-direction:column;gap:18px">
     <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
