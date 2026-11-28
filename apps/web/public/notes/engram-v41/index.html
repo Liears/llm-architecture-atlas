@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="data-as-of" content="2026-11-28">
 <title>Engram 条件记忆与 DeepSeek-V4.1-Flash-1017 学习笔记</title>
-<link rel="stylesheet" href="fonts/fonts.css?v=1299f207">
+<link rel="stylesheet" href="fonts/fonts.css?v=1e42cf06">
 <style>
 :root {
   --ink:#2b2418;
@@ -277,9 +277,13 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 1 · 阶段 1+2：目标、核心问题与适用前提（Non-Goals） -->
 <section class="slide" id="goal">
-  <header class="rv" style="display:flex;align-items:center;gap:20px">
-    <h1 class="t-title">为实现零增算力扩容知识，Engram 解除「前层动态重构静态常识」的结构矛盾</h1>
-    <span class="badge good" style="margin-left:auto">源码与原图核对</span>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+      <span class="badge solid">1–2 / 9 · 目标与核心问题</span>
+      <span class="t-label">框架主线：目标·问题 → 事实×约束 → 方案取舍 → 具体实现 → 受控验证 → 差距 → 下一步突破</span>
+      <span class="badge good" style="margin-left:auto">源码与原图核对</span>
+    </div>
+    <h1 class="t-title">一、目标与核心问题：Engram 为零增算力扩容，解除「前层算静态常识」冲突</h1>
   </header>
   <div class="card rv">
     <div class="grid3">
@@ -306,7 +310,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 2 · 阶段 3+4：客观事实 × 关键约束双栏受力推演 -->
 <section class="slide" id="tension">
-  <header class="rv"><h2 class="t-title">三条客观事实与三条硬约束，共同锁死了唯一可行架构区间</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">3–4 / 9 · 客观事实 × 关键约束</span></div>
+    <h2 class="t-title">二、客观事实 × 关键约束：三条规律与三条红线锁死唯一可行区间</h2>
+  </header>
   <div class="grid2">
     <div class="subcard rv" style="display:flex;flex-direction:column;gap:14px">
       <div class="t-label">客观事实（不可违背的数据与硬件规律）</div>
@@ -344,7 +351,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 3 · 阶段 5：前人试错、备选淘汰对比与新代价承接 -->
 <section class="slide" id="candidates">
-  <header class="rv"><h2 class="t-title">前人方案均踩中约束红线，唯有 Engram 门控双轴兼顾算力与显存边界</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">5 / 9 · 方案推导与取舍</span></div>
+    <h2 class="t-title">三、方案推导与取舍：对比三类前身与备选，Engram 胜出但引入搬运代价</h2>
+  </header>
   <div class="card rv">
     <div class="dtable" data-cols="4">
       <div class="th"><div>候选路线</div></div><div class="th"><div>满足的约束</div></div><div class="th"><div>踩中的红线 / 淘汰原因</div></div><div class="th"><div>引入的新代价</div></div>
@@ -360,7 +370,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 4 · 阶段 6a：V4.1 整网架构与模块归因（交互 SVG · 字号 >= 20px） -->
 <section class="slide" id="v41-arch">
-  <header class="rv"><h2 class="t-title">DeepSeek-V4.1-Flash-1017 把每个模块精确焊在约束缺口上</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 1/6</span><span class="t-label">全局拓扑与模块约束归因</span></div>
+    <h2 class="t-title">四、具体实现（1/6）全局架构：V4.1 把每个模块精确焊在约束缺口上</h2>
+  </header>
   <div class="stepper card rv" id="arch-explorer">
     <div class="step-bar">
       <span class="t-label">点选组件看为何存在：</span>
@@ -489,7 +502,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 5 · 阶段 6b：论文原图 Figure 1（内部门控如何消除 OverEncoding 冲突代价） -->
 <section class="slide" id="paper-arch">
-  <header class="rv"><h2 class="t-title">从论文 Figure 1 看微观机制：为什么每个子模块必须同时存在</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 2/6</span><span class="t-label">论文微观机理（Figure 1）</span></div>
+    <h2 class="t-title">四、具体实现（2/6）微观机理：Figure 1 多头哈希与点积门控消解冲突</h2>
+  </header>
   <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
       <img src="images/arch.png" alt="Engram 论文 Figure 1 原图：2/3-gram 哈希查表与条件门控写入残差">
@@ -515,7 +531,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 6 · 阶段 6c：五步实例动画演练（具体双语与视觉占位轨迹） -->
 <section class="slide" id="walkthrough">
-  <header class="rv"><h2 class="t-title">实例动画演练：一句话如何步步过关并甩掉多模态干扰</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 3/6</span><span class="t-label">五步交互动画实例</span></div>
+    <h2 class="t-title">四、具体实现（3/6）动画演练：一句话如何走完折叠、哨兵隔离与门控写回</h2>
+  </header>
   <div class="stepper card rv" id="example-stepper">
     <div class="step-bar">
       <span class="t-label">步进演示：</span>
@@ -609,7 +628,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 7 · 阶段 6d：论文原图 Figure 6（中英文门控激活真例验证） -->
 <section class="slide" id="paper-case">
-  <header class="rv"><h2 class="t-title">门控行为验证（Figure 6）：Engram 总在实体与成语结尾词元放行</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 4/6</span><span class="t-label">门控热力实证（Figure 6）</span></div>
+    <h2 class="t-title">四、具体实现（4/6）门控实证：Figure 6 证明只在实体与成语结尾放行</h2>
+  </header>
   <div class="grid2" style="grid-template-columns:1.45fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
       <img src="images/case.png" alt="Engram 论文 Figure 6 原图：中英文序列门控标量 alpha 热力可视化">
@@ -635,7 +657,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 8 · 阶段 6e：从演示走向 V4.1-Flash-1017 生产源码（演进与裁剪交互高亮） -->
 <section class="slide" id="prod-code">
-  <header class="rv"><h2 class="t-title">从开源 Demo 走向 V4.1 生产代码：为延迟与多模态做的 4 项硬裁剪</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 5/6</span><span class="t-label">Demo → V4.1 生产源码裁剪</span></div>
+    <h2 class="t-title">四、具体实现（5/6）源码演化：V4.1 砍掉 ShortConv 并融合 wkv 与图像掩码</h2>
+  </header>
   <div class="stepper rv" id="code-stepper">
     <div class="codewin">
       <div class="dots"><i class="dot r"></i><i class="dot y"></i><i class="dot g"></i></div>
@@ -686,7 +711,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 9 · 阶段 6f：从论文 Demo 到 V4.1 配置演化详单 -->
 <section class="slide" id="config-diff">
-  <header class="rv"><h2 class="t-title">参数落地全对照：从 Demo 扩至 4-gram，文本端承载 26.3% 静态参数</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">6 / 9 · 具体实现 6/6</span><span class="t-label">配置字段与参数比例</span></div>
+    <h2 class="t-title">四、具体实现（6/6）参数对照：从 Demo 扩至 4-gram，静态表占文本端 26.3%</h2>
+  </header>
   <div class="card rv">
     <div class="dtable" data-cols="3">
       <div class="th"><div>配置维度</div></div><div class="th"><div>论文开源 Demo（engram_demo_v1）</div></div><div class="th"><div>DeepSeek-V4.1-Flash-1017 生产实现</div></div>
@@ -704,7 +732,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 10 · 阶段 7a：受控验证（Figure 3 U 型分配规律与扩展率 + 副作用核验） -->
 <section class="slide" id="scaling">
-  <header class="rv"><h2 class="t-title">受控实验验证：20%–25% 配比最优，且主存异步卸载损耗低于 3%</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">7 / 9 · 受控验证 1/2</span><span class="t-label">U 型分配律与内存卸载代价（Figure 3）</span></div>
+    <h2 class="t-title">五、受控验证（1/2）配比与代价：U 型最优 20%–25%，主存卸载损耗 &lt; 3%</h2>
+  </header>
   <div class="grid2" style="grid-template-columns:1.35fr 1fr;align-items:stretch">
     <div class="figframe blend rv">
       <img src="images/scaling_law.png" alt="Engram 论文 Figure 3 原图：U 型分配率曲线与嵌入槽位对数扩展律">
@@ -731,7 +762,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 11 · 阶段 7b：受控能力改善（27B 对照全线提升 + 严格剔除 1017 RL 混杂项） -->
 <section class="slide" id="eval">
-  <header class="rv"><h2 class="t-title">严格等激活对照：Engram 不仅涨知识，推理与代码同步大涨</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">7 / 9 · 受控验证 2/2</span><span class="t-label">27B 对照改善与 1017 RL 混杂项隔离</span></div>
+    <h2 class="t-title">五、受控验证（2/2）效果与隔离：27B 全线大涨，严格剥离 1017 RL 混杂分</h2>
+  </header>
   <div class="subcard rv" style="display:grid;grid-template-columns:380px minmax(0,1fr);gap:18px 28px;align-items:center">
     <div class="t-label">Multi-Query NIAH（长文多针检索）</div>
     <div>
@@ -768,7 +802,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 12 · 阶段 8：目前距离第 1 页目标还有多远（能力缺口与实证盲区） -->
 <section class="slide" id="gaps">
-  <header class="rv"><h2 class="t-title">对照「零代价语义扩容」目标，当前仍在泛化粒度与生产实证存在缺口</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">8 / 9 · 距离目标的差距</span><span class="t-label">对照第 1 页目标盘点能力缺口与实证盲区</span></div>
+    <h2 class="t-title">六、距离目标的差距：泛化粒度、手工层位与 748B 消融三大缺口</h2>
+  </header>
   <div class="grid3">
     <div class="subcard rv" style="display:flex;flex-direction:column">
       <div style="display:flex;align-items:center;gap:12px">
@@ -809,7 +846,10 @@ a:focus-visible, [tabindex]:focus-visible { outline:3px solid var(--accent); out
 
 <!-- 页 13 · 阶段 9：下一步应该突破什么（近期落盘 + 中长期突破点） -->
 <section class="slide" id="next">
-  <header class="rv"><h2 class="t-title">围绕三大缺口，下一步分「近期工程落盘」与「中长期突破」推进</h2></header>
+  <header class="rv">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><span class="badge solid">9 / 9 · 下一步突破方向</span><span class="t-label">一一映射第 12 页三大缺口</span></div>
+    <h2 class="t-title">七、下一步突破方向：围绕三大缺口，分近期工程与中长期研究推进</h2>
+  </header>
   <div class="card rv" style="display:flex;flex-direction:column;gap:18px">
     <div class="inset" style="display:flex;align-items:center;gap:18px;padding:20px 26px">
       <span class="badge solid">01</span>
